@@ -35,7 +35,7 @@ export function RestaurantActionsChart() {
             tickMargin={10}
             axisLine={false}
             width={100}
-            stroke="hsl(var(--primary-foreground))"
+            stroke="hsl(var(--foreground))"
           />
           <XAxis dataKey="actions" type="number" hide />
           <ChartTooltip

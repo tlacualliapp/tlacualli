@@ -28,46 +28,46 @@ export function MasterUsersTable() {
     <div className="space-y-4 pt-4">
       <div className="flex justify-between items-center gap-4">
         <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
           <Input
             placeholder="Buscar por nombre o correo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-white/20 border-white/30 placeholder:text-white/70 rounded-full"
+            className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full"
           />
         </div>
       </div>
-      <div className="rounded-md border border-white/20">
+      <div className="rounded-md border border-gray-200">
         <Table>
           <TableHeader>
-            <TableRow className="border-b-white/20 hover:bg-white/10">
-              <TableHead className="text-white/90">Nombre de Usuario</TableHead>
-              <TableHead className="text-white/90">Correo Electrónico</TableHead>
-              <TableHead className="text-white/90">Fecha de Registro</TableHead>
-              <TableHead className="text-right text-white/90">Acciones</TableHead>
+            <TableRow className="border-b-gray-200 hover:bg-gray-50">
+              <TableHead className="text-gray-700">Nombre de Usuario</TableHead>
+              <TableHead className="text-gray-700">Correo Electrónico</TableHead>
+              <TableHead className="text-gray-700">Fecha de Registro</TableHead>
+              <TableHead className="text-right text-gray-700">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.map(user => (
-              <TableRow key={user.id} className="border-b-white/20 hover:bg-white/10">
+              <TableRow key={user.id} className="border-b-gray-200 hover:bg-gray-50">
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{new Date(user.registered).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-white/20">
+                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
                             <span className="sr-only">Abrir menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-gray-800 text-white border-gray-700">
+                        <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
                           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                            <DropdownMenuItem className="cursor-pointer">
                             <FilePenLine className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-red-400 focus:text-red-400 focus:bg-red-900/50">
+                          <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100">
                             <Trash2 className="mr-2 h-4 w-4" />
                             Eliminar
                           </DropdownMenuItem>

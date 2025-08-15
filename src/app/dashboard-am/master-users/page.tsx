@@ -28,29 +28,29 @@ export default function MasterUsersPage() {
     <AppLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold font-headline text-white flex items-center gap-2">
+          <h1 className="text-3xl font-bold font-headline text-gray-800 flex items-center gap-2">
             <UserPlus className="h-8 w-8" /> Registrar Usuario Master
           </h1>
-          <p className="text-white/80">Añada un nuevo usuario administrador maestro al sistema.</p>
+          <p className="text-gray-600">Añada un nuevo usuario administrador maestro al sistema.</p>
         </div>
       </div>
-      <Card className="bg-white/10 backdrop-blur-lg border-white/20 text-white">
+      <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
         <CardHeader>
           <CardTitle>Información del Usuario</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="userName" className="text-white/90">Nombre de Usuario</Label>
-              <Input id="userName" name="userName" placeholder="Ej: admin_master" className="bg-white/20 border-white/30 placeholder:text-white/70" required />
+              <Label htmlFor="userName" className="text-gray-700">Nombre de Usuario</Label>
+              <Input id="userName" name="userName" placeholder="Ej: admin_master" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-white/90">Correo Electrónico</Label>
-              <Input id="email" name="email" type="email" placeholder="Ej: admin@correo.com" className="bg-white/20 border-white/30 placeholder:text-white/70" required />
+              <Label htmlFor="email" className="text-gray-700">Correo Electrónico</Label>
+              <Input id="email" name="email" type="email" placeholder="Ej: admin@correo.com" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-white/90">Contraseña</Label>
-              <Input id="password" name="password" type="password" placeholder="••••••••••" className="bg-white/20 border-white/30 placeholder:text-white/70" required />
+              <Label htmlFor="password" className="text-gray-700">Contraseña</Label>
+              <Input id="password" name="password" type="password" placeholder="••••••••••" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
             <div className="flex justify-end">
                 <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full text-lg">

@@ -38,13 +38,13 @@ export function DailyAccessChart() {
             axisLine={false}
             tickMargin={8}
             tickFormatter={(value) => value.slice(0, 3)}
-            stroke="hsl(var(--primary-foreground))"
+            stroke="hsl(var(--foreground))"
           />
           <YAxis
             tickLine={false}
             axisLine={false}
             tickMargin={8}
-            stroke="hsl(var(--primary-foreground))"
+            stroke="hsl(var(--foreground))"
            />
           <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
           <defs>

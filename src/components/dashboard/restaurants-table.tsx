@@ -62,23 +62,23 @@ export function RestaurantsTable() {
     <div className="space-y-4 pt-4">
       <div className="flex justify-between items-center gap-4">
         <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
           <Input
             placeholder="Buscar por nombre..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-white/20 border-white/30 placeholder:text-white/70 rounded-full"
+            className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full"
           />
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto bg-white/20 border-white/30 hover:bg-white/30">
+            <Button variant="outline" className="ml-auto bg-white/50 border-gray-300 hover:bg-gray-100">
               <Filter className="mr-2 h-4 w-4" /> Filtros
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-gray-800 text-white border-gray-700">
+          <DropdownMenuContent align="end" className="w-56 bg-white text-gray-800 border-gray-200">
             <DropdownMenuLabel>Filtrar por Estado</DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-gray-600"/>
+            <DropdownMenuSeparator className="bg-gray-200"/>
             <div className="max-h-60 overflow-y-auto">
               {mexicanStates.map(state => (
                 <DropdownMenuCheckboxItem
@@ -90,9 +90,9 @@ export function RestaurantsTable() {
                 </DropdownMenuCheckboxItem>
               ))}
             </div>
-             <DropdownMenuSeparator className="bg-gray-600"/>
+             <DropdownMenuSeparator className="bg-gray-200"/>
             <DropdownMenuLabel>Filtrar por Estilo</DropdownMenuLabel>
-             <DropdownMenuSeparator className="bg-gray-600"/>
+             <DropdownMenuSeparator className="bg-gray-200"/>
              {restaurantStyles.map(style => (
               <DropdownMenuCheckboxItem
                 key={style}
@@ -105,39 +105,39 @@ export function RestaurantsTable() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="rounded-md border border-white/20">
+      <div className="rounded-md border border-gray-200">
         <Table>
           <TableHeader>
-            <TableRow className="border-b-white/20 hover:bg-white/10">
-              <TableHead className="text-white/90">Nombre</TableHead>
-              <TableHead className="text-white/90">Estilo</TableHead>
-              <TableHead className="text-white/90">Municipio/Alcaldía</TableHead>
-              <TableHead className="text-white/90">Estado</TableHead>
-              <TableHead className="text-right text-white/90">Acciones</TableHead>
+            <TableRow className="border-b-gray-200 hover:bg-gray-50">
+              <TableHead className="text-gray-700">Nombre</TableHead>
+              <TableHead className="text-gray-700">Estilo</TableHead>
+              <TableHead className="text-gray-700">Municipio/Alcaldía</TableHead>
+              <TableHead className="text-gray-700">Estado</TableHead>
+              <TableHead className="text-right text-gray-700">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredData.map(item => (
-              <TableRow key={item.id} className="border-b-white/20 hover:bg-white/10">
+              <TableRow key={item.id} className="border-b-gray-200 hover:bg-gray-50">
                 <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell><Badge variant="secondary" className="bg-red-500/80 text-white">{item.style}</Badge></TableCell>
+                <TableCell><Badge variant="secondary" className="bg-red-100 text-red-700">{item.style}</Badge></TableCell>
                 <TableCell>{item.municipality}</TableCell>
                 <TableCell>{item.state}</TableCell>
                 <TableCell className="text-right">
                    <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-white/20">
+                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
                             <span className="sr-only">Abrir menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-gray-800 text-white border-gray-700">
+                        <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
                           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                           <DropdownMenuItem className="cursor-pointer">
                             <FilePenLine className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-red-400 focus:text-red-400 focus:bg-red-900/50">
+                          <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100">
                             <Trash2 className="mr-2 h-4 w-4" />
                             Eliminar
                           </DropdownMenuItem>

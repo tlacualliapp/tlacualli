@@ -40,13 +40,13 @@ export default function RestaurantsPage() {
     <AppLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold font-headline text-white flex items-center gap-2">
+          <h1 className="text-3xl font-bold font-headline text-gray-800 flex items-center gap-2">
             <UtensilsCrossed className="h-8 w-8" /> Registrar Restaurante
           </h1>
-          <p className="text-white/80">Añada un nuevo restaurante al sistema.</p>
+          <p className="text-gray-600">Añada un nuevo restaurante al sistema.</p>
         </div>
       </div>
-      <Card className="bg-white/10 backdrop-blur-lg border-white/20 text-white">
+      <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
         <CardHeader>
           <CardTitle>Información del Restaurante</CardTitle>
         </CardHeader>
@@ -54,13 +54,13 @@ export default function RestaurantsPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <Label htmlFor="restaurantName" className="text-white/90">Nombre del Restaurante</Label>
-                    <Input id="restaurantName" name="restaurantName" placeholder="Ej: Tacos El Sol" className="bg-white/20 border-white/30 placeholder:text-white/70" required />
+                    <Label htmlFor="restaurantName" className="text-gray-700">Nombre del Restaurante</Label>
+                    <Input id="restaurantName" name="restaurantName" placeholder="Ej: Tacos El Sol" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="style" className="text-white/90">Estilo</Label>
+                    <Label htmlFor="style" className="text-gray-700">Estilo</Label>
                     <Select name="style">
-                        <SelectTrigger className="bg-white/20 border-white/30 placeholder:text-white/70">
+                        <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
                             <SelectValue placeholder="Seleccione un estilo" />
                         </SelectTrigger>
                         <SelectContent>
@@ -71,19 +71,19 @@ export default function RestaurantsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address" className="text-white/90">Dirección</Label>
-              <Input id="address" name="address" placeholder="Ej: Av. Principal 123, Colonia Centro" className="bg-white/20 border-white/30 placeholder:text-white/70" required />
+              <Label htmlFor="address" className="text-gray-700">Dirección</Label>
+              <Input id="address" name="address" placeholder="Ej: Av. Principal 123, Colonia Centro" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <Label htmlFor="municipality" className="text-white/90">Municipio o Alcaldía</Label>
-                    <Input id="municipality" name="municipality" placeholder="Ej: Cuauhtémoc" className="bg-white/20 border-white/30 placeholder:text-white/70" required />
+                    <Label htmlFor="municipality" className="text-gray-700">Municipio o Alcaldía</Label>
+                    <Input id="municipality" name="municipality" placeholder="Ej: Cuauhtémoc" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="state" className="text-white/90">Estado</Label>
+                    <Label htmlFor="state" className="text-gray-700">Estado</Label>
                     <Select name="state">
-                        <SelectTrigger className="bg-white/20 border-white/30 placeholder:text-white/70">
+                        <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
                             <SelectValue placeholder="Seleccione un estado" />
                         </SelectTrigger>
                         <SelectContent>
@@ -93,24 +93,24 @@ export default function RestaurantsPage() {
                 </div>
             </div>
 
-            <Separator className="my-6 bg-white/20" />
+            <Separator className="my-6 bg-gray-300" />
 
-            <h3 className="text-lg font-semibold text-white/90">Información de Contacto</h3>
+            <h3 className="text-lg font-semibold text-gray-800">Información de Contacto</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-white/90">Teléfono</Label>
-                    <Input id="phone" name="phone" type="tel" placeholder="Ej: 55 1234 5678" className="bg-white/20 border-white/30 placeholder:text-white/70" required />
+                    <Label htmlFor="phone" className="text-gray-700">Teléfono</Label>
+                    <Input id="phone" name="phone" type="tel" placeholder="Ej: 55 1234 5678" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="email" className="text-white/90">Correo Electrónico</Label>
-                    <Input id="email" name="email" type="email" placeholder="Ej: contacto@tacoselsol.com" className="bg-white/20 border-white/30 placeholder:text-white/70" required />
+                    <Label htmlFor="email" className="text-gray-700">Correo Electrónico</Label>
+                    <Input id="email" name="email" type="email" placeholder="Ej: contacto@tacoselsol.com" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
             </div>
 
              <div className="space-y-2">
-                <Label htmlFor="rfc" className="text-white/90">RFC</Label>
-                <Input id="rfc" name="rfc" placeholder="Ej: SOLT850101XXX" className="bg-white/20 border-white/30 placeholder:text-white/70" required />
+                <Label htmlFor="rfc" className="text-gray-700">RFC</Label>
+                <Input id="rfc" name="rfc" placeholder="Ej: SOLT850101XXX" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
             
             <div className="flex justify-end pt-4">
