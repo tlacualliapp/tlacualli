@@ -6,15 +6,14 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart3,
   BookOpen,
-  ChevronDown,
   ClipboardList,
   Cog,
   LayoutDashboard,
   LogOut,
   Map,
   Users,
+  User,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -95,17 +94,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="https://placehold.co/100x100.png" alt="Admin" data-ai-hint="user avatar" />
-                  <AvatarFallback>AD</AvatarFallback>
-                </Avatar>
-                <div className="text-left hidden md:block">
-                  <p className="font-semibold text-sm">Admin</p>
-                  <p className="text-xs text-muted-foreground">admin@tlacualli.com</p>
-                </div>
-                <ChevronDown className="ml-auto h-4 w-4" />
-              </Button>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                    <User className="h-5 w-5" />
+                </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" side="bottom" align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
