@@ -1,8 +1,11 @@
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, LineChart, Users, UtensilsCrossed } from 'lucide-react';
+import { BarChart, LineChart, Users, UtensilsCrossed, Search, Filter } from 'lucide-react';
 import { DailyAccessChart } from '@/components/dashboard/daily-access-chart';
 import { RestaurantActionsChart } from '@/components/dashboard/restaurant-actions-chart';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RestaurantsTable } from '@/components/dashboard/restaurants-table';
+import { MasterUsersTable } from '@/components/dashboard/master-users-table';
 
 export default function AdminMasterDashboard() {
   return (
@@ -72,6 +75,22 @@ export default function AdminMasterDashboard() {
               </CardContent>
             </Card>
           </div>
+          <Card className="mt-6 bg-white/10 backdrop-blur-lg border-white/20 text-white">
+            <CardContent className="p-4 md:p-6">
+                 <Tabs defaultValue="restaurantes">
+                    <TabsList className="bg-white/20 text-white/80">
+                        <TabsTrigger value="restaurantes">Restaurantes</TabsTrigger>
+                        <TabsTrigger value="usuarios">Usuarios Master</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="restaurantes">
+                        <RestaurantsTable />
+                    </TabsContent>
+                    <TabsContent value="usuarios">
+                        <MasterUsersTable />
+                    </TabsContent>
+                </Tabs>
+            </CardContent>
+          </Card>
         </AppLayout>
       </div>
   );
