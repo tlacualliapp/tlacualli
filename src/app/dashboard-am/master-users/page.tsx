@@ -56,8 +56,8 @@ export default function MasterUsersPage() {
             console.log('Usuario registrado (simulación):', { nombre, apellidos, telefono, email });
 
             toast({
-              title: "Cliente Registrado (Simulación)",
-              description: `El cliente "${fullName}" ha sido registrado exitosamente.`,
+              title: "Usuario Master Registrado (Simulación)",
+              description: `El Usuario Master "${fullName}" ha sido registrado exitosamente.`,
             });
             (e.target as HTMLFormElement).reset();
 
@@ -65,7 +65,7 @@ export default function MasterUsersPage() {
             console.error("Error en el registro:", error);
             const errorMessage = (error as any).code === 'auth/email-already-in-use'
                 ? "Este correo electrónico ya está en uso."
-                : "Ocurrió un error al registrar al cliente.";
+                : "Ocurrió un error al registrar al usuario master.";
 
             toast({
               variant: "destructive",
@@ -82,14 +82,14 @@ export default function MasterUsersPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold font-headline text-gray-800 flex items-center gap-2">
-            <UserPlus className="h-8 w-8" /> Registrar Cliente
+            <UserPlus className="h-8 w-8" /> Registrar Usuario Master
           </h1>
-          <p className="text-gray-600">Añada un nuevo cliente al sistema.</p>
+          <p className="text-gray-600">Añada un nuevo usuario master al sistema.</p>
         </div>
       </div>
       <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
         <CardHeader>
-          <CardTitle>Información del Cliente</CardTitle>
+          <CardTitle>Información del Usuario Master</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -115,7 +115,7 @@ export default function MasterUsersPage() {
             </div>
             <div className="flex justify-end">
                 <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full text-lg" disabled={isLoading}>
-                    {isLoading ? 'Registrando...' : 'Registrar Cliente'}
+                    {isLoading ? 'Registrando...' : 'Registrar Usuario Master'}
                 </Button>
             </div>
           </form>
