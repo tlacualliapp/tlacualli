@@ -40,6 +40,7 @@ export default function MasterUsersPage() {
                 telefono,
                 email,
                 status: 2,
+                perfil: 'AM',
                 fecharegistro: serverTimestamp()
             });
 
