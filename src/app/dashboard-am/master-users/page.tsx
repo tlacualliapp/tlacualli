@@ -9,11 +9,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus } from 'lucide-react';
 import { useState } from 'react';
-
-// TODO: Importar e inicializar Firebase cuando las credenciales estén disponibles
-// import { auth, db } from '@/lib/firebase'; 
-// import { createUserWithEmailAndPassword } from 'firebase/auth';
-// import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase'; 
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function MasterUsersPage() {
     const { toast } = useToast();
@@ -30,42 +28,43 @@ export default function MasterUsersPage() {
         const fullName = `${nombre} ${apellidos}`;
 
         try {
-            // ---- SECCIÓN DE INTEGRACIÓN CON FIREBASE (actualmente comentada) ----
-            
             // 1. Crear usuario en Firebase Auth
-            // const userCredential = await createUserWithEmailAndPassword(auth, email, telefono);
-            // const user = userCredential.user;
+            const userCredential = await createUserWithEmailAndPassword(auth, email, telefono);
+            const user = userCredential.user;
 
             // 2. Guardar datos en Firestore
-            // await addDoc(collection(db, "usuarios"), {
-            //     uid: user.uid,
-            //     nombre,
-            //     apellidos,
-            //     telefono,
-            //     email,
-            //     status: 2,
-            //     fecharegistro: serverTimestamp()
-            // });
+            await addDoc(collection(db, "usuarios"), {
+                uid: user.uid,
+                nombre,
+                apellidos,
+                telefono,
+                email,
+                status: 2,
+                fecharegistro: serverTimestamp()
+            });
 
             // 3. Enviar correo de confirmación (requiere configuración de nodemailer en un backend)
-            // console.log("Correo de confirmación enviado a:", email);
-
-
-            // ---- SIMULACIÓN MIENTRAS FIREBASE NO ESTÁ CONECTADO ----
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Simula la llamada a la red
-            console.log('Usuario registrado (simulación):', { nombre, apellidos, telefono, email });
+            // Esta sección se deja preparada para una futura implementación en un entorno de servidor.
+            console.log("Correo de confirmación enviado a (simulación):", email);
 
             toast({
-              title: "Usuario Master Registrado (Simulación)",
-              description: `El Usuario Master "${fullName}" ha sido registrado exitosamente.`,
+              title: "Usuario Master Registrado",
+              description: `El Usuario Master "${fullName}" ha sido registrado exitosamente en Firebase.`,
             });
             (e.target as HTMLFormElement).reset();
 
         } catch (error) {
             console.error("Error en el registro:", error);
-            const errorMessage = (error as any).code === 'auth/email-already-in-use'
-                ? "Este correo electrónico ya está en uso."
-                : "Ocurrió un error al registrar al usuario master.";
+            const errorCode = (error as any).code;
+            let errorMessage = "Ocurrió un error al registrar al usuario master.";
+
+            if (errorCode === 'auth/email-already-in-use') {
+                errorMessage = "Este correo electrónico ya está en uso.";
+            } else if (errorCode === 'auth/weak-password') {
+                errorMessage = "La contraseña (teléfono) debe tener al menos 6 caracteres.";
+            } else if (errorCode === 'auth/invalid-email') {
+                errorMessage = "El formato del correo electrónico no es válido.";
+            }
 
             toast({
               variant: "destructive",
@@ -105,12 +104,12 @@ export default function MasterUsersPage() {
             </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="telefono" className="text-gray-700">Teléfono</Label>
-                  <Input id="telefono" name="telefono" type="tel" placeholder="Ej: 55 1234 5678" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                  <Label htmlFor="telefono" className="text-gray-700">Teléfono (será la contraseña)</Label>
+                  <Input id="telefono" name="telefono" type="tel" placeholder="Mínimo 6 dígitos" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-gray-700">Correo Electrónico</Label>
-                  <Input id="email" name="email" type="email" placeholder="Ej: cliente@correo.com" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                  <Input id="email" name="email" type="email" placeholder="Ej: usuario@correo.com" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
             </div>
             <div className="flex justify-end">
