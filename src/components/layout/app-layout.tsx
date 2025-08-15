@@ -5,19 +5,11 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  BarChart3,
-  BookOpen,
-  ClipboardList,
-  Cog,
-  LayoutDashboard,
   LogOut,
-  Map,
   Users,
   User,
   PanelLeft,
   Home,
-  Package,
-  Soup,
   UtensilsCrossed
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,18 +23,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { TacoIcon } from '@/components/icons/logo';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { TablesIcon } from '@/components/icons/tables';
-import { InventoryIcon } from '@/components/icons/inventory';
 
 const navItems = [
   { href: '/dashboard-am', label: 'Dashboard', icon: Home },
-  { href: '/orders', label: 'Pedidos', icon: ClipboardList },
-  { href: '/map', label: 'Mesas', icon: TablesIcon },
-  { href: '/menu', label: 'Menú', icon: BookOpen },
-  { href: '/employees', label: 'Empleados', icon: Users },
-  { href: '/reports', label: 'Reportes', icon: BarChart3 },
-  { href: '/inventory', label: 'Inventario', icon: InventoryIcon },
-  { href: '/recipes', label: 'Recetas', icon: Soup },
+  { href: '/restaurants', label: 'Restaurantes', icon: UtensilsCrossed },
+  { href: '/master-users', label: 'Usuarios Master', icon: Users },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
