@@ -175,7 +175,7 @@ export function RestaurantsTable() {
               <DialogHeader>
                 <DialogTitle className="text-2xl font-headline text-gray-900">{selectedRestaurant.name}</DialogTitle>
                 <DialogDescription>
-                  <Badge variant="secondary" className="bg-red-100 text-red-700">{selectedRestaurant.style}</Badge>
+                  <div><Badge variant="secondary" className="bg-red-100 text-red-700">{selectedRestaurant.style}</Badge></div>
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -215,4 +215,3 @@ export function RestaurantsTable() {
     </div>
   );
 }
-
