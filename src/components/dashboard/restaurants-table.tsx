@@ -14,15 +14,28 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, MoreHorizontal, FilePenLine, Trash2 } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash } from 'lucide-react';
 import { Badge } from '../ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
-const restaurantsData = [
-  { id: '1', name: 'Tacos El Sol', style: 'Mexicano', state: 'Jalisco', municipality: 'Guadalajara' },
-  { id: '2', name: 'La Trattoria', style: 'Italiano', state: 'Ciudad de México', municipality: 'Cuauhtémoc' },
-  { id: '3', name: 'El Asador Argentino', style: 'Carnes', state: 'Nuevo León', municipality: 'Monterrey' },
-  { id: '4', name: 'Mariscos La Playa', style: 'Mariscos', state: 'Quintana Roo', municipality: 'Cancún' },
-  { id: '5', name: 'Sushi-Zen', style: 'Japonés', state: 'Jalisco', municipality: 'Zapopan' },
+type Restaurant = {
+  id: string;
+  name: string;
+  style: string;
+  state: string;
+  municipality: string;
+  address: string;
+  phone: string;
+  email: string;
+  rfc: string;
+};
+
+const restaurantsData: Restaurant[] = [
+  { id: '1', name: 'Tacos El Sol', style: 'Mexicano', state: 'Jalisco', municipality: 'Guadalajara', address: 'Av. del Sol 123', phone: '33 1234 5678', email: 'contacto@tacoselsol.com', rfc: 'SOLT850101XXX' },
+  { id: '2', name: 'La Trattoria', style: 'Italiano', state: 'Ciudad de México', municipality: 'Cuauhtémoc', address: 'Calle Roma 45', phone: '55 9876 5432', email: 'info@trattoria.mx', rfc: 'TRAT780202YYY' },
+  { id: '3', name: 'El Asador Argentino', style: 'Carnes', state: 'Nuevo León', municipality: 'Monterrey', address: 'Calzada del Valle 400', phone: '81 1122 3344', email: 'reservas@asador.com', rfc: 'ASAD900303ZZZ' },
+  { id: '4', name: 'Mariscos La Playa', style: 'Mariscos', state: 'Quintana Roo', municipality: 'Cancún', address: 'Blvd. Kukulcan Km 9.5', phone: '998 888 7766', email: 'contacto@laplaya.com', rfc: 'PLAY850404AAA' },
+  { id: '5', name: 'Sushi-Zen', style: 'Japonés', state: 'Jalisco', municipality: 'Zapopan', address: 'Av. Patria 500', phone: '33 5566 7788', email: 'sushizen@mail.com', rfc: 'SUZE950505BBB' },
 ];
 
 const mexicanStates = [
@@ -38,6 +51,7 @@ const restaurantStyles = ["Italiano", "Mar y tierra", "Carnes", "Mariscos", "Mex
 export function RestaurantsTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({ state: new Set<string>(), style: new Set<string>() });
+  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
 
   const handleFilterChange = (type: 'state' | 'style', value: string) => {
     setFilters(prev => {
@@ -119,7 +133,11 @@ export function RestaurantsTable() {
           <TableBody>
             {filteredData.map(item => (
               <TableRow key={item.id} className="border-b-gray-200 hover:bg-gray-50">
-                <TableCell className="font-medium">{item.name}</TableCell>
+                <TableCell className="font-medium">
+                  <Button variant="link" className="p-0 h-auto text-gray-800 font-medium" onClick={() => setSelectedRestaurant(item)}>
+                    {item.name}
+                  </Button>
+                </TableCell>
                 <TableCell><Badge variant="secondary" className="bg-red-100 text-red-700">{item.style}</Badge></TableCell>
                 <TableCell>{item.municipality}</TableCell>
                 <TableCell>{item.state}</TableCell>
@@ -149,6 +167,52 @@ export function RestaurantsTable() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={selectedRestaurant !== null} onOpenChange={(isOpen) => !isOpen && setSelectedRestaurant(null)}>
+        <DialogContent className="sm:max-w-lg bg-white text-gray-800">
+          {selectedRestaurant && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-headline text-gray-900">{selectedRestaurant.name}</DialogTitle>
+                <DialogDescription>
+                  <Badge variant="secondary" className="bg-red-100 text-red-700">{selectedRestaurant.style}</Badge>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="flex items-start gap-4">
+                  <Building className="h-5 w-5 text-gray-600 mt-1" />
+                  <div>
+                    <p className="font-semibold text-gray-700">Dirección</p>
+                    <p className="text-gray-600">{selectedRestaurant.address}, {selectedRestaurant.municipality}, {selectedRestaurant.state}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Phone className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <p className="font-semibold text-gray-700">Teléfono</p>
+                    <p className="text-gray-600">{selectedRestaurant.phone}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Mail className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <p className="font-semibold text-gray-700">Correo Electrónico</p>
+                    <p className="text-gray-600">{selectedRestaurant.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Hash className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <p className="font-semibold text-gray-700">RFC</p>
+                    <p className="text-gray-600">{selectedRestaurant.rfc}</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
