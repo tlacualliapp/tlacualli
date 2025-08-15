@@ -43,7 +43,7 @@ type AppLayoutProps = {
 };
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard-am', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/orders', label: 'Orders', icon: ClipboardList },
   { href: '/map', label: 'Restaurant Map', icon: Map },
   { href: '/menu', label: 'Menu', icon: BookOpen },
