@@ -53,12 +53,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background/50 backdrop-blur-lg px-4 md:px-6 z-20">
         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
           <Link
-            href="#"
+            href="/dashboard-am"
             className="flex items-center gap-2 text-lg font-semibold md:text-base"
           >
             <TacoIcon className="h-8 w-8 text-primary" />
             <span className="font-headline text-xl">TLACUALLI</span>
           </Link>
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`transition-colors hover:text-foreground ${
+                pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
         <Sheet>
           <SheetTrigger asChild>
@@ -75,11 +86,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <nav className="grid gap-6 text-lg font-medium">
               <Link
-                href="#"
+                href="/dashboard-am"
                 className="flex items-center gap-2 text-lg font-semibold"
               >
                 <TacoIcon className="h-6 w-6" />
-                <span className="sr-only">Tlacualli</span>
+                <span >Tlacualli</span>
               </Link>
               {navItems.map((item) => (
                 <Link
