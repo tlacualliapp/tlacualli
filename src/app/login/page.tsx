@@ -6,12 +6,11 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { User, MapPin, Lock, Globe } from 'lucide-react';
+import { User, Lock, Globe } from 'lucide-react';
 import { TacoIcon } from '@/components/icons/logo';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
-  const [restaurantName, setRestaurantName] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
   const { toast } = useToast();
@@ -20,15 +19,15 @@ export default function LoginPage() {
     e.preventDefault();
     if (username === 'admin' && password === '1234') {
       toast({
-        title: "Login Successful",
-        description: "Welcome back!",
+        title: "Inicio de Sesión Exitoso",
+        description: "¡Bienvenido de vuelta!",
       });
       router.push('/');
     } else {
       toast({
         variant: "destructive",
-        title: "Login Failed",
-        description: "Invalid credentials. Please try again.",
+        title: "Inicio de Sesión Fallido",
+        description: "Credenciales inválidas. Por favor, intenta de nuevo.",
       });
     }
   };
@@ -53,22 +52,11 @@ export default function LoginPage() {
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70" />
               <Input
                 type="text"
-                placeholder="Username"
+                placeholder="Usuario"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="pl-10 bg-white/20 border-white/30 placeholder:text-white/70 rounded-full focus:ring-white"
                 autoComplete="username"
-              />
-            </div>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70" />
-              <Input
-                type="text"
-                placeholder="Restaurant Name"
-                value={restaurantName}
-                onChange={(e) => setRestaurantName(e.target.value)}
-                className="pl-10 bg-white/20 border-white/30 placeholder:text-white/70 rounded-full focus:ring-white"
-                autoComplete="off"
               />
             </div>
             <div className="relative">
@@ -84,7 +72,7 @@ export default function LoginPage() {
               <Globe className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70" />
             </div>
             <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-full text-lg">
-              LOG IN
+              INICIAR SESIÓN
             </Button>
           </form>
           <p className="text-center text-xs text-white/60 mt-6">www.tlacuallionline.com</p>
