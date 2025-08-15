@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -13,6 +14,11 @@ import {
   Map,
   Users,
   User,
+  PanelLeft,
+  Home,
+  Package,
+  Soup,
+  UtensilsCrossed
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,88 +29,88 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarTrigger,
-  SidebarInset,
-} from '@/components/ui/sidebar';
 import { TacoIcon } from '@/components/icons/logo';
-
-type AppLayoutProps = {
-  children: React.ReactNode;
-};
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { TablesIcon } from '@/components/icons/tables';
+import { InventoryIcon } from '@/components/icons/inventory';
 
 const navItems = [
-  { href: '/dashboard-am', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/orders', label: 'Orders', icon: ClipboardList },
-  { href: '/map', label: 'Restaurant Map', icon: Map },
-  { href: '/menu', label: 'Menu', icon: BookOpen },
-  { href: '/reports', label: 'Reports', icon: BarChart3 },
-  { href: '/employees', label: 'Employees', icon: Users },
+  { href: '/dashboard-am', label: 'Dashboard', icon: Home },
+  { href: '/orders', label: 'Pedidos', icon: ClipboardList },
+  { href: '/map', label: 'Mesas', icon: TablesIcon },
+  { href: '/menu', label: 'Menú', icon: BookOpen },
+  { href: '/employees', label: 'Empleados', icon: Users },
+  { href: '/reports', label: 'Reportes', icon: BarChart3 },
+  { href: '/inventory', label: 'Inventario', icon: InventoryIcon },
+  { href: '/recipes', label: 'Recetas', icon: Soup },
 ];
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-2 p-2">
-            <TacoIcon className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-semibold font-headline text-foreground">Tlacualli</h1>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
+    <div className="flex min-h-screen w-full flex-col">
+      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background/50 backdrop-blur-lg px-4 md:px-6 z-20">
+        <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+          <Link
+            href="#"
+            className="flex items-center gap-2 text-lg font-semibold md:text-base"
+          >
+            <TacoIcon className="h-8 w-8 text-primary" />
+            <span className="font-headline text-xl">TLACUALLI</span>
+          </Link>
+        </nav>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0 md:hidden"
+            >
+              <PanelLeft className="h-5 w-5" />
+              <span className="sr-only">Toggle navigation menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left">
+            <SheetTitle className="sr-only">Menu</SheetTitle>
+            <nav className="grid gap-6 text-lg font-medium">
+              <Link
+                href="#"
+                className="flex items-center gap-2 text-lg font-semibold"
+              >
+                <TacoIcon className="h-6 w-6" />
+                <span className="sr-only">Tlacualli</span>
+              </Link>
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-4 rounded-xl px-3 py-2 ${
+                    pathname === item.href
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground'
+                  } transition-all hover:text-foreground`}
                 >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-        <SidebarFooter>
-            {/* User profile moved to header */}
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset className="bg-transparent">
-        <header className="flex items-center justify-between p-4 border-b bg-card/10 backdrop-blur-lg border-white/20 rounded-t-lg">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger />
-            <h2 className="text-2xl font-bold font-headline hidden md:block text-white">
-                {navItems.find((item) => item.href === pathname)?.label || 'Dashboard'}
-            </h2>
-          </div>
+                  <item.icon className="h-5 w-5" />
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </SheetContent>
+        </Sheet>
+        <div className="flex w-full items-center justify-end gap-4 md:ml-auto md:gap-2 lg:gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/20 hover:text-white">
-                    <User className="h-5 w-5" />
-                </Button>
+              <Button variant="secondary" size="icon" className="rounded-full">
+                <User className="h-5 w-5" />
+                <span className="sr-only">Toggle user menu</span>
+              </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" side="bottom" align="end">
+            <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Cog className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
+              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/login">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -113,11 +119,11 @@ export function AppLayout({ children }: AppLayoutProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </header>
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
-          {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+        </div>
+      </header>
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 relative">
+        {children}
+      </main>
+    </div>
   );
 }
