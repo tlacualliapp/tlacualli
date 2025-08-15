@@ -35,7 +35,7 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Logo } from '@/components/icons/logo';
+import { TacoIcon } from '@/components/icons/logo';
 
 type AppLayoutProps = {
   children: React.ReactNode;
@@ -58,7 +58,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2">
-            <Logo className="w-8 h-8 text-primary" />
+            <TacoIcon className="w-8 h-8 text-primary" />
             <h1 className="text-xl font-semibold font-headline text-foreground">Tlacualli</h1>
           </div>
         </SidebarHeader>
@@ -84,17 +84,17 @@ export function AppLayout({ children }: AppLayoutProps) {
             {/* User profile moved to header */}
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
-        <header className="flex items-center justify-between p-4 border-b bg-card">
+      <SidebarInset className="bg-transparent">
+        <header className="flex items-center justify-between p-4 border-b bg-card/10 backdrop-blur-lg border-white/20 rounded-t-lg">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
-            <h2 className="text-2xl font-bold font-headline hidden md:block">
+            <h2 className="text-2xl font-bold font-headline hidden md:block text-white">
                 {navItems.find((item) => item.href === pathname)?.label || 'Dashboard'}
             </h2>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
+                <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/20 hover:text-white">
                     <User className="h-5 w-5" />
                 </Button>
             </DropdownMenuTrigger>

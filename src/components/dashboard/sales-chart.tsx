@@ -35,19 +35,21 @@ export function SalesChart() {
             right: 12,
           }}
         >
-          <CartesianGrid vertical={false} />
+          <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.5} />
           <XAxis
             dataKey="month"
             tickLine={false}
             axisLine={false}
             tickMargin={8}
             tickFormatter={(value) => value.slice(0, 3)}
+            stroke="hsl(var(--primary-foreground))"
           />
           <YAxis
             tickLine={false}
             axisLine={false}
             tickMargin={8}
             tickFormatter={(value) => `$${value / 1000}k`}
+            stroke="hsl(var(--primary-foreground))"
            />
           <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
           <defs>

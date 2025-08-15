@@ -27,7 +27,7 @@ export function TopItemsChart() {
     <div className="h-[300px] w-full">
       <ChartContainer config={chartConfig}>
         <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 10 }}>
-          <CartesianGrid horizontal={false} />
+          <CartesianGrid horizontal={false} strokeDasharray="3 3" strokeOpacity={0.5} />
           <YAxis
             dataKey="item"
             type="category"
@@ -35,6 +35,7 @@ export function TopItemsChart() {
             tickMargin={10}
             axisLine={false}
             width={80}
+            stroke="hsl(var(--primary-foreground))"
           />
           <XAxis dataKey="sales" type="number" hide />
           <ChartTooltip
