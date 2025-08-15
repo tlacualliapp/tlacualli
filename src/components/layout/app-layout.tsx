@@ -82,21 +82,32 @@ export function AppLayout({ children }: AppLayoutProps) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
+            {/* User profile moved to header */}
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        <header className="flex items-center justify-between p-4 border-b bg-card">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger />
+            <h2 className="text-2xl font-bold font-headline hidden md:block">
+                {navItems.find((item) => item.href === pathname)?.label || 'Dashboard'}
+            </h2>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-auto">
+              <Button variant="ghost" className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="https://placehold.co/100x100.png" alt="Admin" data-ai-hint="user avatar" />
                   <AvatarFallback>AD</AvatarFallback>
                 </Avatar>
-                <div className="text-left group-data-[collapsible=icon]:hidden">
+                <div className="text-left hidden md:block">
                   <p className="font-semibold text-sm">Admin</p>
                   <p className="text-xs text-muted-foreground">admin@tlacualli.com</p>
                 </div>
-                <ChevronDown className="ml-auto h-4 w-4 group-data-[collapsible=icon]:hidden" />
+                <ChevronDown className="ml-auto h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 mb-2" side="top" align="start">
+            <DropdownMenuContent className="w-56" side="bottom" align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
@@ -111,15 +122,6 @@ export function AppLayout({ children }: AppLayoutProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="flex items-center justify-between p-4 border-b bg-card">
-          <SidebarTrigger />
-          <h2 className="text-2xl font-bold font-headline">
-            {navItems.find((item) => item.href === pathname)?.label || 'Dashboard'}
-          </h2>
-          <div />
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           {children}
