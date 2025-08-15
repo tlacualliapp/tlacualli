@@ -6,13 +6,7 @@ import { TopItemsChart } from '@/components/dashboard/top-items-chart';
 
 export default function AdminMasterDashboard() {
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-red-500 via-red-600 to-yellow-500">
-      <div 
-        className="absolute inset-0 bg-cover bg-center opacity-20" 
-        style={{backgroundImage: "url('https://firebasestudio.ai/api/files/GCS/prototyper-instances/wDBiYw8A4sTq3fN2h1vG/O34g970zYFay97iXzR25.png')"}}
-        data-ai-hint="chef preparing food"
-      ></div>
-      <div className="relative z-10">
+    <div className="relative z-10">
         <AppLayout>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card className="bg-white/10 backdrop-blur-lg border-white/20 text-white">
@@ -80,6 +74,5 @@ export default function AdminMasterDashboard() {
           </div>
         </AppLayout>
       </div>
-    </div>
   );
 }
