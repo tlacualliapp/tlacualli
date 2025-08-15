@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
 import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
   title: 'Tlacualli',
@@ -20,17 +21,24 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <div className="relative min-h-screen w-full bg-gray-50">
-            <div 
-                className="absolute inset-0 bg-cover bg-center opacity-10" 
-                style={{backgroundImage: "url('/assets/background.png')"}}
-                data-ai-hint="chef preparing food"
-            ></div>
-            <div className="relative z-10">
-                {children}
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            <div className="relative min-h-screen w-full bg-background">
+                <div 
+                    className="absolute inset-0 bg-cover bg-center opacity-10" 
+                    style={{backgroundImage: "url('/assets/background.png')"}}
+                    data-ai-hint="chef preparing food"
+                ></div>
+                <div className="relative z-10">
+                    {children}
+                </div>
             </div>
-        </div>
-        <Toaster />
+            <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

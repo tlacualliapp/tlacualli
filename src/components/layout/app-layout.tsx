@@ -10,7 +10,10 @@ import {
   User,
   PanelLeft,
   Home,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Sun,
+  Moon,
+  Laptop,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,9 +23,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
 import { TacoIcon } from '@/components/icons/logo';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { useTheme } from 'next-themes';
 
 const navItems = [
   { href: '/dashboard-am', label: 'Dashboard', icon: Home },
@@ -32,24 +40,25 @@ const navItems = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { setTheme } = useTheme();
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-white/80 backdrop-blur-lg px-4 md:px-6 z-20">
+      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card/80 backdrop-blur-lg px-4 md:px-6 z-20">
         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
           <Link
             href="/dashboard-am"
             className="flex items-center gap-2 text-lg font-semibold md:text-base"
           >
             <TacoIcon className="h-8 w-8 text-primary" />
-            <span className="font-headline text-xl text-gray-800">TLACUALLI</span>
+            <span className="font-headline text-xl">TLACUALLI</span>
           </Link>
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`transition-colors hover:text-gray-900 ${
-                pathname === item.href ? 'text-gray-900' : 'text-gray-500'
+              className={`transition-colors hover:text-foreground ${
+                pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
               }`}
             >
               {item.label}
@@ -105,7 +114,27 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+               <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <span>Theme</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => setTheme("light")}>
+                      <Sun className="mr-2 h-4 w-4" />
+                      <span>Light</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("dark")}>
+                      <Moon className="mr-2 h-4 w-4" />
+                      <span>Dark</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("system")}>
+                      <Laptop className="mr-2 h-4 w-4" />
+                      <span>System</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/login">
