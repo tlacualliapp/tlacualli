@@ -22,7 +22,7 @@ export default function LoginPage() {
         title: "Inicio de Sesión Exitoso",
         description: "¡Bienvenido de vuelta!",
       });
-      router.push('/');
+      router.push('/dashboard-am');
     } else {
       toast({
         variant: "destructive",
@@ -36,8 +36,8 @@ export default function LoginPage() {
     <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-red-500 via-red-600 to-yellow-500">
        <div 
         className="absolute inset-0 bg-cover bg-center opacity-20" 
-        style={{backgroundImage: "url('https://placehold.co/1080x1920.png')"}}
-        data-ai-hint="spices in bowl"
+        style={{backgroundImage: "url('https://firebasestudio.ai/api/files/GCS/prototyper-instances/wDBiYw8A4sTq3fN2h1vG/O34g970zYFay97iXzR25.png')"}}
+        data-ai-hint="chef preparing food"
       ></div>
       <Card className="w-full max-w-sm bg-white/10 backdrop-blur-lg border-white/20 text-white rounded-2xl z-10">
         <CardHeader className="text-center">
