@@ -26,8 +26,8 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/s
 
 const navItems = [
   { href: '/dashboard-am', label: 'Dashboard', icon: Home },
-  { href: '/restaurants', label: 'Restaurantes', icon: UtensilsCrossed },
-  { href: '/master-users', label: 'Usuarios Master', icon: Users },
+  { href: '/dashboard-am/restaurants', label: 'Restaurantes', icon: UtensilsCrossed },
+  { href: '/dashboard-am/master-users', label: 'Usuarios Master', icon: Users },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
