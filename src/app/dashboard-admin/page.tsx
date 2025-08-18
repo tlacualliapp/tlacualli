@@ -33,7 +33,7 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <Card className="bg-card/30 backdrop-blur-lg border-white/20">
+      <Card className="bg-card/65 backdrop-blur-lg border-white/20">
         <CardHeader>
           <CardTitle className="text-3xl font-bold font-headline">{t('Administrator Dashboard')}</CardTitle>
           <p className="text-muted-foreground">{t("Manage your restaurant's operations.")}</p>

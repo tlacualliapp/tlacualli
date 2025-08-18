@@ -67,7 +67,7 @@ export default function InventoryPage() {
 
   return (
     <AdminLayout>
-      <Card className="mb-6 bg-card/30 backdrop-blur-lg">
+      <Card className="mb-6 bg-card/65 backdrop-blur-lg">
         <CardHeader>
             <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
                 <Package className="h-8 w-8" /> {t('Inventory Management')}
@@ -77,7 +77,7 @@ export default function InventoryPage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card className="bg-card/30 backdrop-blur-lg">
+        <Card className="bg-card/65 backdrop-blur-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('Inventory Value')}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -87,7 +87,7 @@ export default function InventoryPage() {
             <p className="text-xs text-muted-foreground">{t('Estimated value of current stock')}</p>
           </CardContent>
         </Card>
-        <Card className="bg-card/30 backdrop-blur-lg">
+        <Card className="bg-card/65 backdrop-blur-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('Low Stock Items')}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -99,7 +99,7 @@ export default function InventoryPage() {
         </Card>
       </div>
 
-      <Card className="bg-card/30 backdrop-blur-lg">
+      <Card className="bg-card/65 backdrop-blur-lg">
         <CardContent className="p-4 md:p-6">
           <Tabs defaultValue="items">
             <TabsList>
