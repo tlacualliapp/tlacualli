@@ -154,11 +154,8 @@ export default function LoginPage() {
 
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen">
-       <div 
-        className="absolute inset-0 bg-main-background bg-cover bg-center opacity-10"
-        data-ai-hint="chef preparing food"
-      ></div>
+    <div className="relative flex items-center justify-center min-h-screen bg-main-background bg-cover bg-center">
+      <div className="absolute inset-0 bg-black/30"></div>
       <Card className="w-full max-w-sm bg-white/50 backdrop-blur-lg border-white/20 text-gray-800 rounded-2xl z-10">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
