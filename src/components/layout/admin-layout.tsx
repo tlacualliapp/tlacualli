@@ -133,138 +133,135 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       className="relative flex min-h-screen w-full flex-col bg-cover bg-center"
       style={{ backgroundImage: "url('/assets/background.png')" }}
     >
-       <div className="absolute inset-0 bg-black/10"></div>
-       <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r bg-card/80 backdrop-blur-lg sm:flex">
-          <div className="flex h-16 items-center border-b px-6">
-             <Link
-                href="/dashboard-admin"
-                className="flex items-center gap-2 font-semibold"
-              >
-                <TacoIcon className="h-8 w-8 text-primary" />
-                <span className="font-headline text-xl">TLACUALLI</span>
+      <div className="absolute inset-0 bg-black/10"></div>
+      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card/80 backdrop-blur-lg px-4 md:px-6 z-20">
+        <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+          <Link
+            href="/dashboard-admin"
+            className="flex items-center gap-2 text-lg font-semibold md:text-base"
+          >
+            <TacoIcon className="h-8 w-8 text-primary" />
+            <span className="sr-only">Tlacualli</span>
+          </Link>
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`transition-colors hover:text-foreground ${
+                pathname === item.href ? 'text-foreground font-semibold' : 'text-muted-foreground'
+              }`}
+            >
+              {t(item.label)}
             </Link>
-          </div>
-           <nav className="flex-1 overflow-y-auto px-4 py-4">
-                <div className="grid items-start gap-1">
-                    {navItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${
-                        pathname === item.href ? 'bg-muted text-primary' : ''
-                      }`}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {t(item.label)}
-                    </Link>
-                  ))}
-                </div>
-           </nav>
-        </aside>
-
-        <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-64 z-10">
-            <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-card/80 backdrop-blur-lg px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-                <Sheet>
-                    <SheetTrigger asChild>
-                        <Button size="icon" variant="outline" className="sm:hidden">
-                        <PanelLeft className="h-5 w-5" />
-                        <span className="sr-only">{t('Toggle Menu')}</span>
-                        </Button>
-                    </SheetTrigger>
-                    <SheetContent side="left" className="sm:max-w-xs">
-                         <SheetTitle className="sr-only">{t('Menu')}</SheetTitle>
-                        <nav className="grid gap-6 text-lg font-medium">
-                        <Link
-                            href="/dashboard-admin"
-                            className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
-                        >
-                            <TacoIcon className="h-5 w-5 transition-all group-hover:scale-110" />
-                            <span className="sr-only">Tlacualli</span>
-                        </Link>
-                        {navItems.map((item) => (
-                            <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground ${
-                                pathname === item.href ? 'text-foreground' : ''
-                            }`}
-                            >
-                            <item.icon className="h-5 w-5" />
-                            {t(item.label)}
-                            </Link>
-                        ))}
-                        </nav>
-                    </SheetContent>
-                </Sheet>
-                 <div className="relative ml-auto flex-1 md:grow-0">
-                    {/* Optional: Can add a search bar here */}
-                 </div>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
-                            <User className="h-5 w-5" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>{t('My Account')}</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                            <Sun className="mr-2 h-4 w-4" />
-                            <span>{t('Theme')}</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuPortal>
-                            <DropdownMenuSubContent>
-                                <DropdownMenuItem onClick={() => setTheme("light")}>
-                                <Sun className="mr-2 h-4 w-4" />
-                                <span>{t('Light')}</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setTheme("dark")}>
-                                <Moon className="mr-2 h-4 w-4" />
-                                <span>{t('Dark')}</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setTheme("system")}>
-                                <Laptop className="mr-2 h-4 w-4" />
-                                <span>{t('System')}</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                            </DropdownMenuPortal>
-                        </DropdownMenuSub>
-                        <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                            <Languages className="mr-2 h-4 w-4" />
-                            <span>{t('Language')}</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuPortal>
-                            <DropdownMenuSubContent>
-                                <DropdownMenuItem onClick={() => changeLanguage('en')}>
-                                <span>English</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => changeLanguage('es')}>
-                                <span>Español</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                            </DropdownMenuPortal>
-                        </DropdownMenuSub>
-                        <DropdownMenuItem onSelect={() => setIsPasswordModalOpen(true)}>
-                            <KeyRound className="mr-2 h-4 w-4" />
-                            <span>{t('Change Password')}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                            <Link href="/login">
-                            <LogOut className="mr-2 h-4 w-4" />
-                            <span>{t('Log out')}</span>
-                            </Link>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </header>
-             <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-                {children}
-            </main>
+          ))}
+        </nav>
+        
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0 md:hidden"
+            >
+              <PanelLeft className="h-5 w-5" />
+              <span className="sr-only">{t('Toggle navigation menu')}</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left">
+            <SheetTitle className="sr-only">{t('Menu')}</SheetTitle>
+            <nav className="grid gap-6 text-lg font-medium">
+              <Link
+                href="/dashboard-admin"
+                className="flex items-center gap-2 text-lg font-semibold"
+              >
+                <TacoIcon className="h-6 w-6 text-primary" />
+                <span >Tlacualli</span>
+              </Link>
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-4 rounded-xl px-3 py-2 ${
+                    pathname === item.href
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground'
+                  } transition-all hover:text-foreground`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {t(item.label)}
+                </Link>
+              ))}
+            </nav>
+          </SheetContent>
+        </Sheet>
+        
+        <div className="flex w-full items-center justify-end gap-4 md:ml-auto md:gap-2 lg:gap-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon" className="rounded-full">
+                <User className="h-5 w-5" />
+                <span className="sr-only">{t('Toggle user menu')}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{t('My Account')}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Sun className="mr-2 h-4 w-4" />
+                  <span>{t('Theme')}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => setTheme("light")}>
+                      <Sun className="mr-2 h-4 w-4" />
+                      <span>{t('Light')}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("dark")}>
+                      <Moon className="mr-2 h-4 w-4" />
+                      <span>{t('Dark')}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("system")}>
+                      <Laptop className="mr-2 h-4 w-4" />
+                      <span>{t('System')}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Languages className="mr-2 h-4 w-4" />
+                  <span>{t('Language')}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => changeLanguage('en')}>
+                      <span>English</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => changeLanguage('es')}>
+                      <span>Español</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuItem onSelect={() => setIsPasswordModalOpen(true)}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                <span>{t('Change Password')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/login">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>{t('Log out')}</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-
+      </header>
+      <main className="flex-1 p-4 sm:px-6 sm:py-8 md:gap-8 md:p-8 relative z-10">
+        {children}
+      </main>
 
       <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
