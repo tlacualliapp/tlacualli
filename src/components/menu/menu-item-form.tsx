@@ -68,7 +68,9 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    // Treat a specific value, e.g., "none", as an empty string for the recipeId
+    const finalValue = value === "none" ? "" : value;
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -118,10 +120,10 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         </div>
         <div className="space-y-2">
           <Label htmlFor="recipeId">{t('Recipe')}</Label>
-          <Select name="recipeId" value={formData.recipeId} onValueChange={(value) => handleSelectChange('recipeId', value)}>
+          <Select name="recipeId" value={formData.recipeId || "none"} onValueChange={(value) => handleSelectChange('recipeId', value)}>
             <SelectTrigger><SelectValue placeholder={t('Select a recipe')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{t('None')}</SelectItem>
+              <SelectItem value="none">{t('None')}</SelectItem>
               {recipes.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
             </SelectContent>
           </Select>
