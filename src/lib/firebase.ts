@@ -4,22 +4,17 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  "projectId": "tlacualli-bfbh0",
-  "appId": "1:918335842280:web:9756be54035734c080265d",
-  "storageBucket": "tlacualli-bfbh0.firebasestorage.app",
-  "apiKey": "AIzaSyB627iXGidjNf_rXMn4Y7dH2Gfw4X78IcE",
-  "authDomain": "tlacualli-bfbh0.firebaseapp.com",
-  "messagingSenderId": "918335842280"
+ apiKey: "AIzaSyB-AHzxMPGer2NI7EQVvP21qEbmSLWpqsE",
+  authDomain: "tlacualli-a881e.firebaseapp.com",
+  projectId: "tlacualli-a881e",
+  storageBucket: "tlacualli-a881e.firebasestorage.app",
+  messagingSenderId: "323312061685",
+  appId: "1:323312061685:web:38922872679f08047409bc",
+  measurementId: "G-1WY87VL7G4"
 };
 
 // Initialize Firebase
-let app: FirebaseApp;
-if (getApps().length === 0) {
-    app = initializeApp(firebaseConfig);
-} else {
-    app = getApp();
-}
-
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 
