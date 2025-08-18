@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef } from 'react';
@@ -114,7 +113,7 @@ export function RestaurantForm({ onSuccess }: RestaurantFormProps) {
         } finally {
             setIsLoading(false);
         }
-    };
+    }
 
     return (
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto p-2">
