@@ -3,19 +3,33 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, MoreHorizontal, FilePenLine, Trash2, Loader2, UserPlus } from 'lucide-react';
 import { MasterUserForm } from './master-user-form';
+import { useToast } from '@/hooks/use-toast';
 
 type MasterUser = {
   id: string;
-  name: string;
+  nombre: string;
+  apellidos: string;
   email: string;
+  telefono: string;
   registered: string;
 };
 
@@ -23,7 +37,9 @@ export function MasterUsersTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState<MasterUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<MasterUser | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsLoading(true);
@@ -36,7 +52,6 @@ export function MasterUsersTable() {
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const usersData = querySnapshot.docs.map(doc => {
         const data = doc.data();
-        const fullName = `${data.nombre || ''} ${data.apellidos || ''}`.trim();
         
         let registeredDate = 'N/A';
         if (data.fecharegistro && data.fecharegistro instanceof Timestamp) {
@@ -45,8 +60,10 @@ export function MasterUsersTable() {
 
         return {
           id: doc.id,
-          name: fullName,
+          nombre: data.nombre || '',
+          apellidos: data.apellidos || '',
           email: data.email || 'No especificado',
+          telefono: data.telefono || '',
           registered: registeredDate,
         };
       });
@@ -60,9 +77,39 @@ export function MasterUsersTable() {
     return () => unsubscribe();
   }, []);
 
+  const handleEdit = (user: MasterUser) => {
+    setUserToEdit(user);
+    setIsFormModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setUserToEdit(null);
+    setIsFormModalOpen(true);
+  }
+
+  const handleDelete = async (userId: string) => {
+    try {
+        const userRef = doc(db, "usuarios", userId);
+        await updateDoc(userRef, {
+            status: "0" // Eliminación lógica
+        });
+        toast({
+            title: "Usuario Eliminado",
+            description: "El usuario ha sido marcado como inactivo.",
+        });
+    } catch (error) {
+        console.error("Error al eliminar usuario:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "No se pudo eliminar al usuario.",
+        });
+    }
+  };
+
 
   const filteredData = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    `${user.nombre} ${user.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -78,22 +125,24 @@ export function MasterUsersTable() {
             className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full"
           />
         </div>
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-                 <Button>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Registrar Nuevo Usuario Master
-                </Button>
-            </DialogTrigger>
+        <Button onClick={handleAddNew}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Registrar Nuevo Usuario Master
+        </Button>
+      </div>
+
+       <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
             <DialogContent className="sm:max-w-[625px]">
                 <DialogHeader>
-                    <DialogTitle>Registrar Usuario Master</DialogTitle>
-                    <DialogDescription>Añada un nuevo usuario master al sistema.</DialogDescription>
+                    <DialogTitle>{userToEdit ? 'Editar' : 'Registrar'} Usuario Master</DialogTitle>
+                    <DialogDescription>
+                        {userToEdit ? 'Modifique la información del usuario.' : 'Añada un nuevo usuario master al sistema.'}
+                    </DialogDescription>
                 </DialogHeader>
-                <MasterUserForm onSuccess={() => setIsModalOpen(false)} />
+                <MasterUserForm onSuccess={() => setIsFormModalOpen(false)} userToEdit={userToEdit} />
             </DialogContent>
         </Dialog>
-      </div>
+
       <div className="rounded-md border border-gray-200">
         <Table>
           <TableHeader>
@@ -117,29 +166,47 @@ export function MasterUsersTable() {
             ) : filteredData.length > 0 ? (
                 filteredData.map(user => (
                   <TableRow key={user.id} className="border-b-gray-200 hover:bg-gray-50">
-                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell className="font-medium">{user.nombre} {user.apellidos}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.registered}</TableCell>
                     <TableCell className="text-right">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
-                                <span className="sr-only">Abrir menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
-                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                               <DropdownMenuItem className="cursor-pointer">
-                                <FilePenLine className="mr-2 h-4 w-4" />
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        <AlertDialog>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
+                                    <span className="sr-only">Abrir menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
+                                  <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                   <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(user)}>
+                                    <FilePenLine className="mr-2 h-4 w-4" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100" onSelect={(e) => e.preventDefault()}>
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Eliminar
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Esta acción marcará al usuario como inactivo y no podrá acceder al sistema. ¿Desea continuar?
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(user.id)} className="bg-red-600 hover:bg-red-700">
+                                        Sí, eliminar
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))
