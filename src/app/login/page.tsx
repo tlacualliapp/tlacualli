@@ -1,27 +1,45 @@
 
 "use client"
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { User, Lock, Globe, Loader2 } from 'lucide-react';
 import { TacoIcon } from '@/components/icons/logo';
 import { auth, db } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    if (rememberedEmail) {
+      setEmail(rememberedEmail);
+      setRememberMe(true);
+    }
+  }, []);
+
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    if (rememberMe) {
+      localStorage.setItem('rememberedEmail', email);
+    } else {
+      localStorage.removeItem('rememberedEmail');
+    }
 
     try {
       // 1. Autenticar con Firebase Auth
@@ -57,7 +75,7 @@ export default function LoginPage() {
       let errorMessage = "Credenciales inválidas o error de conexión. Por favor, intenta de nuevo.";
       if (error instanceof Error && error.message.includes("no está activo")) {
           errorMessage = error.message;
-      } else if ((error as any).code === 'auth/user-not-found' || (error as any).code === 'auth/wrong-password') {
+      } else if ((error as any).code === 'auth/user-not-found' || (error as any).code === 'auth/wrong-password' || (error as any).code === 'auth/invalid-credential') {
           errorMessage = "El correo electrónico o la contraseña son incorrectos.";
       }
       
@@ -70,6 +88,39 @@ export default function LoginPage() {
         setIsLoading(false);
     }
   };
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      toast({
+        variant: "destructive",
+        title: "Correo electrónico requerido",
+        description: "Por favor, introduce tu correo electrónico para restablecer la contraseña.",
+      });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: "Correo de recuperación enviado",
+        description: "Revisa tu bandeja de entrada para restablecer tu contraseña.",
+      });
+    } catch (error) {
+      console.error("Error al enviar correo de recuperación:", error);
+       let errorMessage = "No se pudo enviar el correo de recuperación. Inténtalo de nuevo.";
+       if ((error as any).code === 'auth/user-not-found') {
+          errorMessage = "No se encontró ningún usuario con ese correo electrónico.";
+       }
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="relative flex items-center justify-center min-h-screen">
@@ -112,6 +163,17 @@ export default function LoginPage() {
               />
               <Globe className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
             </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
+                <Label htmlFor="remember-me" className="text-sm text-gray-600 cursor-pointer">Recordar mi usuario</Label>
+              </div>
+              <Button variant="link" type="button" onClick={handlePasswordReset} className="text-sm text-red-600 p-0 h-auto">
+                ¿Olvidaste tu contraseña?
+              </Button>
+            </div>
+
             <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-full text-lg" disabled={isLoading}>
               {isLoading ? <Loader2 className="animate-spin" /> : 'INICIAR SESIÓN'}
             </Button>
@@ -122,3 +184,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+  
