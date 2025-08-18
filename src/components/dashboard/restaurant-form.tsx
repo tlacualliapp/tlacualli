@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,10 +11,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+
+interface Restaurant {
+  id: string;
+  restaurantName: string;
+  socialReason: string;
+  style: string;
+  address: string;
+  municipality: string;
+  state: string;
+  phone: string;
+  email: string;
+  rfc: string;
+}
 
 interface RestaurantFormProps {
   onSuccess?: () => void;
+  restaurantToEdit?: Restaurant | null;
 }
 
 const mexicanStates = [
@@ -26,21 +41,32 @@ const mexicanStates = [
 
 const restaurantStyles = ["Italiano", "Mar y tierra", "Carnes", "Mariscos", "Mexicano", "Japonés", "Otro"];
 
-export function RestaurantForm({ onSuccess }: RestaurantFormProps) {
+export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormProps) {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const formRef = useRef<HTMLFormElement>(null);
+    const isEditMode = !!restaurantToEdit;
+    
     const [formData, setFormData] = useState({
-        restaurantName: '',
-        socialReason: '',
-        style: '',
-        address: '',
-        municipality: '',
-        state: '',
-        phone: '',
-        email: '',
-        rfc: '',
+        restaurantName: '', socialReason: '', style: '', address: '',
+        municipality: '', state: '', phone: '', email: '', rfc: '',
     });
+
+    useEffect(() => {
+        if (isEditMode && restaurantToEdit) {
+            setFormData({
+                restaurantName: restaurantToEdit.restaurantName || '',
+                socialReason: restaurantToEdit.socialReason || '',
+                style: restaurantToEdit.style || '',
+                address: restaurantToEdit.address || '',
+                municipality: restaurantToEdit.municipality || '',
+                state: restaurantToEdit.state || '',
+                phone: restaurantToEdit.phone || '',
+                email: restaurantToEdit.email || '',
+                rfc: restaurantToEdit.rfc || '',
+            });
+        }
+    }, [restaurantToEdit, isEditMode]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
@@ -51,13 +77,34 @@ export function RestaurantForm({ onSuccess }: RestaurantFormProps) {
       setFormData(prev => ({...prev, [name]: value}))
     }
 
+    const resetForm = () => {
+        formRef.current?.reset();
+        setFormData({
+            restaurantName: '', socialReason: '', style: '', address: '',
+            municipality: '', state: '', phone: '', email: '', rfc: '',
+        });
+    }
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsLoading(true);
         
-        const { restaurantName, phone, email } = formData;
+        const { restaurantName, email, phone } = formData;
 
         try {
+          if (isEditMode && restaurantToEdit) {
+             // Modo Edición
+            const restaurantRef = doc(db, "restaurantes", restaurantToEdit.id);
+            await updateDoc(restaurantRef, {
+                ...formData,
+                updatedAt: serverTimestamp(),
+            });
+            toast({
+                title: "Actualización Exitosa",
+                description: `La información del restaurante "${restaurantName}" ha sido actualizada.`,
+            });
+          } else {
+             // Modo Creación
             const restaurantData = {
               ...formData,
               status: "1",
@@ -85,12 +132,10 @@ export function RestaurantForm({ onSuccess }: RestaurantFormProps) {
               title: "Registro Exitoso",
               description: `El restaurante "${restaurantName}" y su usuario administrador han sido registrados.`,
             });
-            formRef.current?.reset();
-            setFormData({
-                restaurantName: '', socialReason: '', style: '', address: '',
-                municipality: '', state: '', phone: '', email: '', rfc: '',
-            });
-            onSuccess?.();
+            resetForm();
+          }
+
+          onSuccess?.();
 
         } catch (error) {
             console.error("Error en el registro:", error);
@@ -168,12 +213,12 @@ export function RestaurantForm({ onSuccess }: RestaurantFormProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-gray-700">Teléfono (será la contraseña)</Label>
+                    <Label htmlFor="phone" className="text-gray-700">Teléfono {isEditMode ? '' : '(será la contraseña)'}</Label>
                     <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder="Mínimo 6 dígitos" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="email" className="text-gray-700">Correo Electrónico (será el usuario)</Label>
-                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="Ej: admin@tacoselsol.com" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                    <Label htmlFor="email" className="text-gray-700">Correo Electrónico {isEditMode ? '' : '(será el usuario)'}</Label>
+                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="Ej: admin@tacoselsol.com" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required disabled={isEditMode} />
                 </div>
             </div>
 
@@ -187,10 +232,10 @@ export function RestaurantForm({ onSuccess }: RestaurantFormProps) {
                  {isLoading ? (
                     <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Registrando...
+                        {isEditMode ? 'Guardando...' : 'Registrando...'}
                     </>
                     ) : (
-                    'Registrar Restaurante'
+                    isEditMode ? 'Guardar Cambios' : 'Registrar Restaurante'
                 )}
               </Button>
             </div>

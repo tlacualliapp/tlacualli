@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { RestaurantForm } from '@/components/dashboard/restaurant-form';
 
 
-export default function RestaurantsPage() {
+export default function CreateRestaurantPage() {
   const router = useRouter();
 
   return (

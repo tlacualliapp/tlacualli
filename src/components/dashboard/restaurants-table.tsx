@@ -32,6 +32,7 @@ import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Ph
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { RestaurantForm } from './restaurant-form';
 
 type Restaurant = {
   id: string;
@@ -62,6 +63,8 @@ export function RestaurantsTable() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -103,6 +106,11 @@ export function RestaurantsTable() {
       return { ...prev, [type]: newSet };
     });
   };
+  
+  const handleEdit = (restaurant: Restaurant) => {
+    setRestaurantToEdit(restaurant);
+    setIsFormModalOpen(true);
+  };
 
   const handleDelete = async (restaurantId: string) => {
     try {
@@ -122,10 +130,6 @@ export function RestaurantsTable() {
             description: "No se pudo eliminar el restaurante.",
         });
     }
-  };
-
-  const handleEdit = (restaurantId: string) => {
-    router.push(`/dashboard-am/restaurants?id=${restaurantId}`);
   };
 
   const filteredData = restaurants.filter(item => {
@@ -182,12 +186,29 @@ export function RestaurantsTable() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-             <Button onClick={() => router.push('/dashboard-am/restaurants')} className="bg-red-600 hover:bg-red-700 text-white">
+             <Button onClick={() => router.push('/dashboard-am/restaurants/create')} className="bg-red-600 hover:bg-red-700 text-white">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Registrar Restaurante
             </Button>
         </div>
       </div>
+
+       <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
+            <DialogContent className="sm:max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle>Editar Restaurante</DialogTitle>
+                    <DialogDescription>
+                        Modifique la información del restaurante.
+                    </DialogDescription>
+                </DialogHeader>
+                <RestaurantForm 
+                    onSuccess={() => setIsFormModalOpen(false)} 
+                    restaurantToEdit={restaurantToEdit} 
+                />
+            </DialogContent>
+        </Dialog>
+
+
       <div className="rounded-md border border-gray-200">
         <Table>
           <TableHeader>
@@ -231,7 +252,7 @@ export function RestaurantsTable() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
                               <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                              <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(item.id)}>
+                               <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(item)}>
                                 <FilePenLine className="mr-2 h-4 w-4" />
                                 Editar
                               </DropdownMenuItem>
@@ -327,4 +348,3 @@ export function RestaurantsTable() {
   );
 }
 
-    
