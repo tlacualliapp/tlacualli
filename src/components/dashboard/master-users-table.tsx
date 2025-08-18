@@ -2,13 +2,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, onSnapshot } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, MoreHorizontal, FilePenLine, Trash2, Loader2 } from 'lucide-react';
+import { Search, MoreHorizontal, FilePenLine, Trash2, Loader2, UserPlus } from 'lucide-react';
 
 type MasterUser = {
   id: string;
@@ -23,43 +24,38 @@ export function MasterUsersTable() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchMasterUsers = async () => {
-      setIsLoading(true);
-      try {
-        const q = query(
-          collection(db, "usuarios"),
-          where("perfil", "==", "AM"),
-          where("status", "==", "1")
-        );
-        const querySnapshot = await getDocs(q);
-        const usersData = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          // Combine nombre and apellidos for the full name
-          const fullName = `${data.nombre || ''} ${data.apellidos || ''}`.trim();
-          
-          // Format the timestamp
-          let registeredDate = 'N/A';
-          if (data.fecharegistro && data.fecharegistro instanceof Timestamp) {
-            registeredDate = data.fecharegistro.toDate().toLocaleDateString();
-          }
+    setIsLoading(true);
+    const q = query(
+      collection(db, "usuarios"),
+      where("perfil", "==", "AM"),
+      where("status", "==", "1")
+    );
 
-          return {
-            id: doc.id,
-            name: fullName,
-            email: data.email || 'No especificado',
-            registered: registeredDate,
-          };
-        });
-        setUsers(usersData);
-      } catch (error) {
-        console.error("Error fetching master users:", error);
-        // Optionally, show a toast notification for the error
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const usersData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        const fullName = `${data.nombre || ''} ${data.apellidos || ''}`.trim();
+        
+        let registeredDate = 'N/A';
+        if (data.fecharegistro && data.fecharegistro instanceof Timestamp) {
+          registeredDate = data.fecharegistro.toDate().toLocaleDateString();
+        }
 
-    fetchMasterUsers();
+        return {
+          id: doc.id,
+          name: fullName,
+          email: data.email || 'No especificado',
+          registered: registeredDate,
+        };
+      });
+      setUsers(usersData);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching master users:", error);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
 
@@ -80,6 +76,12 @@ export function MasterUsersTable() {
             className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full"
           />
         </div>
+        <Button asChild>
+            <Link href="/dashboard-am/master-users">
+                <UserPlus className="mr-2 h-4 w-4" />
+                Registrar Nuevo Usuario Master
+            </Link>
+        </Button>
       </div>
       <div className="rounded-md border border-gray-200">
         <Table>
