@@ -1,25 +1,69 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, MoreHorizontal, FilePenLine, Trash2 } from 'lucide-react';
+import { Search, MoreHorizontal, FilePenLine, Trash2, Loader2 } from 'lucide-react';
 
-const usersData = [
-  { id: '1', name: 'Admin Master 1', email: 'admin1@example.com', registered: '2023-01-15' },
-  { id: '2', name: 'Laura Martinez', email: 'laura.m@example.com', registered: '2023-02-20' },
-  { id: '3', name: 'Carlos Sanchez', email: 'carlos.s@example.com', registered: '2023-03-10' },
-  { id: '4', name: 'Ana Garcia', email: 'ana.g@example.com', registered: '2023-04-05' },
-  { id: '5', name: 'Pedro Rodriguez', email: 'pedro.r@example.com', registered: '2023-05-25' },
-];
+type MasterUser = {
+  id: string;
+  name: string;
+  email: string;
+  registered: string;
+};
 
 export function MasterUsersTable() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [users, setUsers] = useState<MasterUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredData = usersData.filter(user =>
+  useEffect(() => {
+    const fetchMasterUsers = async () => {
+      setIsLoading(true);
+      try {
+        const q = query(
+          collection(db, "usuarios"),
+          where("perfil", "==", "AM"),
+          where("status", "==", "1")
+        );
+        const querySnapshot = await getDocs(q);
+        const usersData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          // Combine nombre and apellidos for the full name
+          const fullName = `${data.nombre || ''} ${data.apellidos || ''}`.trim();
+          
+          // Format the timestamp
+          let registeredDate = 'N/A';
+          if (data.fecharegistro && data.fecharegistro instanceof Timestamp) {
+            registeredDate = data.fecharegistro.toDate().toLocaleDateString();
+          }
+
+          return {
+            id: doc.id,
+            name: fullName,
+            email: data.email || 'No especificado',
+            registered: registeredDate,
+          };
+        });
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Error fetching master users:", error);
+        // Optionally, show a toast notification for the error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMasterUsers();
+  }, []);
+
+
+  const filteredData = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -48,34 +92,51 @@ export function MasterUsersTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.map(user => (
-              <TableRow key={user.id} className="border-b-gray-200 hover:bg-gray-50">
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{new Date(user.registered).toLocaleDateString()}</TableCell>
-                <TableCell className="text-right">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
-                            <span className="sr-only">Abrir menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                           <DropdownMenuItem className="cursor-pointer">
-                            <FilePenLine className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+            {isLoading ? (
+                <TableRow>
+                    <TableCell colSpan={4} className="text-center">
+                        <div className="flex justify-center items-center p-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                            <span className="ml-4">Cargando usuarios...</span>
+                        </div>
+                    </TableCell>
+                </TableRow>
+            ) : filteredData.length > 0 ? (
+                filteredData.map(user => (
+                  <TableRow key={user.id} className="border-b-gray-200 hover:bg-gray-50">
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.registered}</TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
+                                <span className="sr-only">Abrir menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
+                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                               <DropdownMenuItem className="cursor-pointer">
+                                <FilePenLine className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+            ) : (
+                <TableRow>
+                    <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                        No se encontraron usuarios master.
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
