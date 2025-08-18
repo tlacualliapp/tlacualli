@@ -1,7 +1,10 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,14 +16,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 type Restaurant = {
   id: string;
-  name: string;
+  restaurantName: string;
   style: string;
   state: string;
   municipality: string;
@@ -28,15 +42,8 @@ type Restaurant = {
   phone: string;
   email: string;
   rfc: string;
+  socialReason: string;
 };
-
-const restaurantsData: Restaurant[] = [
-  { id: '1', name: 'Tacos El Sol', style: 'Mexicano', state: 'Jalisco', municipality: 'Guadalajara', address: 'Av. del Sol 123', phone: '33 1234 5678', email: 'contacto@tacoselsol.com', rfc: 'SOLT850101XXX' },
-  { id: '2', name: 'La Trattoria', style: 'Italiano', state: 'Ciudad de México', municipality: 'Cuauhtémoc', address: 'Calle Roma 45', phone: '55 9876 5432', email: 'info@trattoria.mx', rfc: 'TRAT780202YYY' },
-  { id: '3', name: 'El Asador Argentino', style: 'Carnes', state: 'Nuevo León', municipality: 'Monterrey', address: 'Calzada del Valle 400', phone: '81 1122 3344', email: 'reservas@asador.com', rfc: 'ASAD900303ZZZ' },
-  { id: '4', name: 'Mariscos La Playa', style: 'Mariscos', state: 'Quintana Roo', municipality: 'Cancún', address: 'Blvd. Kukulcan Km 9.5', phone: '998 888 7766', email: 'contacto@laplaya.com', rfc: 'PLAY850404AAA' },
-  { id: '5', name: 'Sushi-Zen', style: 'Japonés', state: 'Jalisco', municipality: 'Zapopan', address: 'Av. Patria 500', phone: '33 5566 7788', email: 'sushizen@mail.com', rfc: 'SUZE950505BBB' },
-];
 
 const mexicanStates = [
   "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
@@ -51,7 +58,38 @@ const restaurantStyles = ["Italiano", "Mar y tierra", "Carnes", "Mariscos", "Mex
 export function RestaurantsTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({ state: new Set<string>(), style: new Set<string>() });
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setIsLoading(true);
+    const q = query(
+      collection(db, "restaurantes"),
+      where("status", "==", "1")
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const restaurantsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Restaurant));
+      setRestaurants(restaurantsData);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching restaurants:", error);
+      setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudieron cargar los restaurantes."
+      })
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
   const handleFilterChange = (type: 'state' | 'style', value: string) => {
     setFilters(prev => {
@@ -65,8 +103,33 @@ export function RestaurantsTable() {
     });
   };
 
-  const filteredData = restaurantsData.filter(item => {
-    const searchMatch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const handleDelete = async (restaurantId: string) => {
+    try {
+        const restaurantRef = doc(db, "restaurantes", restaurantId);
+        await updateDoc(restaurantRef, {
+            status: "0" // Eliminación lógica
+        });
+        toast({
+            title: "Restaurante Eliminado",
+            description: "El restaurante ha sido marcado como inactivo.",
+        });
+    } catch (error) {
+        console.error("Error al eliminar restaurante:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "No se pudo eliminar el restaurante.",
+        });
+    }
+  };
+
+  const handleEdit = (restaurantId: string) => {
+    router.push(`/dashboard-am/restaurants?id=${restaurantId}`);
+  };
+
+
+  const filteredData = restaurants.filter(item => {
+    const searchMatch = (item.restaurantName || '').toLowerCase().includes(searchTerm.toLowerCase());
     const stateMatch = filters.state.size === 0 || filters.state.has(item.state);
     const styleMatch = filters.style.size === 0 || filters.style.has(item.style);
     return searchMatch && stateMatch && styleMatch;
@@ -131,39 +194,74 @@ export function RestaurantsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.map(item => (
-              <TableRow key={item.id} className="border-b-gray-200 hover:bg-gray-50">
-                <TableCell className="font-medium">
-                  <Button variant="link" className="p-0 h-auto text-gray-800 font-medium" onClick={() => setSelectedRestaurant(item)}>
-                    {item.name}
-                  </Button>
-                </TableCell>
-                <TableCell><Badge variant="secondary" className="bg-red-100 text-red-700">{item.style}</Badge></TableCell>
-                <TableCell>{item.municipality}</TableCell>
-                <TableCell>{item.state}</TableCell>
-                <TableCell className="text-right">
-                   <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
-                            <span className="sr-only">Abrir menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem className="cursor-pointer">
-                            <FilePenLine className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+             {isLoading ? (
+                <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                        <div className="flex justify-center items-center p-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                            <span className="ml-4">Cargando restaurantes...</span>
+                        </div>
+                    </TableCell>
+                </TableRow>
+            ) : filteredData.length > 0 ? (
+              filteredData.map(item => (
+                <TableRow key={item.id} className="border-b-gray-200 hover:bg-gray-50">
+                  <TableCell className="font-medium">
+                    <Button variant="link" className="p-0 h-auto text-gray-800 font-medium" onClick={() => setSelectedRestaurant(item)}>
+                      {item.restaurantName}
+                    </Button>
+                  </TableCell>
+                  <TableCell><Badge variant="secondary" className="bg-red-100 text-red-700">{item.style}</Badge></TableCell>
+                  <TableCell>{item.municipality}</TableCell>
+                  <TableCell>{item.state}</TableCell>
+                  <TableCell className="text-right">
+                     <AlertDialog>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
+                                <span className="sr-only">Abrir menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
+                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                              <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(item.id)}>
+                                <FilePenLine className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                               <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100" onSelect={(e) => e.preventDefault()}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Eliminar
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Esta acción marcará al restaurante como inactivo. ¿Desea continuar?
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700">
+                                    Sí, eliminar
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+                <TableRow>
+                    <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                        No se encontraron restaurantes.
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
@@ -173,7 +271,7 @@ export function RestaurantsTable() {
           {selectedRestaurant && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl font-headline text-gray-900">{selectedRestaurant.name}</DialogTitle>
+                <DialogTitle className="text-2xl font-headline text-gray-900">{selectedRestaurant.restaurantName}</DialogTitle>
                 <DialogDescription>
                   <div><Badge variant="secondary" className="bg-red-100 text-red-700">{selectedRestaurant.style}</Badge></div>
                 </DialogDescription>
