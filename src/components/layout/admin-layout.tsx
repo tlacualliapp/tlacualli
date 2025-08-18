@@ -60,7 +60,7 @@ import '@/app/i18n';
 const navItems = [
   { href: '/dashboard-admin', label: 'Dashboard', icon: Home },
   { href: '/orders', label: 'Orders', icon: ClipboardList },
-  { href: '/menu', label: 'Menu', icon: Utensils },
+  { href: '/dashboard-admin/menu', label: 'Menu', icon: Utensils },
   { href: '/recipes', label: 'Recipes', icon: BookOpen },
   { href: '/employees', label: 'Staff', icon: Users },
   { href: '/dashboard-admin/inventory', label: 'Inventory', icon: Package },

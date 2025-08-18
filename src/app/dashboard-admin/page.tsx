@@ -18,7 +18,7 @@ import {
 
 const modules = [
   { href: '/orders', icon: ClipboardList, label: 'Orders', color: 'bg-yellow-500' },
-  { href: '/menu', icon: Utensils, label: 'Menu', color: 'bg-red-500' },
+  { href: '/dashboard-admin/menu', icon: Utensils, label: 'Menu', color: 'bg-red-500' },
   { href: '/recipes', icon: BookOpen, label: 'Recipes', color: 'bg-blue-500' },
   { href: '/employees', icon: Users, label: 'Staff', color: 'bg-teal-500' },
   { href: '/dashboard-admin/inventory', icon: Package, label: 'Inventory', color: 'bg-orange-500' },
