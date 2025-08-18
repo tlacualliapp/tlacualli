@@ -280,6 +280,13 @@ export function RestaurantsTable() {
                 <div className="flex items-start gap-4">
                   <Building className="h-5 w-5 text-gray-600 mt-1" />
                   <div>
+                    <p className="font-semibold text-gray-700">Razón Social</p>
+                    <p className="text-gray-600">{selectedRestaurant.socialReason}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <Building className="h-5 w-5 text-gray-600 mt-1" />
+                  <div>
                     <p className="font-semibold text-gray-700">Dirección</p>
                     <p className="text-gray-600">{selectedRestaurant.address}, {selectedRestaurant.municipality}, {selectedRestaurant.state}</p>
                   </div>

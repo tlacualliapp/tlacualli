@@ -1,16 +1,31 @@
+
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, LineChart, Users, UtensilsCrossed, Search, Filter } from 'lucide-react';
+import { BarChart, LineChart, Users, UtensilsCrossed, Search, Filter, PlusCircle } from 'lucide-react';
 import { DailyAccessChart } from '@/components/dashboard/daily-access-chart';
 import { RestaurantActionsChart } from '@/components/dashboard/restaurant-actions-chart';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RestaurantsTable } from '@/components/dashboard/restaurants-table';
 import { MasterUsersTable } from '@/components/dashboard/master-users-table';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function AdminMasterDashboard() {
   return (
     <div className="relative z-10">
         <AppLayout>
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h1 className="text-3xl font-bold font-headline text-gray-800">Dashboard Administrador Master</h1>
+              <p className="text-gray-600">Bienvenido al panel de control general de Tlacualli.</p>
+            </div>
+            <Link href="/dashboard-am/restaurants" passHref>
+                <Button className="bg-red-600 hover:bg-red-700 text-white font-bold">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Registrar Restaurante
+                </Button>
+            </Link>
+          </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
