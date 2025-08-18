@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -15,6 +15,8 @@ import {
   Moon,
   Laptop,
   Languages,
+  KeyRound,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,11 +31,24 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { TacoIcon } from '@/components/icons/logo';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
-import '@/app/i18n'; // Import the i18n configuration
+import { auth } from '@/lib/firebase';
+import { updatePassword } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import '@/app/i18n'; 
 
 const navItems = [
   { href: '/dashboard-am', label: 'Dashboard', icon: Home },
@@ -43,9 +58,58 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { setTheme } = useTheme();
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
+  };
+
+  const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        variant: 'destructive',
+        title: t('Error'),
+        description: t('Passwords do not match.'),
+      });
+      return;
+    }
+    if (newPassword.length < 6) {
+       toast({
+        variant: 'destructive',
+        title: t('Error'),
+        description: t('Password must be at least 6 characters long.'),
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        await updatePassword(user, newPassword);
+        toast({
+          title: t('Success'),
+          description: t('Password updated successfully.'),
+        });
+        setNewPassword('');
+        setConfirmPassword('');
+        setIsPasswordModalOpen(false);
+      } catch (error) {
+         toast({
+          variant: 'destructive',
+          title: t('Error updating password'),
+          description: t('This operation is sensitive and requires recent authentication. Please log out and log back in to change your password.'),
+        });
+        console.error("Error updating password:", error);
+      } finally {
+        setIsUpdatingPassword(false);
+      }
+    }
   };
 
   return (
@@ -79,11 +143,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               className="shrink-0 md:hidden"
             >
               <PanelLeft className="h-5 w-5" />
-              <span className="sr-only">Toggle navigation menu</span>
+              <span className="sr-only">{t('Toggle navigation menu')}</span>
             </Button>
           </SheetTrigger>
           <SheetContent side="left">
-            <SheetTitle className="sr-only">Menu</SheetTitle>
+            <SheetTitle className="sr-only">{t('Menu')}</SheetTitle>
             <nav className="grid gap-6 text-lg font-medium">
               <Link
                 href="/dashboard-am"
@@ -114,7 +178,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" className="rounded-full">
                 <User className="h-5 w-5" />
-                <span className="sr-only">Toggle user menu</span>
+                <span className="sr-only">{t('Toggle user menu')}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -158,6 +222,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
+              <DropdownMenuItem onSelect={() => setIsPasswordModalOpen(true)}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                <span>{t('Change Password')}</span>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/login">
@@ -172,6 +240,50 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 relative">
         {children}
       </main>
+
+      <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{t('Change Password')}</DialogTitle>
+            <DialogDescription>
+              {t("Enter your new password below. After saving, you will be logged out for security.")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-password" className="text-right">
+                {t('New Password')}
+              </Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="confirm-password" className="text-right">
+                {t('Confirm Password')}
+              </Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPasswordModalOpen(false)}>{t('Cancel')}</Button>
+            <Button onClick={handlePasswordChange} disabled={isUpdatingPassword}>
+              {isUpdatingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {t('Save Changes')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
