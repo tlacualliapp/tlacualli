@@ -134,7 +134,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       style={{ backgroundImage: "url('/assets/background.png')" }}
     >
       <div className="absolute inset-0 bg-black/10"></div>
-      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card/80 backdrop-blur-lg px-4 md:px-6 z-20">
+      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card/50 backdrop-blur-lg px-4 md:px-6 z-20">
         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
           <Link
             href="/dashboard-admin"
