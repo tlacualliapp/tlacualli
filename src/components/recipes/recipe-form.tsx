@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, PlusCircle, Trash2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import { useTranslation } from 'react-i18next';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Recipe {
@@ -39,15 +38,15 @@ interface RecipeFormProps {
   restaurantId: string;
   onSuccess?: () => void;
   recipeToEdit?: Recipe | null;
+  t: (key: string) => string;
 }
 
-export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeFormProps) {
+export function RecipeForm({ restaurantId, onSuccess, recipeToEdit, t }: RecipeFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const isEditMode = !!recipeToEdit;
-  const { t } = useTranslation();
-
+  
   const [name, setName] = useState(recipeToEdit?.name || '');
   const [ingredients, setIngredients] = useState<Ingredient[]>(recipeToEdit?.ingredients || []);
   const [totalCost, setTotalCost] = useState(0);

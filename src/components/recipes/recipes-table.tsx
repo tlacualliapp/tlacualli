@@ -98,7 +98,12 @@ export function RecipesTable({ restaurantId }: RecipesTableProps) {
             <DialogTitle>{recipeToEdit ? t('Edit Recipe') : t('Add New Recipe')}</DialogTitle>
             <DialogDescription>{recipeToEdit ? t('Modify the recipe details.') : t('Add a new recipe.')}</DialogDescription>
           </DialogHeader>
-          <RecipeForm restaurantId={restaurantId} onSuccess={() => setIsFormModalOpen(false)} recipeToEdit={recipeToEdit} />
+          <RecipeForm 
+            restaurantId={restaurantId} 
+            onSuccess={() => setIsFormModalOpen(false)} 
+            recipeToEdit={recipeToEdit} 
+            t={t}
+          />
         </DialogContent>
       </Dialog>
 
