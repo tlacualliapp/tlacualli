@@ -45,7 +45,7 @@ export default function RestaurantsPage() {
         phone: formData.get('phone') as string,
         email: formData.get('email') as string,
         rfc: formData.get('rfc') as string,
-        status: 1,
+        status: "1", // status as string
         fecharegistro: serverTimestamp()
     };
     
@@ -66,8 +66,8 @@ export default function RestaurantsPage() {
             nombre: "Admin",
             apellidos: restaurantName,
             restauranteId: restaurantId,
-            perfil: 1,
-            status: 1,
+            perfil: "1", // perfil as string
+            status: "1", // status as string
             fecharegistro: serverTimestamp(),
             email,
             telefono: phone
@@ -201,5 +201,3 @@ export default function RestaurantsPage() {
     </AppLayout>
   );
 }
-
-    

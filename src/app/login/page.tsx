@@ -51,7 +51,7 @@ export default function LoginPage() {
       const q = query(
         collection(db, "usuarios"), 
         where("email", "==", user.email),
-        where("status", "==", 1)
+        where("status", "==", "1") // status as string
       );
       const querySnapshot = await getDocs(q);
 
@@ -69,11 +69,11 @@ export default function LoginPage() {
       // 3. Redirigir según el perfil
       if (userData.perfil === 'AM') {
         router.push('/dashboard-am');
-      } else if (userData.perfil === 1) {
+      } else if (userData.perfil === 1 || userData.perfil === '1') {
         router.push('/dashboard-admin');
-      } else if (userData.perfil === 2) {
+      } else if (userData.perfil === 2 || userData.perfil === '2') {
         router.push('/dashboard-collaborator');
-      } else if (userData.perfil === 3) {
+      } else if (userData.perfil === 3 || userData.perfil === '3') {
         router.push('/dashboard-client');
       } else {
          throw new Error("Perfil de usuario no reconocido o estado inválido.");
