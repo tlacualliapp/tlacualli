@@ -10,7 +10,6 @@ export default {
   theme: {
     extend: {
       backgroundImage: {
-        'main-background': "url('/background.png')",
       },
       fontFamily: {
         body: ['PT Sans', 'sans-serif'],

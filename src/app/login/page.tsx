@@ -154,7 +154,10 @@ export default function LoginPage() {
 
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen bg-main-background bg-cover bg-center">
+    <div 
+      className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
+      style={{ backgroundImage: "url('/assets/background.png')" }}
+    >
       <div className="absolute inset-0 bg-black/30"></div>
       <Card className="w-full max-w-sm bg-white/50 backdrop-blur-lg border-white/20 text-gray-800 rounded-2xl z-10">
         <CardHeader className="text-center">
