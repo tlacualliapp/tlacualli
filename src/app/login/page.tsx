@@ -156,8 +156,7 @@ export default function LoginPage() {
   return (
     <div className="relative flex items-center justify-center min-h-screen">
        <div 
-        className="absolute inset-0 bg-cover bg-center opacity-10" 
-        style={{backgroundImage: "url('/assets/background.png')"}}
+        className="absolute inset-0 bg-main-background bg-cover bg-center opacity-10"
         data-ai-hint="chef preparing food"
       ></div>
       <Card className="w-full max-w-sm bg-white/50 backdrop-blur-lg border-white/20 text-gray-800 rounded-2xl z-10">

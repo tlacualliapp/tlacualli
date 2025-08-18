@@ -113,8 +113,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div 
-          className="absolute inset-0 bg-cover bg-center opacity-10" 
-          style={{backgroundImage: "url('/assets/background.png')"}}
+          className="absolute inset-0 bg-main-background bg-cover bg-center opacity-10"
           data-ai-hint="chef preparing food"
       ></div>
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card/80 backdrop-blur-lg px-4 md:px-6 z-20">
