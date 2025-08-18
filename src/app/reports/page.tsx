@@ -1,10 +1,10 @@
-import { AppLayout } from '@/components/layout/app-layout';
+import { AdminLayout } from '@/components/layout/admin-layout';
 import { ReportForm } from './report-form';
 import { Lightbulb } from 'lucide-react';
 
 export default function ReportsPage() {
   return (
-    <AppLayout>
+    <AdminLayout>
       <div className="flex items-start gap-4 mb-6">
         <div className="p-3 bg-primary/10 rounded-full">
             <Lightbulb className="h-6 w-6 text-primary" />
@@ -17,6 +17,6 @@ export default function ReportsPage() {
         </div>
       </div>
       <ReportForm />
-    </AppLayout>
+    </AdminLayout>
   );
 }

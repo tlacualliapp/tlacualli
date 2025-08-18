@@ -1,10 +1,10 @@
-import { AppLayout } from '@/components/layout/app-layout';
+import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
 
 export default function MapPage() {
   return (
-    <AppLayout>
+    <AdminLayout>
       <Card>
         <CardContent className="p-0">
           <div className="p-6">
@@ -28,6 +28,6 @@ export default function MapPage() {
           </div>
         </CardContent>
       </Card>
-    </AppLayout>
+    </AdminLayout>
   );
 }

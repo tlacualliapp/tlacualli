@@ -1,4 +1,4 @@
-import { AppLayout } from '@/components/layout/app-layout';
+import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,7 +14,7 @@ const employees = [
 
 export default function EmployeesPage() {
   return (
-    <AppLayout>
+    <AdminLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold font-headline">Employee Management</h1>
@@ -50,6 +50,6 @@ export default function EmployeesPage() {
           </div>
         </CardContent>
       </Card>
-    </AppLayout>
+    </AdminLayout>
   );
 }

@@ -27,17 +27,8 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-            <div className="relative min-h-screen w-full bg-background">
-                <div 
-                    className="absolute inset-0 bg-cover bg-center opacity-10" 
-                    style={{backgroundImage: "url('/assets/background.png')"}}
-                    data-ai-hint="chef preparing food"
-                ></div>
-                <div className="relative z-10">
-                    {children}
-                </div>
-            </div>
-            <Toaster />
+          {children}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
