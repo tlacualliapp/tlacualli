@@ -33,28 +33,30 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold font-headline">{t('Administrator Dashboard')}</h1>
+      <Card className="bg-card/80 backdrop-blur-lg border-white/20">
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold font-headline">{t('Administrator Dashboard')}</CardTitle>
           <p className="text-muted-foreground">{t("Manage your restaurant's operations.")}</p>
-        </div>
-      </div>
-      <div className="grid gap-4 md:gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {modules.map((item) => (
-            <Link href={item.href} key={item.href}>
-                <Card className={`hover:scale-105 transition-transform duration-200 ease-in-out group ${item.color} text-white overflow-hidden`}>
-                    <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                            <span>{t(item.label)}</span>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-center p-6">
-                        <item.icon className="h-16 w-16 text-white/80 group-hover:scale-110 transition-transform duration-200 ease-in-out" strokeWidth={1.5}/>
-                    </CardContent>
-                </Card>
-            </Link>
-        ))}
-      </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {modules.map((item) => (
+                <Link href={item.href} key={item.href}>
+                    <Card className={`hover:scale-105 transition-transform duration-200 ease-in-out group ${item.color} text-white overflow-hidden`}>
+                        <CardHeader>
+                            <CardTitle className="flex items-center justify-between">
+                                <span>{t(item.label)}</span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex items-center justify-center p-6">
+                            <item.icon className="h-16 w-16 text-white/80 group-hover:scale-110 transition-transform duration-200 ease-in-out" strokeWidth={1.5}/>
+                        </CardContent>
+                    </Card>
+                </Link>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </AdminLayout>
   );
 }

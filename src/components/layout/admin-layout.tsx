@@ -129,8 +129,12 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-       <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r bg-background sm:flex">
+    <div 
+      className="relative flex min-h-screen w-full flex-col bg-cover bg-center"
+      style={{ backgroundImage: "url('/assets/background.png')" }}
+    >
+       <div className="absolute inset-0 bg-black/10"></div>
+       <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r bg-card/80 backdrop-blur-lg sm:flex">
           <div className="flex h-16 items-center border-b px-6">
              <Link
                 href="/dashboard-admin"
@@ -158,8 +162,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
            </nav>
         </aside>
 
-        <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-64">
-            <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+        <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-64 z-10">
+            <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-card/80 backdrop-blur-lg px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                 <Sheet>
                     <SheetTrigger asChild>
                         <Button size="icon" variant="outline" className="sm:hidden">
