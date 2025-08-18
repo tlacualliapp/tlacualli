@@ -66,6 +66,10 @@ export default function LoginPage() {
         router.push('/dashboard-am');
       } else if (userData.perfil === 1) {
         router.push('/dashboard-admin');
+      } else if (userData.perfil === 2) {
+        router.push('/dashboard-collaborator');
+      } else if (userData.perfil === 3) {
+        router.push('/dashboard-client');
       } else {
          throw new Error("Perfil de usuario no reconocido.");
       }
