@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, Truck, History, DollarSign, AlertTriangle } from 'lucide-react';
 import { InventoryItemsTable } from '@/components/inventory/items-table';
 import { SuppliersTable } from '@/components/inventory/suppliers-table';
+import { MovementsTable } from '@/components/inventory/movements-table';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
@@ -105,7 +106,7 @@ export default function InventoryPage() {
             <TabsList>
               <TabsTrigger value="items"><Package className="mr-2 h-4 w-4"/>{t('Items')}</TabsTrigger>
               <TabsTrigger value="suppliers"><Truck className="mr-2 h-4 w-4"/>{t('Suppliers')}</TabsTrigger>
-              <TabsTrigger value="history" disabled><History className="mr-2 h-4 w-4"/>{t('Movements')}</TabsTrigger>
+              <TabsTrigger value="history"><History className="mr-2 h-4 w-4"/>{t('Movements')}</TabsTrigger>
             </TabsList>
             <TabsContent value="items">
               {restaurantId ? <InventoryItemsTable restaurantId={restaurantId} /> : <p>{t('Loading...')}</p>}
@@ -114,7 +115,7 @@ export default function InventoryPage() {
               {restaurantId ? <SuppliersTable restaurantId={restaurantId} /> : <p>{t('Loading...')}</p>}
             </TabsContent>
             <TabsContent value="history">
-              {/* Movement history table will go here */}
+              {restaurantId ? <MovementsTable restaurantId={restaurantId} /> : <p>{t('Loading...')}</p>}
             </TabsContent>
           </Tabs>
         </CardContent>
