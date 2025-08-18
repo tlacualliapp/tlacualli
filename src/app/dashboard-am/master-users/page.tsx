@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { auth, db } from '@/lib/firebase'; 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -44,13 +44,9 @@ export default function MasterUsersPage() {
                 fecharegistro: serverTimestamp()
             });
 
-            // 3. Enviar correo de confirmación (requiere configuración de nodemailer en un backend)
-            // Esta sección se deja preparada para una futura implementación en un entorno de servidor.
-            console.log("Correo de confirmación enviado a (simulación):", email);
-
             toast({
               title: "Usuario Master Registrado",
-              description: `El Usuario Master "${fullName}" ha sido registrado exitosamente en Firebase.`,
+              description: `El Usuario Master "${fullName}" ha sido registrado exitosamente.`,
             });
             (e.target as HTMLFormElement).reset();
 
@@ -115,7 +111,7 @@ export default function MasterUsersPage() {
             </div>
             <div className="flex justify-end">
                 <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full text-lg" disabled={isLoading}>
-                    {isLoading ? 'Registrando...' : 'Registrar Usuario Master'}
+                    {isLoading ? <Loader2 className="animate-spin" /> : 'Registrar Usuario Master'}
                 </Button>
             </div>
           </form>
