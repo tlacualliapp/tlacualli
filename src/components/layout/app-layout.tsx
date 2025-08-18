@@ -33,7 +33,7 @@ import { TacoIcon } from '@/components/icons/logo';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
-import '../app/i18n'; // Import the i18n configuration
+import '@/app/i18n'; // Import the i18n configuration
 
 const navItems = [
   { href: '/dashboard-am', label: 'Dashboard', icon: Home },
