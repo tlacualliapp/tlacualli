@@ -19,12 +19,6 @@ export default function AdminMasterDashboard() {
               <h1 className="text-3xl font-bold font-headline text-gray-800">Dashboard Administrador Master</h1>
               <p className="text-gray-600">Bienvenido al panel de control general de Tlacualli.</p>
             </div>
-            <Link href="/dashboard-am/restaurants" passHref>
-                <Button className="bg-red-600 hover:bg-red-700 text-white font-bold">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Registrar Restaurante
-                </Button>
-            </Link>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">

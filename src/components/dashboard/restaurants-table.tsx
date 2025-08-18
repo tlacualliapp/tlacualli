@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2 } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -127,6 +127,10 @@ export function RestaurantsTable() {
     router.push(`/dashboard-am/restaurants?id=${restaurantId}`);
   };
 
+  const handleAddNew = () => {
+    router.push('/dashboard-am/restaurants');
+  };
+
 
   const filteredData = restaurants.filter(item => {
     const searchMatch = (item.restaurantName || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -147,40 +151,46 @@ export function RestaurantsTable() {
             className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full"
           />
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto bg-white/50 border-gray-300 hover:bg-gray-100">
-              <Filter className="mr-2 h-4 w-4" /> Filtros
+        <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="ml-auto bg-white/50 border-gray-300 hover:bg-gray-100">
+                  <Filter className="mr-2 h-4 w-4" /> Filtros
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-white text-gray-800 border-gray-200">
+                <DropdownMenuLabel>Filtrar por Estado</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-gray-200"/>
+                <div className="max-h-60 overflow-y-auto">
+                  {mexicanStates.map(state => (
+                    <DropdownMenuCheckboxItem
+                      key={state}
+                      checked={filters.state.has(state)}
+                      onCheckedChange={() => handleFilterChange('state', state)}
+                    >
+                      {state}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </div>
+                 <DropdownMenuSeparator className="bg-gray-200"/>
+                <DropdownMenuLabel>Filtrar por Estilo</DropdownMenuLabel>
+                 <DropdownMenuSeparator className="bg-gray-200"/>
+                 {restaurantStyles.map(style => (
+                  <DropdownMenuCheckboxItem
+                    key={style}
+                    checked={filters.style.has(style)}
+                    onCheckedChange={() => handleFilterChange('style', style)}
+                  >
+                    {style}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button onClick={handleAddNew} className="bg-red-600 hover:bg-red-700 text-white">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Registrar Restaurante
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-white text-gray-800 border-gray-200">
-            <DropdownMenuLabel>Filtrar por Estado</DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-gray-200"/>
-            <div className="max-h-60 overflow-y-auto">
-              {mexicanStates.map(state => (
-                <DropdownMenuCheckboxItem
-                  key={state}
-                  checked={filters.state.has(state)}
-                  onCheckedChange={() => handleFilterChange('state', state)}
-                >
-                  {state}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </div>
-             <DropdownMenuSeparator className="bg-gray-200"/>
-            <DropdownMenuLabel>Filtrar por Estilo</DropdownMenuLabel>
-             <DropdownMenuSeparator className="bg-gray-200"/>
-             {restaurantStyles.map(style => (
-              <DropdownMenuCheckboxItem
-                key={style}
-                checked={filters.style.has(style)}
-                onCheckedChange={() => handleFilterChange('style', style)}
-              >
-                {style}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        </div>
       </div>
       <div className="rounded-md border border-gray-200">
         <Table>
