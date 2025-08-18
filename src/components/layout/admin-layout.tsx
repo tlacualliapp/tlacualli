@@ -63,7 +63,7 @@ const navItems = [
   { href: '/menu', label: 'Menu', icon: Utensils },
   { href: '/recipes', label: 'Recipes', icon: BookOpen },
   { href: '/employees', label: 'Staff', icon: Users },
-  { href: '/inventory', label: 'Inventory', icon: Package },
+  { href: '/dashboard-admin/inventory', label: 'Inventory', icon: Package },
   { href: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { href: '/deliveries', label: 'Deliveries', icon: Truck },
   { href: '/reports', label: 'Reports', icon: BarChart },

@@ -21,7 +21,7 @@ const modules = [
   { href: '/menu', icon: Utensils, label: 'Menu', color: 'bg-red-500' },
   { href: '/recipes', icon: BookOpen, label: 'Recipes', color: 'bg-blue-500' },
   { href: '/employees', icon: Users, label: 'Staff', color: 'bg-teal-500' },
-  { href: '/inventory', icon: Package, label: 'Inventory', color: 'bg-orange-500' },
+  { href: '/dashboard-admin/inventory', icon: Package, label: 'Inventory', color: 'bg-orange-500' },
   { href: '/kitchen', icon: ChefHat, label: 'Kitchen', color: 'bg-gray-500' },
   { href: '/deliveries', icon: Truck, label: 'Deliveries', color: 'bg-indigo-500' },
   { href: '/reports', icon: BarChart, label: 'Reports', color: 'bg-green-500' },
