@@ -12,7 +12,7 @@ import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { TacoIcon } from '@/components/icons/logo';
 import { auth, db } from '@/lib/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, or } from 'firebase/firestore';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -48,7 +48,11 @@ export default function LoginPage() {
       const user = userCredential.user;
 
       // 2. Consultar Firestore para verificar el perfil y estado
-      const q = query(collection(db, "usuarios"), where("email", "==", user.email), where("status", "==", 1));
+      const q = query(
+        collection(db, "usuarios"), 
+        where("email", "==", user.email),
+        or(where("status", "==", 1), where("status", "==", 2))
+      );
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
@@ -63,22 +67,22 @@ export default function LoginPage() {
       });
 
       // 3. Redirigir según el perfil
-      if (userData.perfil === 'AM') {
+      if (userData.perfil === 'AM' && userData.status === 2) {
         router.push('/dashboard-am');
-      } else if (userData.perfil === 1) {
+      } else if (userData.perfil === 1 && userData.status === 1) {
         router.push('/dashboard-admin');
       } else if (userData.perfil === 2) {
         router.push('/dashboard-collaborator');
       } else if (userData.perfil === 3) {
         router.push('/dashboard-client');
       } else {
-         throw new Error("Perfil de usuario no reconocido.");
+         throw new Error("Perfil de usuario no reconocido o estado inválido.");
       }
 
     } catch (error) {
       console.error("Error en el inicio de sesión:", error);
       let errorMessage = "Credenciales inválidas o error de conexión. Por favor, intenta de nuevo.";
-      if (error instanceof Error && error.message.includes("no está activo")) {
+      if (error instanceof Error && (error.message.includes("no está activo") || error.message.includes("no reconocido"))) {
           errorMessage = error.message;
       } else if ((error as any).code === 'auth/user-not-found' || (error as any).code === 'auth/wrong-password' || (error as any).code === 'auth/invalid-credential') {
           errorMessage = "El correo electrónico o la contraseña son incorrectos.";
