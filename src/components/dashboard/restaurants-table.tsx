@@ -32,7 +32,6 @@ import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Ph
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { RestaurantForm } from './restaurant-form';
 
 type Restaurant = {
   id: string;
@@ -63,7 +62,6 @@ export function RestaurantsTable() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -184,23 +182,10 @@ export function RestaurantsTable() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-red-600 hover:bg-red-700 text-white">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Registrar Restaurante
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-4xl">
-                  <DialogHeader>
-                      <DialogTitle>Registrar Nuevo Restaurante</DialogTitle>
-                      <DialogDescription>
-                          Añada un nuevo restaurante y su administrador al sistema.
-                      </DialogDescription>
-                  </DialogHeader>
-                  <RestaurantForm onSuccess={() => setIsFormModalOpen(false)} />
-              </DialogContent>
-            </Dialog>
+             <Button onClick={() => router.push('/dashboard-am/restaurants')} className="bg-red-600 hover:bg-red-700 text-white">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Registrar Restaurante
+            </Button>
         </div>
       </div>
       <div className="rounded-md border border-gray-200">
@@ -341,3 +326,5 @@ export function RestaurantsTable() {
     </div>
   );
 }
+
+    
