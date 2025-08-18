@@ -12,7 +12,7 @@ import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { TacoIcon } from '@/components/icons/logo';
 import { auth, db } from '@/lib/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -60,13 +60,33 @@ export default function LoginPage() {
       }
 
       const userData = querySnapshot.docs[0].data();
+      const restaurantId = userData.restauranteId;
+      let restaurantName = 'N/A';
+
+      if(restaurantId) {
+        const restaurantRef = doc(db, 'restaurantes', restaurantId);
+        const restaurantSnap = await getDoc(restaurantRef);
+        if (restaurantSnap.exists()) {
+            restaurantName = restaurantSnap.data().restaurantName || 'Desconocido';
+        }
+      }
+
+      // 3. Registrar en Monitor
+       await addDoc(collection(db, "monitor"), {
+            accion: "Inicio de sesion",
+            usuarioNombre: `${userData.nombre} ${userData.apellidos}`,
+            usuarioPerfil: userData.perfil,
+            restauranteId: restaurantId || null,
+            restauranteNombre: restaurantName,
+            fecha: serverTimestamp(),
+        });
       
       toast({
         title: "Inicio de Sesión Exitoso",
         description: `¡Bienvenido de vuelta, ${userData.nombre}!`,
       });
 
-      // 3. Redirigir según el perfil
+      // 4. Redirigir según el perfil
       if (userData.perfil === 'AM') {
         router.push('/dashboard-am');
       } else if (userData.perfil === 1 || userData.perfil === '1') {
