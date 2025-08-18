@@ -14,6 +14,7 @@ import {
   Sun,
   Moon,
   Laptop,
+  Languages,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +32,8 @@ import {
 import { TacoIcon } from '@/components/icons/logo';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { useTheme } from 'next-themes';
+import { useTranslation } from 'react-i18next';
+import '../app/i18n'; // Import the i18n configuration
 
 const navItems = [
   { href: '/dashboard-am', label: 'Dashboard', icon: Home },
@@ -39,6 +42,11 @@ const navItems = [
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { setTheme } = useTheme();
+  const { t, i18n } = useTranslation();
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -59,7 +67,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
               }`}
             >
-              {item.label}
+              {t(item.label)}
             </Link>
           ))}
         </nav>
@@ -95,7 +103,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   } transition-all hover:text-foreground`}
                 >
                   <item.icon className="h-5 w-5" />
-                  {item.label}
+                  {t(item.label)}
                 </Link>
               ))}
             </nav>
@@ -110,25 +118,42 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('My Account')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
                <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                  <span>Theme</span>
+                  <Sun className="mr-2 h-4 w-4" />
+                  <span>{t('Theme')}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
                     <DropdownMenuItem onClick={() => setTheme("light")}>
                       <Sun className="mr-2 h-4 w-4" />
-                      <span>Light</span>
+                      <span>{t('Light')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setTheme("dark")}>
                       <Moon className="mr-2 h-4 w-4" />
-                      <span>Dark</span>
+                      <span>{t('Dark')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setTheme("system")}>
                       <Laptop className="mr-2 h-4 w-4" />
-                      <span>System</span>
+                      <span>{t('System')}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+               <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Languages className="mr-2 h-4 w-4" />
+                  <span>{t('Language')}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => changeLanguage('en')}>
+                      <span>English</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => changeLanguage('es')}>
+                      <span>Español</span>
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
@@ -137,7 +162,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <DropdownMenuItem asChild>
                 <Link href="/login">
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
+                  <span>{t('Log out')}</span>
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
