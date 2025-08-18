@@ -1,6 +1,6 @@
 
 'use client';
-import React from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { UtensilsCrossed, Loader2, Save, ArrowLeft } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -36,8 +35,7 @@ export default function RestaurantsPage() {
   const restaurantId = searchParams.get('id');
   const isEditMode = !!restaurantId;
 
-  // Use a ref for the form to reset it
-  const formRef = React.useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [formData, setFormData] = useState({
     restaurantName: '',
@@ -83,16 +81,25 @@ export default function RestaurantsPage() {
       }
     } catch (error) {
       console.error("Error fetching restaurant:", error);
+      toast({
+          variant: "destructive",
+          title: "Error de Carga",
+          description: "No se pudo cargar la información del restaurante.",
+        });
     } finally {
       setIsFetchingData(false);
     }
   }, [restaurantId, router, toast]);
 
   useEffect(() => {
-    fetchRestaurantData();
-  }, [fetchRestaurantData]);
+    if (isEditMode) {
+      fetchRestaurantData();
+    } else {
+      setIsFetchingData(false);
+    }
+  }, [isEditMode, fetchRestaurantData]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
       setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -111,7 +118,7 @@ export default function RestaurantsPage() {
       if (isEditMode) {
         // Update existing restaurant
         const restaurantRef = doc(db, "restaurantes", restaurantId!);
-        await updateDoc(restaurantRef, formData);
+        await updateDoc(restaurantRef, { ...formData, updatedAt: serverTimestamp() });
         toast({
           title: "Actualización Exitosa",
           description: `El restaurante "${restaurantName}" ha sido actualizado.`,
@@ -127,8 +134,6 @@ export default function RestaurantsPage() {
 
         const restaurantRef = await addDoc(collection(db, "restaurantes"), restaurantData);
         
-        // This part is problematic if editing, as an admin user might already exist.
-        // We only create a user when creating a restaurant.
         const userCredential = await createUserWithEmailAndPassword(auth, email, phone);
         const user = userCredential.user;
 
@@ -153,6 +158,7 @@ export default function RestaurantsPage() {
             restaurantName: '', socialReason: '', style: '', address: '',
             municipality: '', state: '', phone: '', email: '', rfc: '',
         });
+        router.push('/dashboard-am');
       }
     } catch (error) {
         console.error("Error en el registro:", error);
@@ -219,7 +225,7 @@ export default function RestaurantsPage() {
             </div>
              <div className="space-y-2">
                 <Label htmlFor="style" className="text-gray-700">Estilo</Label>
-                <Select name="style" value={formData.style} onValueChange={(value) => handleSelectChange('style', value)}>
+                <Select name="style" value={formData.style} onValueChange={(value) => handleSelectChange('style', value)} required>
                     <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
                         <SelectValue placeholder="Seleccione un estilo" />
                     </SelectTrigger>
@@ -241,7 +247,7 @@ export default function RestaurantsPage() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="state" className="text-gray-700">Estado</Label>
-                    <Select name="state" value={formData.state} onValueChange={(value) => handleSelectChange('state', value)}>
+                    <Select name="state" value={formData.state} onValueChange={(value) => handleSelectChange('state', value)} required>
                         <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
                             <SelectValue placeholder="Seleccione un estado" />
                         </SelectTrigger>
@@ -273,7 +279,7 @@ export default function RestaurantsPage() {
             </div>
             
             <div className="flex justify-end pt-4">
-              <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full text-lg" disabled={isLoading}>
+              <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full text-lg" disabled={isLoading || isFetchingData}>
                  {isLoading ? (
                     <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
