@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef } from 'react';
@@ -155,7 +154,7 @@ export function RestaurantForm({ onSuccess }: RestaurantFormProps) {
                     <Select name="state" value={formData.state} onValueChange={(value) => handleSelectChange('state', value)} required>
                         <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
                             <SelectValue placeholder="Seleccione un estado" />
-                        </Trigger>
+                        </SelectTrigger>
                         <SelectContent>
                             {mexicanStates.map(state => <SelectItem key={state} value={state}>{state}</SelectItem>)}
                         </SelectContent>
