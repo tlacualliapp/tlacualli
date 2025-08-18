@@ -7,6 +7,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const chartConfig = {
   logins: {
@@ -15,11 +16,15 @@ const chartConfig = {
   },
 };
 
-const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+const monthNamesEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const monthNamesEs = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
 export function DailyAccessChart() {
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { t, i18n } = useTranslation();
+  
+  const monthNames = i18n.language === 'es' ? monthNamesEs : monthNamesEn;
 
   useEffect(() => {
     const q = query(
@@ -65,7 +70,7 @@ export function DailyAccessChart() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [monthNames]);
 
   if (isLoading) {
     return (
@@ -78,14 +83,14 @@ export function DailyAccessChart() {
   if (chartData.length === 0) {
     return (
        <div className="h-[300px] w-full flex justify-center items-center">
-        <p className="text-gray-500">No hay datos de accesos para mostrar.</p>
+        <p className="text-gray-500">{t('No access data to display.')}</p>
       </div>
     )
   }
 
   return (
     <div className="h-[300px] w-full">
-      <ChartContainer config={chartConfig}>
+      <ChartContainer config={{...chartConfig, logins: { ...chartConfig.logins, label: t('Accesses')}}}>
         <AreaChart
           accessibilityLayer
           data={chartData}

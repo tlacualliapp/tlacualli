@@ -17,12 +17,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, MoreHorizontal, FilePenLine, Trash2, Loader2, UserPlus } from 'lucide-react';
 import { MasterUserForm } from './master-user-form';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from 'react-i18next';
 
 type MasterUser = {
   id: string;
@@ -40,6 +40,7 @@ export function MasterUsersTable() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<MasterUser | null>(null);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     setIsLoading(true);
@@ -62,7 +63,7 @@ export function MasterUsersTable() {
           id: doc.id,
           nombre: data.nombre || '',
           apellidos: data.apellidos || '',
-          email: data.email || 'No especificado',
+          email: data.email || t('Not specified'),
           telefono: data.telefono || '',
           registered: registeredDate,
         };
@@ -75,7 +76,7 @@ export function MasterUsersTable() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [t]);
 
   const handleEdit = (user: MasterUser) => {
     setUserToEdit(user);
@@ -94,15 +95,15 @@ export function MasterUsersTable() {
             status: "0" // Eliminación lógica
         });
         toast({
-            title: "Usuario Eliminado",
-            description: "El usuario ha sido marcado como inactivo.",
+            title: t("User Deleted"),
+            description: t("The user has been marked as inactive."),
         });
     } catch (error) {
         console.error("Error al eliminar usuario:", error);
         toast({
             variant: "destructive",
-            title: "Error",
-            description: "No se pudo eliminar al usuario.",
+            title: t("Error"),
+            description: t("Could not delete the user."),
         });
     }
   };
@@ -119,7 +120,7 @@ export function MasterUsersTable() {
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
           <Input
-            placeholder="Buscar por nombre o correo..."
+            placeholder={t("Search by name or email...")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full"
@@ -127,16 +128,16 @@ export function MasterUsersTable() {
         </div>
         <Button onClick={handleAddNew}>
             <UserPlus className="mr-2 h-4 w-4" />
-            Registrar Nuevo Usuario Master
+            {t('Register New Master User')}
         </Button>
       </div>
 
        <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
             <DialogContent className="sm:max-w-[625px]">
                 <DialogHeader>
-                    <DialogTitle>{userToEdit ? 'Editar' : 'Registrar'} Usuario Master</DialogTitle>
+                    <DialogTitle>{userToEdit ? t('Edit') : t('Register')} {t('Master User')}</DialogTitle>
                     <DialogDescription>
-                        {userToEdit ? 'Modifique la información del usuario.' : 'Añada un nuevo usuario master al sistema.'}
+                        {userToEdit ? t('Modify the user information.') : t('Add a new master user to the system.')}
                     </DialogDescription>
                 </DialogHeader>
                 <MasterUserForm onSuccess={() => setIsFormModalOpen(false)} userToEdit={userToEdit} />
@@ -147,10 +148,10 @@ export function MasterUsersTable() {
         <Table>
           <TableHeader>
             <TableRow className="border-b-gray-200 hover:bg-gray-50">
-              <TableHead className="text-gray-700">Nombre de Usuario</TableHead>
-              <TableHead className="text-gray-700">Correo Electrónico</TableHead>
-              <TableHead className="text-gray-700">Fecha de Registro</TableHead>
-              <TableHead className="text-right text-gray-700">Acciones</TableHead>
+              <TableHead className="text-gray-700">{t('Username')}</TableHead>
+              <TableHead className="text-gray-700">{t('Email')}</TableHead>
+              <TableHead className="text-gray-700">{t('Registration Date')}</TableHead>
+              <TableHead className="text-right text-gray-700">{t('Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -159,7 +160,7 @@ export function MasterUsersTable() {
                     <TableCell colSpan={4} className="text-center">
                         <div className="flex justify-center items-center p-8">
                             <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-                            <span className="ml-4">Cargando usuarios...</span>
+                            <span className="ml-4">{t('Loading users...')}</span>
                         </div>
                     </TableCell>
                 </TableRow>
@@ -174,35 +175,35 @@ export function MasterUsersTable() {
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
-                                    <span className="sr-only">Abrir menu</span>
+                                    <span className="sr-only">{t('Open menu')}</span>
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
-                                  <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                  <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
                                    <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(user)}>
                                     <FilePenLine className="mr-2 h-4 w-4" />
-                                    Editar
+                                    {t('Edit')}
                                   </DropdownMenuItem>
                                   <AlertDialogTrigger asChild>
                                     <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100" onSelect={(e) => e.preventDefault()}>
                                       <Trash2 className="mr-2 h-4 w-4" />
-                                      Eliminar
+                                      {t('Delete')}
                                     </DropdownMenuItem>
                                   </AlertDialogTrigger>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                    <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Esta acción marcará al usuario como inactivo y no podrá acceder al sistema. ¿Desea continuar?
+                                        {t('This action will mark the user as inactive and they will not be able to access the system. Do you want to continue?')}
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
                                     <AlertDialogAction onClick={() => handleDelete(user.id)} className="bg-red-600 hover:bg-red-700">
-                                        Sí, eliminar
+                                        {t('Yes, delete')}
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
@@ -213,7 +214,7 @@ export function MasterUsersTable() {
             ) : (
                 <TableRow>
                     <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                        No se encontraron usuarios master.
+                        {t('No master users found.')}
                     </TableCell>
                 </TableRow>
             )}

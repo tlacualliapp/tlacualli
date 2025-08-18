@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 
 interface Restaurant {
   id: string;
@@ -46,6 +47,7 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
     const [isLoading, setIsLoading] = useState(false);
     const formRef = useRef<HTMLFormElement>(null);
     const isEditMode = !!restaurantToEdit;
+    const { t } = useTranslation();
     
     const [formData, setFormData] = useState({
         restaurantName: '', socialReason: '', style: '', address: '',
@@ -100,8 +102,8 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
                 updatedAt: serverTimestamp(),
             });
             toast({
-                title: "Actualización Exitosa",
-                description: `La información del restaurante "${restaurantName}" ha sido actualizada.`,
+                title: t("Update Successful"),
+                description: t("The information for restaurant '{{name}}' has been updated.", {name: restaurantName}),
             });
           } else {
              // Modo Creación
@@ -129,8 +131,8 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
             });
             
             toast({
-              title: "Registro Exitoso",
-              description: `El restaurante "${restaurantName}" y su usuario administrador han sido registrados.`,
+              title: t("Registration Successful"),
+              description: t("The restaurant '{{name}}' and its administrator user have been registered.", {name: restaurantName}),
             });
             resetForm();
           }
@@ -140,19 +142,19 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
         } catch (error) {
             console.error("Error en el registro:", error);
             const errorCode = (error as any).code;
-            let errorMessage = "Ocurrió un error durante la operación.";
+            let errorMessage = t("An error occurred during the operation.");
 
             if (errorCode === 'auth/email-already-in-use') {
-                errorMessage = "El correo electrónico ya está en uso por otro administrador.";
+                errorMessage = t("The email is already in use by another administrator.");
             } else if (errorCode === 'auth/weak-password') {
-                errorMessage = "La contraseña (teléfono) debe tener al menos 6 caracteres.";
+                errorMessage = t("The password (phone) must be at least 6 characters long.");
             } else if (errorCode === 'auth/invalid-email') {
-                errorMessage = "El formato del correo electrónico no es válido.";
+                errorMessage = t("The email format is invalid.");
             }
             
             toast({
               variant: "destructive",
-              title: "Error en la Operación",
+              title: t("Operation Error"),
               description: errorMessage,
             });
         } finally {
@@ -164,41 +166,41 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto p-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="restaurantName" className="text-gray-700">Nombre del Restaurante</Label>
-                    <Input id="restaurantName" name="restaurantName" value={formData.restaurantName} onChange={handleInputChange} placeholder="Ej: Tacos El Sol" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                    <Label htmlFor="restaurantName" className="text-gray-700">{t('Restaurant Name')}</Label>
+                    <Input id="restaurantName" name="restaurantName" value={formData.restaurantName} onChange={handleInputChange} placeholder={t("e.g., Tacos El Sol")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="socialReason" className="text-gray-700">Razón Social</Label>
-                    <Input id="socialReason" name="socialReason" value={formData.socialReason} onChange={handleInputChange} placeholder="Ej: Tacos El Sol S.A. de C.V." className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                    <Label htmlFor="socialReason" className="text-gray-700">{t('Social Reason')}</Label>
+                    <Input id="socialReason" name="socialReason" value={formData.socialReason} onChange={handleInputChange} placeholder={t("e.g., Tacos El Sol S.A. de C.V.")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
             </div>
              <div className="space-y-2">
-                <Label htmlFor="style" className="text-gray-700">Estilo</Label>
+                <Label htmlFor="style" className="text-gray-700">{t('Style')}</Label>
                 <Select name="style" value={formData.style} onValueChange={(value) => handleSelectChange('style', value)} required>
                     <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
-                        <SelectValue placeholder="Seleccione un estilo" />
+                        <SelectValue placeholder={t("Select a style")} />
                     </SelectTrigger>
                     <SelectContent>
-                        {restaurantStyles.map(style => <SelectItem key={style} value={style}>{style}</SelectItem>)}
+                        {restaurantStyles.map(style => <SelectItem key={style} value={t(style)}>{t(style)}</SelectItem>)}
                     </SelectContent>
                 </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address" className="text-gray-700">Dirección</Label>
-              <Input id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Ej: Av. Principal 123, Colonia Centro" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+              <Label htmlFor="address" className="text-gray-700">{t('Address')}</Label>
+              <Input id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder={t("e.g., Main St 123, Downtown")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="municipality" className="text-gray-700">Municipio o Alcaldía</Label>
-                    <Input id="municipality" name="municipality" value={formData.municipality} onChange={handleInputChange} placeholder="Ej: Cuauhtémoc" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                    <Label htmlFor="municipality" className="text-gray-700">{t('Municipality or City')}</Label>
+                    <Input id="municipality" name="municipality" value={formData.municipality} onChange={handleInputChange} placeholder={t("e.g., Cuauhtémoc")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="state" className="text-gray-700">Estado</Label>
+                    <Label htmlFor="state" className="text-gray-700">{t('State')}</Label>
                     <Select name="state" value={formData.state} onValueChange={(value) => handleSelectChange('state', value)} required>
                         <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
-                            <SelectValue placeholder="Seleccione un estado" />
+                            <SelectValue placeholder={t("Select a state")} />
                         </SelectTrigger>
                         <SelectContent>
                             {mexicanStates.map(state => <SelectItem key={state} value={state}>{state}</SelectItem>)}
@@ -209,22 +211,22 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
 
             <Separator className="my-4 bg-gray-300" />
 
-            <h3 className="text-lg font-semibold text-gray-800">Información de Contacto (Administrador)</h3>
+            <h3 className="text-lg font-semibold text-gray-800">{t('Contact Information (Administrator)')}</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-gray-700">Teléfono {isEditMode ? '' : '(será la contraseña)'}</Label>
-                    <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder="Mínimo 6 dígitos" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                    <Label htmlFor="phone" className="text-gray-700">{isEditMode ? t('Phone') : t('Phone (will be the password)')}</Label>
+                    <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder={t("Minimum 6 digits")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="email" className="text-gray-700">Correo Electrónico {isEditMode ? '' : '(será el usuario)'}</Label>
-                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="Ej: admin@tacoselsol.com" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required disabled={isEditMode} />
+                    <Label htmlFor="email" className="text-gray-700">{isEditMode ? t('Email') : t('Email (will be the username)')}</Label>
+                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder={t("e.g., admin@tacoselsol.com")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required disabled={isEditMode} />
                 </div>
             </div>
 
              <div className="space-y-2">
-                <Label htmlFor="rfc" className="text-gray-700">RFC</Label>
-                <Input id="rfc" name="rfc" value={formData.rfc} onChange={handleInputChange} placeholder="Ej: SOLT850101XXX" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                <Label htmlFor="rfc" className="text-gray-700">{t('RFC')}</Label>
+                <Input id="rfc" name="rfc" value={formData.rfc} onChange={handleInputChange} placeholder={t("e.g., SOLT850101XXX")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
             
             <div className="flex justify-end pt-2">
@@ -232,10 +234,10 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
                  {isLoading ? (
                     <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {isEditMode ? 'Guardando...' : 'Registrando...'}
+                        {isEditMode ? t('Saving...') : t('Registering...')}
                     </>
                     ) : (
-                    isEditMode ? 'Guardar Cambios' : 'Registrar Restaurante'
+                    isEditMode ? t('Save Changes') : t('Register Restaurant')
                 )}
               </Button>
             </div>

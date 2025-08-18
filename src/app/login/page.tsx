@@ -13,6 +13,7 @@ import { TacoIcon } from '@/components/icons/logo';
 import { auth, db } from '@/lib/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedEmail');
@@ -56,7 +58,7 @@ export default function LoginPage() {
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
-        throw new Error("El usuario no está activo o no tiene permisos.");
+        throw new Error(t("The user is not active or does not have permissions."));
       }
 
       const userData = querySnapshot.docs[0].data();
@@ -82,8 +84,8 @@ export default function LoginPage() {
         });
       
       toast({
-        title: "Inicio de Sesión Exitoso",
-        description: `¡Bienvenido de vuelta, ${userData.nombre}!`,
+        title: t("Login Successful"),
+        description: t("Welcome back, {{name}}!", { name: userData.nombre }),
       });
 
       // 4. Redirigir según el perfil
@@ -96,21 +98,21 @@ export default function LoginPage() {
       } else if (userData.perfil === 3 || userData.perfil === '3') {
         router.push('/dashboard-client');
       } else {
-         throw new Error("Perfil de usuario no reconocido o estado inválido.");
+         throw new Error(t("Unrecognized user profile or invalid status."));
       }
 
     } catch (error) {
       console.error("Error en el inicio de sesión:", error);
-      let errorMessage = "Credenciales inválidas o error de conexión. Por favor, intenta de nuevo.";
-      if (error instanceof Error && (error.message.includes("no está activo") || error.message.includes("no reconocido"))) {
+      let errorMessage = t("Invalid credentials or connection error. Please try again.");
+      if (error instanceof Error && (error.message.includes("not active") || error.message.includes("unrecognized"))) {
           errorMessage = error.message;
       } else if ((error as any).code === 'auth/user-not-found' || (error as any).code === 'auth/wrong-password' || (error as any).code === 'auth/invalid-credential') {
-          errorMessage = "El correo electrónico o la contraseña son incorrectos.";
+          errorMessage = t("The email or password are incorrect.");
       }
       
       toast({
         variant: "destructive",
-        title: "Inicio de Sesión Fallido",
+        title: t("Login Failed"),
         description: errorMessage,
       });
     } finally {
@@ -122,8 +124,8 @@ export default function LoginPage() {
     if (!email) {
       toast({
         variant: "destructive",
-        title: "Correo electrónico requerido",
-        description: "Por favor, introduce tu correo electrónico para restablecer la contraseña.",
+        title: t("Email required"),
+        description: t("Please enter your email to reset your password."),
       });
       return;
     }
@@ -131,18 +133,18 @@ export default function LoginPage() {
     try {
       await sendPasswordResetEmail(auth, email);
       toast({
-        title: "Correo de recuperación enviado",
-        description: "Revisa tu bandeja de entrada para restablecer tu contraseña.",
+        title: t("Recovery email sent"),
+        description: t("Check your inbox to reset your password."),
       });
     } catch (error) {
       console.error("Error al enviar correo de recuperación:", error);
-       let errorMessage = "No se pudo enviar el correo de recuperación. Inténtalo de nuevo.";
+       let errorMessage = t("Could not send recovery email. Please try again.");
        if ((error as any).code === 'auth/user-not-found') {
-          errorMessage = "No se encontró ningún usuario con ese correo electrónico.";
+          errorMessage = t("No user found with that email address.");
        }
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t("Error"),
         description: errorMessage,
       });
     } finally {
@@ -171,7 +173,7 @@ export default function LoginPage() {
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
               <Input
                 type="email"
-                placeholder="Usuario (email)"
+                placeholder={t('User (email)')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full focus:ring-red-500"
@@ -183,7 +185,7 @@ export default function LoginPage() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
               <Input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Contraseña"
+                placeholder={t('Password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 pr-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full focus:ring-red-500"
@@ -194,7 +196,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500"
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                aria-label={t(showPassword ? 'Hide password' : 'Show password')}
               >
                 {showPassword ? <EyeOff /> : <Eye />}
               </button>
@@ -203,15 +205,15 @@ export default function LoginPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
-                <Label htmlFor="remember-me" className="text-sm text-gray-600 cursor-pointer">Recordar mi usuario</Label>
+                <Label htmlFor="remember-me" className="text-sm text-gray-600 cursor-pointer">{t('Remember me')}</Label>
               </div>
               <Button variant="link" type="button" onClick={handlePasswordReset} className="text-sm text-red-600 p-0 h-auto">
-                ¿Olvidaste tu contraseña?
+                {t('Forgot your password?')}
               </Button>
             </div>
 
             <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-full text-lg" disabled={isLoading}>
-              {isLoading ? <Loader2 className="animate-spin" /> : 'INICIAR SESIÓN'}
+              {isLoading ? <Loader2 className="animate-spin" /> : t('LOG IN')}
             </Button>
           </form>
           <p className="text-center text-xs text-gray-500 mt-6">www.tlacuallionline.com</p>

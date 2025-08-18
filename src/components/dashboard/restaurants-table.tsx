@@ -30,9 +30,10 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { RestaurantForm } from './restaurant-form';
+import { useTranslation } from 'react-i18next';
 
 type Restaurant = {
   id: string;
@@ -67,6 +68,7 @@ export function RestaurantsTable() {
   const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     setIsLoading(true);
@@ -87,13 +89,13 @@ export function RestaurantsTable() {
       setIsLoading(false);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudieron cargar los restaurantes."
+        title: t("Error"),
+        description: t("Could not load restaurants.")
       })
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, [toast, t]);
 
   const handleFilterChange = (type: 'state' | 'style', value: string) => {
     setFilters(prev => {
@@ -119,15 +121,15 @@ export function RestaurantsTable() {
             status: "0" // Eliminación lógica
         });
         toast({
-            title: "Restaurante Eliminado",
-            description: "El restaurante ha sido marcado como inactivo.",
+            title: t("Restaurant Deleted"),
+            description: t("The restaurant has been marked as inactive."),
         });
     } catch (error) {
         console.error("Error al eliminar restaurante:", error);
         toast({
             variant: "destructive",
-            title: "Error",
-            description: "No se pudo eliminar el restaurante.",
+            title: t("Error"),
+            description: t("Could not delete the restaurant."),
         });
     }
   };
@@ -145,7 +147,7 @@ export function RestaurantsTable() {
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
           <Input
-            placeholder="Buscar por nombre..."
+            placeholder={t("Search by name...")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full"
@@ -155,11 +157,11 @@ export function RestaurantsTable() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="ml-auto bg-white/50 border-gray-300 hover:bg-gray-100">
-                  <Filter className="mr-2 h-4 w-4" /> Filtros
+                  <Filter className="mr-2 h-4 w-4" /> {t('Filters')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-white text-gray-800 border-gray-200">
-                <DropdownMenuLabel>Filtrar por Estado</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('Filter by State')}</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-200"/>
                 <div className="max-h-60 overflow-y-auto">
                   {mexicanStates.map(state => (
@@ -173,7 +175,7 @@ export function RestaurantsTable() {
                   ))}
                 </div>
                  <DropdownMenuSeparator className="bg-gray-200"/>
-                <DropdownMenuLabel>Filtrar por Estilo</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('Filter by Style')}</DropdownMenuLabel>
                  <DropdownMenuSeparator className="bg-gray-200"/>
                  {restaurantStyles.map(style => (
                   <DropdownMenuCheckboxItem
@@ -181,14 +183,14 @@ export function RestaurantsTable() {
                     checked={filters.style.has(style)}
                     onCheckedChange={() => handleFilterChange('style', style)}
                   >
-                    {style}
+                    {t(style)}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
              <Button onClick={() => router.push('/dashboard-am/restaurants/create')} className="bg-red-600 hover:bg-red-700 text-white">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Registrar Restaurante
+                {t('Register Restaurant')}
             </Button>
         </div>
       </div>
@@ -196,9 +198,9 @@ export function RestaurantsTable() {
        <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>Editar Restaurante</DialogTitle>
+                    <DialogTitle>{t('Edit Restaurant')}</DialogTitle>
                     <DialogDescription>
-                        Modifique la información del restaurante.
+                        {t('Modify the restaurant information.')}
                     </DialogDescription>
                 </DialogHeader>
                 <RestaurantForm 
@@ -213,11 +215,11 @@ export function RestaurantsTable() {
         <Table>
           <TableHeader>
             <TableRow className="border-b-gray-200 hover:bg-gray-50">
-              <TableHead className="text-gray-700">Nombre</TableHead>
-              <TableHead className="text-gray-700">Estilo</TableHead>
-              <TableHead className="text-gray-700">Municipio/Alcaldía</TableHead>
-              <TableHead className="text-gray-700">Estado</TableHead>
-              <TableHead className="text-right text-gray-700">Acciones</TableHead>
+              <TableHead className="text-gray-700">{t('Name')}</TableHead>
+              <TableHead className="text-gray-700">{t('Style')}</TableHead>
+              <TableHead className="text-gray-700">{t('Municipality/City')}</TableHead>
+              <TableHead className="text-gray-700">{t('State')}</TableHead>
+              <TableHead className="text-right text-gray-700">{t('Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -226,7 +228,7 @@ export function RestaurantsTable() {
                     <TableCell colSpan={5} className="text-center">
                         <div className="flex justify-center items-center p-8">
                             <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-                            <span className="ml-4">Cargando restaurantes...</span>
+                            <span className="ml-4">{t('Loading restaurants...')}</span>
                         </div>
                     </TableCell>
                 </TableRow>
@@ -238,7 +240,7 @@ export function RestaurantsTable() {
                       {item.restaurantName}
                     </Button>
                   </TableCell>
-                  <TableCell><Badge variant="secondary" className="bg-red-100 text-red-700">{item.style}</Badge></TableCell>
+                  <TableCell><Badge variant="secondary" className="bg-red-100 text-red-700">{t(item.style)}</Badge></TableCell>
                   <TableCell>{item.municipality}</TableCell>
                   <TableCell>{item.state}</TableCell>
                   <TableCell className="text-right">
@@ -246,35 +248,35 @@ export function RestaurantsTable() {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
-                                <span className="sr-only">Abrir menu</span>
+                                <span className="sr-only">{t('Open menu')}</span>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
-                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                              <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
                                <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(item)}>
                                 <FilePenLine className="mr-2 h-4 w-4" />
-                                Editar
+                                {t('Edit')}
                               </DropdownMenuItem>
                                <AlertDialogTrigger asChild>
                                   <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100" onSelect={(e) => e.preventDefault()}>
                                     <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
+                                    {t('Delete')}
                                   </DropdownMenuItem>
                                 </AlertDialogTrigger>
                             </DropdownMenuContent>
                           </DropdownMenu>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Esta acción marcará al restaurante como inactivo. ¿Desea continuar?
+                                    {t('This action will mark the restaurant as inactive. Do you want to continue?')}
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700">
-                                    Sí, eliminar
+                                    {t('Yes, delete')}
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -285,7 +287,7 @@ export function RestaurantsTable() {
             ) : (
                 <TableRow>
                     <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                        No se encontraron restaurantes.
+                        {t('No restaurants found.')}
                     </TableCell>
                 </TableRow>
             )}
@@ -300,42 +302,42 @@ export function RestaurantsTable() {
               <DialogHeader>
                 <DialogTitle className="text-2xl font-headline text-gray-900">{selectedRestaurant.restaurantName}</DialogTitle>
                 <DialogDescription>
-                  <div><Badge variant="secondary" className="bg-red-100 text-red-700">{selectedRestaurant.style}</Badge></div>
+                  <div><Badge variant="secondary" className="bg-red-100 text-red-700">{t(selectedRestaurant.style)}</Badge></div>
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="flex items-start gap-4">
                   <Building className="h-5 w-5 text-gray-600 mt-1" />
                   <div>
-                    <p className="font-semibold text-gray-700">Razón Social</p>
+                    <p className="font-semibold text-gray-700">{t('Social Reason')}</p>
                     <p className="text-gray-600">{selectedRestaurant.socialReason}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
                   <Building className="h-5 w-5 text-gray-600 mt-1" />
                   <div>
-                    <p className="font-semibold text-gray-700">Dirección</p>
+                    <p className="font-semibold text-gray-700">{t('Address')}</p>
                     <p className="text-gray-600">{selectedRestaurant.address}, {selectedRestaurant.municipality}, {selectedRestaurant.state}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <Phone className="h-5 w-5 text-gray-600" />
                   <div>
-                    <p className="font-semibold text-gray-700">Teléfono</p>
+                    <p className="font-semibold text-gray-700">{t('Phone')}</p>
                     <p className="text-gray-600">{selectedRestaurant.phone}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <Mail className="h-5 w-5 text-gray-600" />
                   <div>
-                    <p className="font-semibold text-gray-700">Correo Electrónico</p>
+                    <p className="font-semibold text-gray-700">{t('Email')}</p>
                     <p className="text-gray-600">{selectedRestaurant.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <Hash className="h-5 w-5 text-gray-600" />
                   <div>
-                    <p className="font-semibold text-gray-700">RFC</p>
+                    <p className="font-semibold text-gray-700">{t('RFC')}</p>
                     <p className="text-gray-600">{selectedRestaurant.rfc}</p>
                   </div>
                 </div>
@@ -347,4 +349,3 @@ export function RestaurantsTable() {
     </div>
   );
 }
-

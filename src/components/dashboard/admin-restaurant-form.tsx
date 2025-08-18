@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 
 interface Restaurant {
   id: string;
@@ -43,6 +44,7 @@ const restaurantStyles = ["Italiano", "Mar y tierra", "Carnes", "Mariscos", "Mex
 export function AdminRestaurantForm({ restaurant, onSuccess }: AdminRestaurantFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     restaurantName: '',
     socialReason: '',
@@ -89,16 +91,16 @@ export function AdminRestaurantForm({ restaurant, onSuccess }: AdminRestaurantFo
         updatedAt: serverTimestamp(),
       });
       toast({
-        title: "Actualización Exitosa",
-        description: `La información del restaurante ha sido actualizada.`,
+        title: t("Update Successful"),
+        description: t("The restaurant information has been updated."),
       });
       onSuccess?.();
     } catch (error) {
       console.error("Error updating restaurant:", error);
       toast({
         variant: "destructive",
-        title: "Error en la Actualización",
-        description: "No se pudo guardar la información del restaurante.",
+        title: t("Update Error"),
+        description: t("Could not save the restaurant information."),
       });
     } finally {
       setIsLoading(false);
@@ -109,41 +111,41 @@ export function AdminRestaurantForm({ restaurant, onSuccess }: AdminRestaurantFo
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto p-2">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label htmlFor="restaurantName" className="text-gray-700">Nombre del Restaurante</Label>
-                <Input id="restaurantName" name="restaurantName" value={formData.restaurantName} onChange={handleInputChange} placeholder="Ej: Tacos El Sol" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                <Label htmlFor="restaurantName" className="text-gray-700">{t('Restaurant Name')}</Label>
+                <Input id="restaurantName" name="restaurantName" value={formData.restaurantName} onChange={handleInputChange} placeholder={t('e.g., Tacos El Sol')} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
              <div className="space-y-2">
-                <Label htmlFor="socialReason" className="text-gray-700">Razón Social</Label>
-                <Input id="socialReason" name="socialReason" value={formData.socialReason} onChange={handleInputChange} placeholder="Ej: Tacos El Sol S.A. de C.V." className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                <Label htmlFor="socialReason" className="text-gray-700">{t('Social Reason')}</Label>
+                <Input id="socialReason" name="socialReason" value={formData.socialReason} onChange={handleInputChange} placeholder={t('e.g., Tacos El Sol S.A. de C.V.')} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
         </div>
          <div className="space-y-2">
-            <Label htmlFor="style" className="text-gray-700">Estilo</Label>
+            <Label htmlFor="style" className="text-gray-700">{t('Style')}</Label>
             <Select name="style" value={formData.style} onValueChange={(value) => handleSelectChange('style', value)} required>
                 <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
-                    <SelectValue placeholder="Seleccione un estilo" />
+                    <SelectValue placeholder={t('Select a style')} />
                 </SelectTrigger>
                 <SelectContent>
-                    {restaurantStyles.map(style => <SelectItem key={style} value={style}>{style}</SelectItem>)}
+                    {restaurantStyles.map(style => <SelectItem key={style} value={t(style)}>{t(style)}</SelectItem>)}
                 </SelectContent>
             </Select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="address" className="text-gray-700">Dirección</Label>
-          <Input id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Ej: Av. Principal 123, Colonia Centro" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+          <Label htmlFor="address" className="text-gray-700">{t('Address')}</Label>
+          <Input id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder={t('e.g., Main St 123, Downtown')} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label htmlFor="municipality" className="text-gray-700">Municipio o Alcaldía</Label>
-                <Input id="municipality" name="municipality" value={formData.municipality} onChange={handleInputChange} placeholder="Ej: Cuauhtémoc" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                <Label htmlFor="municipality" className="text-gray-700">{t('Municipality or City')}</Label>
+                <Input id="municipality" name="municipality" value={formData.municipality} onChange={handleInputChange} placeholder={t('e.g., Cuauhtémoc')} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="state" className="text-gray-700">Estado</Label>
+                <Label htmlFor="state" className="text-gray-700">{t('State')}</Label>
                 <Select name="state" value={formData.state} onValueChange={(value) => handleSelectChange('state', value)} required>
                     <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
-                        <SelectValue placeholder="Seleccione un estado" />
+                        <SelectValue placeholder={t('Select a state')} />
                     </SelectTrigger>
                     <SelectContent>
                         {mexicanStates.map(state => <SelectItem key={state} value={state}>{state}</SelectItem>)}
@@ -154,22 +156,22 @@ export function AdminRestaurantForm({ restaurant, onSuccess }: AdminRestaurantFo
 
         <Separator className="my-4 bg-gray-300" />
 
-        <h3 className="text-lg font-semibold text-gray-800">Información de Contacto</h3>
+        <h3 className="text-lg font-semibold text-gray-800">{t('Contact Information')}</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-gray-700">Teléfono</Label>
-                <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder="Teléfono de contacto" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                <Label htmlFor="phone" className="text-gray-700">{t('Phone')}</Label>
+                <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder={t('Contact phone')} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-700">Correo Electrónico (no editable)</Label>
+                <Label htmlFor="email" className="text-gray-700">{t('Email (not editable)')}</Label>
                 <Input id="email" name="email" type="email" value={restaurant.email} className="bg-gray-100 border-gray-300 placeholder:text-gray-500" disabled />
             </div>
         </div>
 
          <div className="space-y-2">
-            <Label htmlFor="rfc" className="text-gray-700">RFC</Label>
-            <Input id="rfc" name="rfc" value={formData.rfc} onChange={handleInputChange} placeholder="Ej: SOLT850101XXX" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+            <Label htmlFor="rfc" className="text-gray-700">{t('RFC')}</Label>
+            <Input id="rfc" name="rfc" value={formData.rfc} onChange={handleInputChange} placeholder={t('e.g., SOLT850101XXX')} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
         </div>
         
         <div className="flex justify-end pt-2">
@@ -177,12 +179,12 @@ export function AdminRestaurantForm({ restaurant, onSuccess }: AdminRestaurantFo
              {isLoading ? (
                 <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
+                    {t('Saving...')}
                 </>
                 ) : (
                 <>
                   <Save className="mr-2 h-4 w-4" />
-                  Guardar Cambios
+                  {t('Save Changes')}
                 </>
             )}
           </Button>

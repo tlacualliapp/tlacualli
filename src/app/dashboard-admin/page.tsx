@@ -11,6 +11,7 @@ import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { AdminRestaurantForm } from '@/components/dashboard/admin-restaurant-form';
 import { getRestaurantIdForUser } from '@/lib/users';
+import { useTranslation } from 'react-i18next';
 
 
 export default function AdminDashboard() {
@@ -19,6 +20,7 @@ export default function AdminDashboard() {
   const [restaurant, setRestaurant] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (user) {
@@ -52,39 +54,39 @@ export default function AdminDashboard() {
     <AppLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Administrator Dashboard</h1>
-          <p className="text-muted-foreground">Manage your restaurant's operations.</p>
+          <h1 className="text-3xl font-bold font-headline">{t('Administrator Dashboard')}</h1>
+          <p className="text-muted-foreground">{t("Manage your restaurant's operations.")}</p>
         </div>
       </div>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Welcome, Administrator!</CardTitle>
+            <CardTitle>{t('Welcome, Administrator!')}</CardTitle>
             <Building className="h-6 w-6 text-muted-foreground"/>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Here you can manage your menu, employees, and view reports for your restaurant.</p>
+            <p className="text-muted-foreground">{t("Here you can manage your menu, employees, and view reports for your restaurant.")}</p>
           </CardContent>
         </Card>
         
         <Card className="lg:col-span-2">
             <CardHeader className="flex flex-row items-start justify-between">
                 <div>
-                    <CardTitle>Restaurant Information</CardTitle>
-                    <CardDescription>View and update your restaurant details.</CardDescription>
+                    <CardTitle>{t('Restaurant Information')}</CardTitle>
+                    <CardDescription>{t("View and update your restaurant details.")}</CardDescription>
                 </div>
                  <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
                     <DialogTrigger asChild>
                         <Button variant="outline" size="sm" disabled={!restaurant}>
                             <Edit className="mr-2 h-4 w-4" />
-                            Edit Information
+                            {t('Edit Information')}
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-4xl">
                         <DialogHeader>
-                            <DialogTitle>Edit Restaurant Information</DialogTitle>
+                            <DialogTitle>{t('Edit Restaurant Information')}</DialogTitle>
                             <DialogDescription>
-                                Update your restaurant's details. Click save when you're done.
+                                {t("Update your restaurant's details. Click save when you're done.")}
                             </DialogDescription>
                         </DialogHeader>
                         {restaurant && <AdminRestaurantForm restaurant={restaurant} onSuccess={() => setIsFormModalOpen(false)} />}
@@ -98,23 +100,23 @@ export default function AdminDashboard() {
                     </div>
                 ) : restaurant ? (
                     <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                        <div className="font-semibold">Restaurant Name:</div>
+                        <div className="font-semibold">{t('Restaurant Name')}:</div>
                         <div>{restaurant.restaurantName}</div>
-                        <div className="font-semibold">Social Reason:</div>
+                        <div className="font-semibold">{t('Social Reason')}:</div>
                         <div>{restaurant.socialReason}</div>
-                        <div className="font-semibold">Style:</div>
+                        <div className="font-semibold">{t('Style')}:</div>
                         <div>{restaurant.style}</div>
-                        <div className="font-semibold">Address:</div>
+                        <div className="font-semibold">{t('Address')}:</div>
                         <div>{`${restaurant.address}, ${restaurant.municipality}, ${restaurant.state}`}</div>
-                        <div className="font-semibold">Phone:</div>
+                        <div className="font-semibold">{t('Phone')}:</div>
                         <div>{restaurant.phone}</div>
-                        <div className="font-semibold">Email:</div>
+                        <div className="font-semibold">{t('Email')}:</div>
                         <div>{restaurant.email}</div>
-                        <div className="font-semibold">RFC:</div>
+                        <div className="font-semibold">{t('RFC')}:</div>
                         <div>{restaurant.rfc}</div>
                     </dl>
                 ) : (
-                    <p className="text-muted-foreground">No restaurant associated with this account.</p>
+                    <p className="text-muted-foreground">{t('No restaurant associated with this account.')}</p>
                 )}
             </CardContent>
         </Card>

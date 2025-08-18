@@ -10,10 +10,11 @@ import {
 import { db } from "@/lib/firebase";
 import { collection, query, onSnapshot, getDocs } from 'firebase/firestore';
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const chartConfig = {
   actions: {
-    label: "Acciones",
+    label: "Actions",
     color: "hsl(var(--primary))",
   },
 };
@@ -21,6 +22,7 @@ const chartConfig = {
 export function RestaurantActionsChart() {
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,7 +33,7 @@ export function RestaurantActionsChart() {
             const restaurantsSnap = await getDocs(restaurantsRef);
             const restaurantNames: { [id: string]: string } = {};
             restaurantsSnap.forEach(doc => {
-                restaurantNames[doc.id] = doc.data().restaurantName || 'Desconocido';
+                restaurantNames[doc.id] = doc.data().restaurantName || t('Unknown');
             });
 
             // 2. Get all monitor actions
@@ -52,7 +54,7 @@ export function RestaurantActionsChart() {
 
                 const formattedData = Object.entries(actionsByRestaurant)
                     .map(([id, count]) => ({
-                        restaurant: restaurantNames[id] || `ID: ${id.substring(0, 5)}...`,
+                        restaurant: restaurantNames[id] || `${t('ID')}: ${id.substring(0, 5)}...`,
                         actions: count,
                     }))
                     .sort((a,b) => b.actions - a.actions)
@@ -70,7 +72,7 @@ export function RestaurantActionsChart() {
     }
 
     fetchData();
-  }, []);
+  }, [t]);
 
   if (isLoading) {
     return (
@@ -83,14 +85,14 @@ export function RestaurantActionsChart() {
   if (chartData.length === 0) {
     return (
        <div className="h-[300px] w-full flex justify-center items-center">
-        <p className="text-gray-500">No hay datos de acciones para mostrar.</p>
+        <p className="text-gray-500">{t('No action data to display.')}</p>
       </div>
     )
   }
 
   return (
     <div className="h-[300px] w-full">
-      <ChartContainer config={chartConfig}>
+      <ChartContainer config={{...chartConfig, actions: { ...chartConfig.actions, label: t('Actions')}}}>
         <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 10 }}>
           <CartesianGrid horizontal={false} strokeDasharray="3 3" strokeOpacity={0.5} />
           <YAxis

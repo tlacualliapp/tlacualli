@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 
 interface MasterUser {
   id?: string;
@@ -28,6 +29,7 @@ export function MasterUserForm({ onSuccess, userToEdit }: MasterUserFormProps) {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const isEditMode = !!userToEdit;
+    const { t } = useTranslation();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -51,8 +53,8 @@ export function MasterUserForm({ onSuccess, userToEdit }: MasterUserFormProps) {
                 });
 
                 toast({
-                  title: "Usuario Actualizado",
-                  description: `El Usuario Master "${fullName}" ha sido actualizado.`,
+                  title: t("User Updated"),
+                  description: t("The Master User '{{fullName}}' has been updated.", { fullName }),
                 });
 
             } else {
@@ -74,8 +76,8 @@ export function MasterUserForm({ onSuccess, userToEdit }: MasterUserFormProps) {
                 });
 
                 toast({
-                  title: "Usuario Master Registrado",
-                  description: `El Usuario Master "${fullName}" ha sido registrado exitosamente.`,
+                  title: t("Master User Registered"),
+                  description: t("The Master User '{{fullName}}' has been successfully registered.", { fullName }),
                 });
             }
             
@@ -85,19 +87,19 @@ export function MasterUserForm({ onSuccess, userToEdit }: MasterUserFormProps) {
         } catch (error) {
             console.error("Error en la operación:", error);
             const errorCode = (error as any).code;
-            let errorMessage = `Ocurrió un error al ${isEditMode ? 'actualizar' : 'registrar'} al usuario.`;
+            let errorMessage = t('An error occurred while {{action}} the user.', { action: isEditMode ? t('updating') : t('registering') });
 
             if (errorCode === 'auth/email-already-in-use') {
-                errorMessage = "Este correo electrónico ya está en uso.";
+                errorMessage = t("This email is already in use.");
             } else if (errorCode === 'auth/weak-password') {
-                errorMessage = "La contraseña (teléfono) debe tener al menos 6 caracteres.";
+                errorMessage = t("The password (phone) must be at least 6 characters long.");
             } else if (errorCode === 'auth/invalid-email') {
-                errorMessage = "El formato del correo electrónico no es válido.";
+                errorMessage = t("The email format is invalid.");
             }
 
             toast({
               variant: "destructive",
-              title: "Error",
+              title: t("Error"),
               description: errorMessage,
             });
         } finally {
@@ -109,27 +111,27 @@ export function MasterUserForm({ onSuccess, userToEdit }: MasterUserFormProps) {
     <form onSubmit={handleSubmit} className="grid gap-4 py-4">
         <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="nombre" className="text-gray-700">Nombre(s)</Label>
-              <Input id="nombre" name="nombre" defaultValue={userToEdit?.nombre} placeholder="Ej: Juan" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+              <Label htmlFor="nombre" className="text-gray-700">{t('First Name(s)')}</Label>
+              <Input id="nombre" name="nombre" defaultValue={userToEdit?.nombre} placeholder={t("e.g., Juan")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="apellidos" className="text-gray-700">Apellidos</Label>
-              <Input id="apellidos" name="apellidos" defaultValue={userToEdit?.apellidos} placeholder="Ej: Pérez García" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+              <Label htmlFor="apellidos" className="text-gray-700">{t('Last Names')}</Label>
+              <Input id="apellidos" name="apellidos" defaultValue={userToEdit?.apellidos} placeholder={t("e.g., Pérez García")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
         </div>
          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="telefono" className="text-gray-700">Teléfono {isEditMode ? '' : '(será la contraseña)'}</Label>
-              <Input id="telefono" name="telefono" type="tel" defaultValue={userToEdit?.telefono} placeholder="Mínimo 6 dígitos" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+              <Label htmlFor="telefono" className="text-gray-700">{isEditMode ? t('Phone') : t('Phone (will be the password)')}</Label>
+              <Input id="telefono" name="telefono" type="tel" defaultValue={userToEdit?.telefono} placeholder={t('Minimum 6 digits')} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700">Correo Electrónico</Label>
-              <Input id="email" name="email" type="email" defaultValue={userToEdit?.email} placeholder="Ej: usuario@correo.com" className="bg-white/50 border-gray-300 placeholder:text-gray-500" required disabled={isEditMode} />
+              <Label htmlFor="email" className="text-gray-700">{t('Email')}</Label>
+              <Input id="email" name="email" type="email" defaultValue={userToEdit?.email} placeholder={t("e.g., user@email.com")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required disabled={isEditMode} />
             </div>
         </div>
         <div className="flex justify-end pt-2">
             <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4" disabled={isLoading}>
-                {isLoading ? <Loader2 className="animate-spin" /> : isEditMode ? 'Guardar Cambios' : 'Registrar Usuario Master'}
+                {isLoading ? <Loader2 className="animate-spin" /> : isEditMode ? t('Save Changes') : t('Register Master User')}
             </Button>
         </div>
     </form>
