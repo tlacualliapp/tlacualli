@@ -61,7 +61,7 @@ const navItems = [
   { href: '/dashboard-admin', label: 'Dashboard', icon: Home },
   { href: '/orders', label: 'Orders', icon: ClipboardList },
   { href: '/dashboard-admin/menu', label: 'Menu y recetas', icon: Utensils },
-  { href: '/employees', label: 'Staff', icon: Users },
+  { href: '/dashboard-admin/employees', label: 'Staff', icon: Users },
   { href: '/dashboard-admin/inventory', label: 'Inventory', icon: Package },
   { href: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { href: '/deliveries', label: 'Deliveries', icon: Truck },
