@@ -20,6 +20,7 @@ interface MenuItem {
   price?: number;
   recipeId?: string;
   availability?: string;
+  imageUrl?: string;
 }
 
 interface Recipe {
@@ -44,8 +45,10 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
 
   const [formData, setFormData] = useState({
     name: menuItemToEdit?.name || '',
+    description: menuItemToEdit?.description || '',
     price: menuItemToEdit?.price || 0,
     recipeId: menuItemToEdit?.recipeId || '',
+    imageUrl: menuItemToEdit?.imageUrl || '',
   });
 
   useEffect(() => {
@@ -92,8 +95,10 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       // Reset form state
       setFormData({
         name: '',
+        description: '',
         price: 0,
         recipeId: '',
+        imageUrl: '',
       })
     } catch (error) {
       console.error("Error saving menu item:", error);
@@ -111,18 +116,31 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       </div>
 
       <div className="space-y-2">
-          <Label htmlFor="recipeId">{t('Select Recipe')}</Label>
-          <Select name="recipeId" value={formData.recipeId} onValueChange={(value) => handleSelectChange('recipeId', value)}>
-            <SelectTrigger><SelectValue placeholder={t('Select a recipe')} /></SelectTrigger>
-            <SelectContent>
-              {recipes.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <Label htmlFor="description">{t('Description')}</Label>
+        <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} placeholder={t('e.g., Juicy beef patty with avocado and chipotle sauce.')} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+            <Label htmlFor="recipeId">{t('Select Recipe')}</Label>
+            <Select name="recipeId" value={formData.recipeId} onValueChange={(value) => handleSelectChange('recipeId', value)}>
+              <SelectTrigger><SelectValue placeholder={t('Select a recipe')} /></SelectTrigger>
+              <SelectContent>
+                 <SelectItem value="none">{t('None')}</SelectItem>
+                {recipes.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="price">{t('Sale Price ($)')}</Label>
+          <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleInputChange} required />
+        </div>
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="price">{t('Sale Price ($)')}</Label>
-        <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleInputChange} required />
+        <Label htmlFor="imageUrl">{t('Image')}</Label>
+        <Input id="imageUrl" name="imageUrl" type="file" />
       </div>
       
       <div className="flex justify-end pt-2">
