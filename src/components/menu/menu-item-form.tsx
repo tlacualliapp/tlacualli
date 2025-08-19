@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, PlusCircle } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs, onSnapshot } from 'firebase/firestore';
 import { Textarea } from '../ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 
 interface MenuItem {
   id?: string;
@@ -18,11 +19,17 @@ interface MenuItem {
   description?: string;
   price?: number;
   recipeId?: string;
+  categoryId?: string;
   availability?: string;
   imageUrl?: string;
 }
 
 interface Recipe {
+  id: string;
+  name: string;
+}
+
+interface Category {
   id: string;
   name: string;
 }
@@ -38,6 +45,9 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit, t }: Men
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const isEditMode = !!menuItemToEdit;
 
   const [formData, setFormData] = useState({
@@ -45,18 +55,30 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit, t }: Men
     description: menuItemToEdit?.description || '',
     price: menuItemToEdit?.price || 0,
     recipeId: menuItemToEdit?.recipeId || '',
+    categoryId: menuItemToEdit?.categoryId || '',
     imageUrl: menuItemToEdit?.imageUrl || '',
   });
 
   useEffect(() => {
-    const fetchRecipes = async () => {
-      if (!restaurantId) return;
-      const recipesQuery = collection(db, `restaurantes/${restaurantId}/recipes`);
-      const querySnapshot = await getDocs(recipesQuery);
-      const recipesList = querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
+    if (!restaurantId) return;
+
+    const recipesQuery = collection(db, `restaurantes/${restaurantId}/recipes`);
+    const categoriesQuery = collection(db, `restaurantes/${restaurantId}/menuCategories`);
+
+    const unsubRecipes = onSnapshot(recipesQuery, (snapshot) => {
+      const recipesList = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
       setRecipes(recipesList);
+    });
+
+    const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
+      const categoriesList = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
+      setCategories(categoriesList);
+    });
+
+    return () => {
+      unsubRecipes();
+      unsubCategories();
     };
-    fetchRecipes();
   }, [restaurantId]);
   
   useEffect(() => {
@@ -66,6 +88,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit, t }: Men
         description: menuItemToEdit.description || '',
         price: menuItemToEdit.price || 0,
         recipeId: menuItemToEdit.recipeId || '',
+        categoryId: menuItemToEdit.categoryId || '',
         imageUrl: menuItemToEdit.imageUrl || '',
       });
     }
@@ -78,7 +101,28 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit, t }: Men
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+     if (name === 'categoryId' && value === 'add_new') {
+      setIsAddCategoryOpen(true);
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast({ variant: 'destructive', title: t('Error'), description: t('Category name cannot be empty.') });
+      return;
+    }
+    try {
+      const collectionRef = collection(db, `restaurantes/${restaurantId}/menuCategories`);
+      await addDoc(collectionRef, { name: newCategoryName });
+      toast({ title: t('Category Added'), description: t('The new category has been added.') });
+      setNewCategoryName('');
+      setIsAddCategoryOpen(false);
+    } catch (error) {
+      console.error("Error adding category:", error);
+      toast({ variant: 'destructive', title: t('Error'), description: t('Could not add the category.') });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -107,6 +151,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit, t }: Men
         description: '',
         price: 0,
         recipeId: '',
+        categoryId: '',
         imageUrl: '',
       })
     } catch (error) {
@@ -118,46 +163,87 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit, t }: Men
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">{t('Dish Name')}</Label>
-        <Input id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder={t('e.g., Aztec Burger')} required />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">{t('Description')}</Label>
-        <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} placeholder={t('e.g., Juicy beef patty with avocado and chipotle sauce.')} />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-            <Label htmlFor="recipeId">{t('Select Recipe')}</Label>
-            <Select name="recipeId" value={formData.recipeId} onValueChange={(value) => handleSelectChange('recipeId', value)}>
-              <SelectTrigger><SelectValue placeholder={t('Select a recipe')} /></SelectTrigger>
-              <SelectContent>
-                 <SelectItem value="none">{t('None')}</SelectItem>
-                {recipes.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <Label htmlFor="name">{t('Dish Name')}</Label>
+          <Input id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder={t('e.g., Aztec Burger')} required />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="description">{t('Description')}</Label>
+          <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} placeholder={t('e.g., Juicy beef patty with avocado and chipotle sauce.')} />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="categoryId">{t('Category')}</Label>
+                <Select name="categoryId" value={formData.categoryId} onValueChange={(value) => handleSelectChange('categoryId', value)}>
+                  <SelectTrigger><SelectValue placeholder={t('Select a category')} /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                    <SelectItem value="add_new" className="text-primary focus:text-primary-foreground">
+                      <div className="flex items-center">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        {t('Add new category')}
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="price">{t('Sale Price ($)')}</Label>
+                <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleInputChange} required />
+            </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+              <Label htmlFor="recipeId">{t('Select Recipe')}</Label>
+              <Select name="recipeId" value={formData.recipeId} onValueChange={(value) => handleSelectChange('recipeId', value)}>
+                <SelectTrigger><SelectValue placeholder={t('Select a recipe (optional)')} /></SelectTrigger>
+                <SelectContent>
+                   <SelectItem value="none">{t('None')}</SelectItem>
+                  {recipes.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+          </div>
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="price">{t('Sale Price ($)')}</Label>
-          <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleInputChange} required />
+          <Label htmlFor="imageUrl">{t('Image (Optional)')}</Label>
+          <Input id="imageUrl" name="imageUrl" type="file" className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
         </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="imageUrl">{t('Image (Optional)')}</Label>
-        <Input id="imageUrl" name="imageUrl" type="file" onChange={handleInputChange} />
-      </div>
-      
-      <div className="flex justify-end pt-2">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {isEditMode ? t('Update Item') : t('Add to Menu')}
-        </Button>
-      </div>
-    </form>
+        
+        <div className="flex justify-end pt-2">
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isEditMode ? t('Update Item') : t('Add to Menu')}
+          </Button>
+        </div>
+      </form>
+
+      <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Add New Category')}</DialogTitle>
+            <DialogDescription>{t('Create a new category for your menu items.')}</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="new-category-name">{t('Category Name')}</Label>
+            <Input 
+              id="new-category-name" 
+              value={newCategoryName} 
+              onChange={(e) => setNewCategoryName(e.target.value)} 
+              placeholder={t('e.g., Appetizers')}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddCategoryOpen(false)}>{t('Cancel')}</Button>
+            <Button onClick={handleAddCategory}>{t('Save Category')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
