@@ -85,8 +85,10 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
             <Tabs value={activeRoom} onValueChange={setActiveRoom} className="w-full max-w-md">
                 <TabsList>
                     {rooms.map(room => (
-                         <TabsTrigger key={room.id} value={room.id} className="relative group">
-                            {room.name}
+                         <div key={room.id} className="relative group">
+                            <TabsTrigger value={room.id}>
+                                {room.name}
+                            </TabsTrigger>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="absolute -right-1 -top-1 h-4 w-4 opacity-50 group-hover:opacity-100">
@@ -99,7 +101,7 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                         </TabsTrigger>
+                         </div>
                     ))}
                 </TabsList>
             </Tabs>
