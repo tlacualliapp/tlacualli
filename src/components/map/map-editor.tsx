@@ -3,11 +3,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useDrop } from 'react-dnd';
 import { Loader2 } from 'lucide-react';
 import { Toolbar } from './toolbar';
 import { TableItem, Table } from './table-item';
+import { useToast } from '@/hooks/use-toast';
+
 
 export interface Room {
   id: string;
@@ -27,6 +29,7 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
   const [tables, setTables] = useState<{ [roomId: string]: Table[] }>({});
   const [activeRoom, setActiveRoom] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const roomsRef = collection(db, `restaurantes/${restaurantId}/rooms`);
@@ -58,6 +61,13 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
     const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`, id);
     await updateDoc(tableRef, { left, top });
   };
+  
+  const deleteTable = async (id: string) => {
+    if (!activeRoom) return;
+    const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`, id);
+    await deleteDoc(tableRef);
+    toast({ title: "Mesa eliminada", description: "La mesa ha sido eliminada del plano." });
+  };
 
   const [, drop] = useDrop(() => ({
     accept: ItemTypes.TABLE,
@@ -82,7 +92,7 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
             {rooms.map(room => (
                 <div key={room.id} style={{ display: activeRoom === room.id ? 'block' : 'none' }} className="w-full h-full">
                      {(tables[room.id] || []).map(table => (
-                        <TableItem key={table.id} {...table} />
+                        <TableItem key={table.id} {...table} onDelete={deleteTable} />
                     ))}
                 </div>
             ))}
