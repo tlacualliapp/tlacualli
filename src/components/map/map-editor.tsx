@@ -4,10 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDrop } from 'react-dnd';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
 import { Toolbar } from './toolbar';
 import { TableItem, Table } from './table-item';
@@ -72,31 +69,29 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
       moveTable(item.id, left, top);
       return undefined;
     },
-  }), [moveTable]);
+  }), [moveTable, activeRoom]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin h-8 w-8" /></div>;
   }
   
   return (
-    <DndProvider backend={HTML5Backend}>
-        <div className="flex flex-col h-full">
-            <Toolbar restaurantId={restaurantId} rooms={rooms} activeRoom={activeRoom} setActiveRoom={setActiveRoom} />
-            <div className="flex-grow relative" ref={drop}>
-                {rooms.map(room => (
-                    <div key={room.id} style={{ display: activeRoom === room.id ? 'block' : 'none' }} className="w-full h-full">
-                         {(tables[room.id] || []).map(table => (
-                            <TableItem key={table.id} {...table} />
-                        ))}
-                    </div>
-                ))}
-                {rooms.length === 0 && (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                        <p>Crea una sala para empezar a añadir mesas.</p>
-                    </div>
-                )}
-            </div>
+    <div className="flex flex-col h-full">
+        <Toolbar restaurantId={restaurantId} rooms={rooms} activeRoom={activeRoom} setActiveRoom={setActiveRoom} />
+        <div className="flex-grow relative" ref={drop}>
+            {rooms.map(room => (
+                <div key={room.id} style={{ display: activeRoom === room.id ? 'block' : 'none' }} className="w-full h-full">
+                     {(tables[room.id] || []).map(table => (
+                        <TableItem key={table.id} {...table} />
+                    ))}
+                </div>
+            ))}
+            {rooms.length === 0 && (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                    <p>Crea una sala para empezar a añadir mesas.</p>
+                </div>
+            )}
         </div>
-    </DndProvider>
+    </div>
   );
 };
