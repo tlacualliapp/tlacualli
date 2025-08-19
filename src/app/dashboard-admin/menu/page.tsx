@@ -43,12 +43,12 @@ export default function MenuPage() {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold font-headline">{t('Menu & Recipes')}</h1>
-          <p className="text-muted-foreground">{t('Manage your recipes and menu items.')}</p>
-        </div>
-      </div>
+      <Card className="mb-6 bg-card/65 backdrop-blur-lg">
+        <CardHeader>
+            <CardTitle className="text-3xl font-bold font-headline">{t('Menu & Recipes')}</CardTitle>
+            <CardDescription>{t('Manage your recipes and menu items.')}</CardDescription>
+        </CardHeader>
+      </Card>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         {/* Create Recipe Card */}
