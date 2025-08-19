@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, deleteDoc, where, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -65,6 +65,21 @@ export function RecipesTable({ restaurantId, t }: RecipesTableProps) {
   };
   
   const handleDelete = async (recipeId: string) => {
+    // 1. Check if recipe is used in any menu item
+    const menuItemsRef = collection(db, `restaurantes/${restaurantId}/menuItems`);
+    const q = query(menuItemsRef, where("recipeId", "==", recipeId));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        toast({
+            variant: "destructive",
+            title: t("Recipe in Use"),
+            description: t("This recipe is used by {{count}} menu item(s). Please remove them before deleting the recipe.", { count: querySnapshot.size }),
+        });
+        return;
+    }
+
+    // 2. If not used, proceed with deletion
     try {
       await deleteDoc(doc(db, `restaurantes/${restaurantId}/recipes`, recipeId));
       toast({ title: t("Recipe Deleted"), description: t("The recipe has been removed.") });
