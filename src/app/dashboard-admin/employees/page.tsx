@@ -38,6 +38,8 @@ interface Employee {
   id: string;
   nombre: string;
   apellidos: string;
+  email: string;
+  telefono: string;
   perfil: string;
   status: string;
   avatar?: string;
@@ -90,6 +92,8 @@ export default function EmployeesPage() {
                 apellidos: data.apellidos,
                 perfil: data.perfil,
                 status: data.status,
+                email: data.email,
+                telefono: data.telefono,
                 avatar: 'https://placehold.co/100x100.png', // Placeholder
                 hint: 'portrait person'
             });
@@ -136,9 +140,9 @@ export default function EmployeesPage() {
 
   const getRoleName = (profileId: string) => {
     switch (profileId) {
-        case '1': return 'Administrator';
-        case '2': return 'Employee';
-        default: return 'Unknown';
+        case '1': return t('Administrator');
+        case '2': return t('Employee');
+        default: return t('Unknown');
     }
   }
 
@@ -178,11 +182,11 @@ export default function EmployeesPage() {
                     <div className="flex items-center gap-4">
                       <Avatar>
                         <AvatarImage src={employee.avatar} alt={`${employee.nombre} ${employee.apellidos}`} data-ai-hint={employee.hint} />
-                        <AvatarFallback>{`${employee.nombre[0]}${employee.apellidos[0]}`}</AvatarFallback>
+                        <AvatarFallback>{`${employee.nombre?.[0] || ''}${employee.apellidos?.[0] || ''}`}</AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-semibold">{employee.nombre} {employee.apellidos}</p>
-                        <p className="text-sm text-muted-foreground">{t(getRoleName(employee.perfil))}</p>
+                        <p className="text-sm text-muted-foreground">{getRoleName(employee.perfil)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
