@@ -14,6 +14,7 @@ import { auth, db } from '@/lib/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
+import '@/app/i18n';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
