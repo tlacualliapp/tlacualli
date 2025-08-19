@@ -44,10 +44,8 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
 
   const [formData, setFormData] = useState({
     name: menuItemToEdit?.name || '',
-    description: menuItemToEdit?.description || '',
     price: menuItemToEdit?.price || 0,
     recipeId: menuItemToEdit?.recipeId || '',
-    availability: menuItemToEdit?.availability || 'available',
   });
 
   useEffect(() => {
@@ -68,9 +66,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    // Treat a specific value, e.g., "none", as an empty string for the recipeId
-    const finalValue = value === "none" ? "" : value;
-    setFormData(prev => ({ ...prev, [name]: finalValue }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -89,10 +85,16 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         toast({ title: t("Update Successful"), description: t("The menu item has been updated.") });
       } else {
         const collectionRef = collection(db, `restaurantes/${restaurantId}/menuItems`);
-        await addDoc(collectionRef, { ...menuItemData, createdAt: serverTimestamp() });
+        await addDoc(collectionRef, { ...menuItemData, createdAt: serverTimestamp(), availability: 'available' });
         toast({ title: t("Menu Item Added"), description: t("The new item has been added to the menu.") });
       }
       onSuccess?.();
+      // Reset form state
+      setFormData({
+        name: '',
+        price: 0,
+        recipeId: '',
+      })
     } catch (error) {
       console.error("Error saving menu item:", error);
       toast({ variant: "destructive", title: t("Save Error"), description: t("Could not save the menu item information.") });
@@ -104,46 +106,29 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">{t('Item Name')}</Label>
+        <Label htmlFor="name">{t('Dish Name')}</Label>
         <Input id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder={t('e.g., Aztec Burger')} required />
       </div>
 
-       <div className="space-y-2">
-        <Label htmlFor="description">{t('Description')}</Label>
-        <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} placeholder={t('e.g., Angus beef patty, avocado, jalapeños, and chipotle mayo.')} />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="price">{t('Price')}</Label>
-          <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleInputChange} required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="recipeId">{t('Recipe')}</Label>
-          <Select name="recipeId" value={formData.recipeId || "none"} onValueChange={(value) => handleSelectChange('recipeId', value)}>
+      <div className="space-y-2">
+          <Label htmlFor="recipeId">{t('Select Recipe')}</Label>
+          <Select name="recipeId" value={formData.recipeId} onValueChange={(value) => handleSelectChange('recipeId', value)}>
             <SelectTrigger><SelectValue placeholder={t('Select a recipe')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">{t('None')}</SelectItem>
               {recipes.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
             </SelectContent>
           </Select>
-        </div>
       </div>
       
       <div className="space-y-2">
-          <Label htmlFor="availability">{t('Availability')}</Label>
-          <Select name="availability" value={formData.availability} onValueChange={(value) => handleSelectChange('availability', value)}>
-            <SelectTrigger><SelectValue placeholder={t('Select availability')} /></SelectTrigger>
-            <SelectContent>
-              {availabilityOptions.map(opt => <SelectItem key={opt} value={opt}>{t(opt)}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <Label htmlFor="price">{t('Sale Price ($)')}</Label>
+        <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleInputChange} required />
       </div>
       
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={isLoading}>
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {t('Save Menu Item')}
+          {isEditMode ? t('Update Item') : t('Add to Menu')}
         </Button>
       </div>
     </form>

@@ -117,6 +117,10 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
         toast({ title: t("Recipe Added"), description: t("The new recipe has been added.") });
       }
       onSuccess?.();
+      // Reset form state after successful submission
+      setName('');
+      setIngredients([]);
+
     } catch (error) {
       console.error("Error saving recipe:", error);
       toast({ variant: "destructive", title: t("Save Error"), description: t("Could not save the recipe information.") });
@@ -133,13 +137,12 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
       </div>
 
       <div>
-        <Label>{t('Ingredients')}</Label>
         <div className="rounded-md border mt-2">
             <Table>
                 <TableHeader>
                     <TableRow>
                         <TableHead>{t('Ingredient')}</TableHead>
-                        <TableHead className="w-[120px]">{t('Quantity')}</TableHead>
+                        <TableHead className="w-[100px]">{t('Quantity')}</TableHead>
                         <TableHead className="w-[100px]">{t('Unit')}</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -169,7 +172,7 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
                 </TableBody>
             </Table>
         </div>
-        <Button type="button" variant="outline" size="sm" className="mt-2" onClick={handleAddIngredient}>
+        <Button type="button" variant="link" size="sm" className="mt-2 px-0" onClick={handleAddIngredient}>
             <PlusCircle className="mr-2 h-4 w-4" />
             {t('Add Ingredient')}
         </Button>
@@ -182,7 +185,7 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={isLoading}>
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {t('Save Recipe')}
+          {isEditMode ? t('Update Recipe') : t('Save Recipe')}
         </Button>
       </div>
     </form>
