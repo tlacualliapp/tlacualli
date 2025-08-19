@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import { useTranslation } from 'react-i18next';
 import { Textarea } from '../ui/textarea';
 
 interface MenuItem {
@@ -32,16 +31,14 @@ interface MenuItemFormProps {
   restaurantId: string;
   onSuccess?: () => void;
   menuItemToEdit?: MenuItem | null;
+  t: (key: string) => string;
 }
 
-const availabilityOptions = ["available", "sold_out", "special"];
-
-export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuItemFormProps) {
+export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit, t }: MenuItemFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const isEditMode = !!menuItemToEdit;
-  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     name: menuItemToEdit?.name || '',
@@ -61,6 +58,18 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     };
     fetchRecipes();
   }, [restaurantId]);
+  
+  useEffect(() => {
+    if (menuItemToEdit) {
+      setFormData({
+        name: menuItemToEdit.name || '',
+        description: menuItemToEdit.description || '',
+        price: menuItemToEdit.price || 0,
+        recipeId: menuItemToEdit.recipeId || '',
+        imageUrl: menuItemToEdit.imageUrl || '',
+      });
+    }
+  }, [menuItemToEdit]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -139,8 +148,8 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="imageUrl">{t('Image')}</Label>
-        <Input id="imageUrl" name="imageUrl" type="file" />
+        <Label htmlFor="imageUrl">{t('Image (Optional)')}</Label>
+        <Input id="imageUrl" name="imageUrl" type="file" onChange={handleInputChange} />
       </div>
       
       <div className="flex justify-end pt-2">

@@ -11,7 +11,6 @@ import { Loader2, Save, PlusCircle, Trash2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useTranslation } from 'react-i18next';
 
 interface Recipe {
   id?: string;
@@ -39,10 +38,10 @@ interface RecipeFormProps {
   restaurantId: string;
   onSuccess?: () => void;
   recipeToEdit?: Recipe | null;
+  t: (key: string) => string;
 }
 
-export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeFormProps) {
-  const { t } = useTranslation();
+export function RecipeForm({ restaurantId, onSuccess, recipeToEdit, t }: RecipeFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
@@ -51,6 +50,13 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
   const [name, setName] = useState(recipeToEdit?.name || '');
   const [ingredients, setIngredients] = useState<Ingredient[]>(recipeToEdit?.ingredients || []);
   const [totalCost, setTotalCost] = useState(0);
+
+  useEffect(() => {
+    if (recipeToEdit) {
+      setName(recipeToEdit.name || '');
+      setIngredients(recipeToEdit.ingredients || []);
+    }
+  }, [recipeToEdit]);
 
   useEffect(() => {
     const fetchInventoryItems = async () => {
@@ -64,9 +70,13 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
   }, [restaurantId]);
 
   useEffect(() => {
-    const cost = ingredients.reduce((acc, ing) => acc + (ing.cost * ing.quantity), 0);
+    const cost = ingredients.reduce((acc, ing) => {
+        const item = inventoryItems.find(i => i.id === ing.itemId);
+        const itemCost = item ? item.averageCost : 0;
+        return acc + (itemCost * ing.quantity);
+    }, 0);
     setTotalCost(cost);
-  }, [ingredients]);
+  }, [ingredients, inventoryItems]);
 
 
   const handleAddIngredient = () => {
@@ -100,9 +110,12 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
     setIsLoading(true);
 
     try {
+      // Filter out ingredients without an itemId
+      const validIngredients = ingredients.filter(ing => ing.itemId);
+
       const recipeData = {
         name,
-        ingredients,
+        ingredients: validIngredients,
         cost: totalCost,
         updatedAt: serverTimestamp(),
       };
@@ -137,6 +150,7 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
       </div>
 
       <div>
+        <Label>{t('Ingredients')}</Label>
         <div className="rounded-md border mt-2">
             <Table>
                 <TableHeader>
@@ -161,7 +175,9 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
                             <TableCell>
                                 <Input type="number" value={ing.quantity} onChange={(e) => handleIngredientChange(index, 'quantity', Number(e.target.value))} />
                             </TableCell>
-                            <TableCell>{ing.unit}</TableCell>
+                            <TableCell>
+                                <Input value={ing.unit} readOnly disabled className="bg-muted"/>
+                            </TableCell>
                             <TableCell>
                                 <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveIngredient(index)}>
                                     <Trash2 className="h-4 w-4 text-destructive" />
