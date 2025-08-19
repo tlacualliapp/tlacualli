@@ -11,6 +11,7 @@ import { Loader2, Save, PlusCircle, Trash2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useTranslation } from 'react-i18next';
 
 interface Recipe {
   id?: string;
@@ -38,10 +39,10 @@ interface RecipeFormProps {
   restaurantId: string;
   onSuccess?: () => void;
   recipeToEdit?: Recipe | null;
-  t: (key: string) => string;
 }
 
-export function RecipeForm({ restaurantId, onSuccess, recipeToEdit, t }: RecipeFormProps) {
+export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeFormProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
