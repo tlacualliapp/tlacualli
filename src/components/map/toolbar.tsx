@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useTranslation } from 'react-i18next';
 
 
 interface ToolbarProps {
@@ -30,10 +31,11 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const addTable = async (shape: 'square' | 'circle') => {
     if (!activeRoom) {
-        toast({ variant: 'destructive', title: "Selecciona una sala", description: "Debes seleccionar una sala para añadir una mesa." });
+        toast({ variant: 'destructive', title: t('Select a room'), description: t('You must select a room to add a table.') });
         return;
     }
     const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`);
@@ -54,18 +56,18 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
     setNewRoomName('');
     setIsRoomModalOpen(false);
     setActiveRoom(newRoom.id);
-    toast({ title: "Sala añadida", description: `La sala "${newRoomName}" ha sido creada.` });
+    toast({ title: t('Room added'), description: t('The room "{{name}}" has been created.', { name: newRoomName }) });
   };
   
   const deleteRoom = async (roomId: string, roomName: string) => {
     if (rooms.length <= 1) {
-        toast({ variant: 'destructive', title: "Acción no permitida", description: "No puedes eliminar la única sala existente." });
+        toast({ variant: 'destructive', title: t('Action not allowed'), description: t('You cannot delete the only existing room.') });
         return;
     }
     await deleteDoc(doc(db, `restaurantes/${restaurantId}/rooms`, roomId));
     const newActiveRoom = rooms.find(r => r.id !== roomId)?.id || '';
     setActiveRoom(newActiveRoom);
-    toast({ title: "Sala eliminada", description: `La sala "${roomName}" ha sido eliminada.` });
+    toast({ title: t('Room deleted'), description: t('The room "{{name}}" has been deleted.', { name: roomName }) });
   };
 
 
@@ -73,10 +75,10 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
     <div className="p-2 border-b flex items-center justify-between gap-4 bg-card">
        <div className="flex items-center gap-2">
            <Button variant="outline" size="sm" onClick={() => addTable('square')} disabled={!activeRoom}>
-                <Square className="mr-2 h-4 w-4" /> Mesa Cuadrada
+                <Square className="mr-2 h-4 w-4" /> {t('Square Table')}
            </Button>
             <Button variant="outline" size="sm" onClick={() => addTable('circle')} disabled={!activeRoom}>
-                <Circle className="mr-2 h-4 w-4" /> Mesa Redonda
+                <Circle className="mr-2 h-4 w-4" /> {t('Circle Table')}
            </Button>
        </div>
        
@@ -94,7 +96,7 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent>
                                     <DropdownMenuItem className="text-destructive" onSelect={() => deleteRoom(room.id, room.name)}>
-                                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar Sala
+                                        <Trash2 className="mr-2 h-4 w-4" /> {t('Delete Room')}
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -105,27 +107,27 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
        </div>
 
         <Button size="sm" onClick={() => setIsRoomModalOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Añadir Sala
+            <PlusCircle className="mr-2 h-4 w-4" /> {t('Add Room')}
         </Button>
 
         <Dialog open={isRoomModalOpen} onOpenChange={setIsRoomModalOpen}>
             <DialogContent>
             <DialogHeader>
-                <DialogTitle>Añadir Nueva Sala</DialogTitle>
+                <DialogTitle>{t('Add New Room')}</DialogTitle>
                 <DialogDescription>
-                    Crea una nueva área o sala para organizar tus mesas.
+                    {t('Create a new area or room to organize your tables.')}
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4">
                 <Input 
-                placeholder="Nombre de la sala (e.g., Terraza)"
+                placeholder={t('Room name (e.g., Terrace)')}
                 value={newRoomName}
                 onChange={(e) => setNewRoomName(e.target.value)}
                 />
             </div>
             <DialogFooter>
-                <Button variant="outline" onClick={() => setIsRoomModalOpen(false)}>Cancelar</Button>
-                <Button onClick={addRoom}>Guardar</Button>
+                <Button variant="outline" onClick={() => setIsRoomModalOpen(false)}>{t('Cancel')}</Button>
+                <Button onClick={addRoom}>{t('Save')}</Button>
             </DialogFooter>
             </DialogContent>
         </Dialog>

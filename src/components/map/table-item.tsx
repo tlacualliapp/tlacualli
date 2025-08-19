@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Trash2, Edit, Armchair } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { useTranslation } from 'react-i18next';
 
 export interface Table {
   id: string;
@@ -32,6 +33,7 @@ const statusClasses = {
 
 export const TableItem: React.FC<TableItemProps> = (props) => {
   const { id, name, shape, status, top, left, seats, onDelete, onEdit } = props;
+  const { t } = useTranslation();
   
   const [{ isDragging }, drag] = useDrag(() => ({
     type: ItemTypes.TABLE,
@@ -64,14 +66,14 @@ export const TableItem: React.FC<TableItemProps> = (props) => {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                    <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Esta acción no se puede deshacer. Esto eliminará permanentemente la mesa del plano de la sala.
+                        {t('This action cannot be undone. This will permanently delete the table from the room plan.')}
                     </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onDelete(id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                    <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onDelete(id)} className="bg-destructive hover:bg-destructive/90">{t('Delete')}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

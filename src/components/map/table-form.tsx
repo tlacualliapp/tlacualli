@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { Table } from './table-item';
+import { useTranslation } from 'react-i18next';
 
 interface TableFormProps {
   table: Table;
@@ -18,6 +19,7 @@ export const TableForm = ({ table, onSave, onCancel }: TableFormProps) => {
   const [name, setName] = useState('');
   const [seats, setSeats] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (table) {
@@ -35,7 +37,7 @@ export const TableForm = ({ table, onSave, onCancel }: TableFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="grid gap-4 py-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Nombre de la Mesa</Label>
+        <Label htmlFor="name">{t('Table Name')}</Label>
         <Input
           id="name"
           value={name}
@@ -44,7 +46,7 @@ export const TableForm = ({ table, onSave, onCancel }: TableFormProps) => {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="seats">Número de Asientos</Label>
+        <Label htmlFor="seats">{t('Number of Seats')}</Label>
         <Input
           id="seats"
           type="number"
@@ -56,11 +58,11 @@ export const TableForm = ({ table, onSave, onCancel }: TableFormProps) => {
       </div>
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
+          {t('Cancel')}
         </Button>
         <Button type="submit" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Guardar Cambios
+          {t('Save Changes')}
         </Button>
       </div>
     </form>

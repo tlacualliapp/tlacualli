@@ -11,17 +11,20 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-
-const features = [
-    { text: "Configuración de mapa de salas y mesas", icon: MapPin },
-    { text: "Asignación de camareros sobre ventas", icon: Users },
-    { text: "Traslado de consumos entre mesas", icon: Move },
-    { text: "Mapa de calor de mesas por ventas", icon: Zap }
-];
+import { useTranslation } from 'react-i18next';
+import '@/app/i18n';
 
 export default function MapPage() {
   const [user] = useAuthState(auth);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const { t } = useTranslation();
+
+  const features = [
+    { text: t("Map and room setup"), icon: MapPin },
+    { text: t("Waiter assignment on sales"), icon: Users },
+    { text: t("Transfer of consumptions between tables"), icon: Move },
+    { text: t("Sales heat map of tables"), icon: Zap }
+  ];
   
   useEffect(() => {
     const fetchRestaurantId = async () => {
@@ -44,14 +47,14 @@ export default function MapPage() {
           <div className="lg:col-span-2">
               <Card className="h-full">
                   <CardHeader>
-                      <CardTitle className="text-2xl font-bold font-headline">Gestión de Mesas</CardTitle>
+                      <CardTitle className="text-2xl font-bold font-headline">{t('Table Management')}</CardTitle>
                       <CardDescription>
-                          Visualiza el layout de tu restaurante, gestiona mesas y asignaciones en tiempo real.
+                          {t('Visualize your restaurant layout, manage tables, and track assignments in real-time.')}
                       </CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
                       <div className="aspect-video bg-muted/50 border-t relative">
-                          {restaurantId ? <MapEditor restaurantId={restaurantId} /> : <p className="p-4">Cargando...</p>}
+                          {restaurantId ? <MapEditor restaurantId={restaurantId} /> : <p className="p-4">{t('Loading...')}</p>}
                       </div>
                   </CardContent>
               </Card>
@@ -59,8 +62,8 @@ export default function MapPage() {
           <div className="lg:col-span-1">
               <Card>
                   <CardHeader>
-                      <CardTitle>Funcionalidades</CardTitle>
-                      <CardDescription>Características clave del módulo de gestión de mesas.</CardDescription>
+                      <CardTitle>{t('Features')}</CardTitle>
+                      <CardDescription>{t('Key features of the table management module.')}</CardDescription>
                   </CardHeader>
                   <CardContent>
                       <ul className="space-y-4">
@@ -71,7 +74,7 @@ export default function MapPage() {
                                   </div>
                                   <div>
                                       <h4 className="font-semibold">{feature.text}</h4>
-                                      <p className="text-sm text-muted-foreground">Disponible próximamente</p>
+                                      <p className="text-sm text-muted-foreground">{t('Available soon')}</p>
                                   </div>
                               </li>
                           ))}
