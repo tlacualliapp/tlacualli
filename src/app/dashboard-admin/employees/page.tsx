@@ -1,53 +1,223 @@
 
+'use client';
+
+import { useState, useEffect } from 'react';
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { EmployeeForm } from '@/components/employees/employee-form';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from 'react-i18next';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-const employees = [
-  { name: 'Ana Silva', role: 'Manager', status: 'Active', avatar: 'https://placehold.co/100x100.png', hint: 'woman portrait' },
-  { name: 'Carlos Gomez', role: 'Chef', status: 'Active', avatar: 'https://placehold.co/100x100.png', hint: 'man portrait' },
-  { name: 'Sofia Rossi', role: 'Waiter', status: 'Active', avatar: 'https://placehold.co/100x100.png', hint: 'woman smiling' },
-  { name: 'Marco Ricci', role: 'Waiter', status: 'Inactive', avatar: 'https://placehold.co/100x100.png', hint: 'man serious' },
-];
+interface Employee {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  perfil: string;
+  status: string;
+  avatar?: string;
+  hint?: string;
+}
 
 export default function EmployeesPage() {
+  const [user] = useAuthState(auth);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
+  const { toast } = useToast();
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    const fetchRestaurantId = async () => {
+      if (user) {
+        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          setRestaurantId(userData.restauranteId);
+        } else {
+            setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    };
+    fetchRestaurantId();
+  }, [user]);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    setIsLoading(true);
+    const q = query(
+        collection(db, "usuarios"), 
+        where("restauranteId", "==", restaurantId),
+        where("status", "==", "1")
+    );
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const staff: Employee[] = [];
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            staff.push({
+                id: doc.id,
+                nombre: data.nombre,
+                apellidos: data.apellidos,
+                perfil: data.perfil,
+                status: data.status,
+                avatar: 'https://placehold.co/100x100.png', // Placeholder
+                hint: 'portrait person'
+            });
+        });
+        setEmployees(staff);
+        setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching employees:", error);
+        toast({ variant: 'destructive', title: t('Error'), description: t('Could not load employees.') });
+        setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [restaurantId, t, toast]);
+
+  const handleAddNew = () => {
+    setEmployeeToEdit(null);
+    setIsFormModalOpen(true);
+  };
+  
+  const handleEdit = (employee: Employee) => {
+    setEmployeeToEdit(employee);
+    setIsFormModalOpen(true);
+  }
+
+  const handleDelete = async (employeeId: string) => {
+    try {
+        const employeeRef = doc(db, "usuarios", employeeId);
+        // Logical delete by changing status
+        await updateDoc(employeeRef, { status: "0" });
+        toast({
+            title: t("Employee Deactivated"),
+            description: t("The employee has been marked as inactive."),
+        });
+    } catch (error) {
+        console.error("Error deactivating employee:", error);
+        toast({
+            variant: "destructive",
+            title: t("Error"),
+            description: t("Could not deactivate the employee."),
+        });
+    }
+  };
+
+  const getRoleName = (profileId: string) => {
+    switch (profileId) {
+        case '1': return 'Administrator';
+        case '2': return 'Employee';
+        default: return 'Unknown';
+    }
+  }
+
   return (
     <AdminLayout>
+      <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
+        <DialogContent className="sm:max-w-[625px]">
+            <DialogHeader>
+                <DialogTitle>{employeeToEdit ? t('Edit Employee') : t('Add New Employee')}</DialogTitle>
+                <DialogDescription>
+                    {employeeToEdit ? t('Modify the employee information.') : t('Add a new employee to your team.')}
+                </DialogDescription>
+            </DialogHeader>
+            {restaurantId && <EmployeeForm restaurantId={restaurantId} onSuccess={() => setIsFormModalOpen(false)} employeeToEdit={employeeToEdit} />}
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Employee Management</h1>
-          <p className="text-muted-foreground">Manage roles, permissions, and PINs for your staff.</p>
+          <h1 className="text-3xl font-bold font-headline">{t('Employee Management')}</h1>
+          <p className="text-muted-foreground">{t('Manage roles, permissions, and PINs for your staff.')}</p>
         </div>
-        <Button className="bg-accent hover:bg-accent/90">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Employee
+        <Button className="bg-accent hover:bg-accent/90" onClick={handleAddNew} disabled={!restaurantId}>
+          <PlusCircle className="mr-2 h-4 w-4" /> {t('Add Employee')}
         </Button>
       </div>
       <Card>
         <CardContent className="p-0">
           <div className="divide-y divide-border">
-            {employees.map(employee => (
-              <div key={employee.name} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <Avatar>
-                    <AvatarImage src={employee.avatar} alt={employee.name} data-ai-hint={employee.hint} />
-                    <AvatarFallback>{employee.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold">{employee.name}</p>
-                    <p className="text-sm text-muted-foreground">{employee.role}</p>
+            {isLoading ? (
+                <div className="flex justify-center items-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            ) : employees.length > 0 ? (
+                employees.map(employee => (
+                  <div key={employee.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <Avatar>
+                        <AvatarImage src={employee.avatar} alt={`${employee.nombre} ${employee.apellidos}`} data-ai-hint={employee.hint} />
+                        <AvatarFallback>{`${employee.nombre[0]}${employee.apellidos[0]}`}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-semibold">{employee.nombre} {employee.apellidos}</p>
+                        <p className="text-sm text-muted-foreground">{t(getRoleName(employee.perfil))}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Badge variant={employee.status === '1' ? 'default' : 'secondary'}>
+                        {employee.status === '1' ? t('Active') : t('Inactive')}
+                      </Badge>
+                       <AlertDialog>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
+                              <DropdownMenuItem onSelect={() => handleEdit(employee)}><FilePenLine className="mr-2 h-4 w-4" />{t('Edit')}</DropdownMenuItem>
+                               <AlertDialogTrigger asChild>
+                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />{t('Deactivate')}</DropdownMenuItem>
+                              </AlertDialogTrigger>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle><AlertDialogDescription>{t("This action will mark the user as inactive and they won't be able to access the system. Do you want to continue?")}</AlertDialogDescription></AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(employee.id)} className="bg-destructive hover:bg-destructive/90">{t('Yes, deactivate')}</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                   </div>
+                ))
+            ) : (
+                <div className="text-center p-8 text-muted-foreground">
+                    {t('No employees found. Add your first employee to get started.')}
                 </div>
-                <div className="flex items-center gap-4">
-                  <Badge variant={employee.status === 'Active' ? 'default' : 'secondary'}>
-                    {employee.status}
-                  </Badge>
-                  <Button variant="outline" size="sm">Manage</Button>
-                </div>
-              </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
