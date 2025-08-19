@@ -32,10 +32,15 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <Card className="bg-card/65 backdrop-blur-lg border-white/20">
+      <Card className="mb-6 bg-card/65 backdrop-blur-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-bold font-headline">{t('Administrator Dashboard')}</CardTitle>
           <p className="text-muted-foreground">{t("Manage your restaurant's operations.")}</p>
+        </CardHeader>
+      </Card>
+      <Card className="bg-card/65 backdrop-blur-lg border-white/20">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">{t('Modules')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">

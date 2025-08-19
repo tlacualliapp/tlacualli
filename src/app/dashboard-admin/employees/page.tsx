@@ -3,12 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import { AdminLayout } from '@/components/layout/admin-layout';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Loader2, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader } from '@/components/ui/dialog';
 import { EmployeeForm } from '@/components/employees/employee-form';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
@@ -159,16 +159,23 @@ export default function EmployeesPage() {
             {restaurantId && <EmployeeForm restaurantId={restaurantId} onSuccess={() => setIsFormModalOpen(false)} employeeToEdit={employeeToEdit} />}
         </DialogContent>
       </Dialog>
+      
+      <Card className="mb-6 bg-card/65 backdrop-blur-lg">
+        <CardHeader>
+            <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
+                <Users className="h-8 w-8" /> {t('Employee Management')}
+            </CardTitle>
+            <CardDescription>{t('Manage roles, permissions, and PINs for your staff.')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div className="flex justify-end">
+                <Button className="bg-accent hover:bg-accent/90" onClick={handleAddNew} disabled={!restaurantId}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> {t('Add Employee')}
+                </Button>
+            </div>
+        </CardContent>
+      </Card>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold font-headline">{t('Employee Management')}</h1>
-          <p className="text-muted-foreground">{t('Manage roles, permissions, and PINs for your staff.')}</p>
-        </div>
-        <Button className="bg-accent hover:bg-accent/90" onClick={handleAddNew} disabled={!restaurantId}>
-          <PlusCircle className="mr-2 h-4 w-4" /> {t('Add Employee')}
-        </Button>
-      </div>
       <Card>
         <CardContent className="p-0">
           <div className="divide-y divide-border">

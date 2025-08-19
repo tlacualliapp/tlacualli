@@ -45,7 +45,9 @@ export default function MenuPage() {
     <AdminLayout>
       <Card className="mb-6 bg-card/65 backdrop-blur-lg">
         <CardHeader>
-            <CardTitle className="text-3xl font-bold font-headline">{t('Menu & Recipes')}</CardTitle>
+            <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
+                <Utensils className="h-8 w-8" /> {t('Menu & Recipes')}
+            </CardTitle>
             <CardDescription>{t('Manage your recipes and menu items.')}</CardDescription>
         </CardHeader>
       </Card>

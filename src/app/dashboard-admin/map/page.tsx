@@ -3,7 +3,7 @@
 
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, CheckCircle, MapPin, Users, Move, Zap } from 'lucide-react';
+import { List, CheckCircle, MapPin, Users, Move, Zap, Map as MapIcon } from 'lucide-react';
 import { MapEditor } from '@/components/map/map-editor';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
@@ -43,17 +43,21 @@ export default function MapPage() {
   return (
     <AdminLayout>
       <DndProvider backend={HTML5Backend}>
+        <Card className="mb-6 bg-card/65 backdrop-blur-lg">
+            <CardHeader>
+                <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
+                    <MapIcon className="h-8 w-8" /> {t('Table Management')}
+                </CardTitle>
+                <CardDescription>
+                    {t('Visualize your restaurant layout, manage tables, and track assignments in real-time.')}
+                </CardDescription>
+            </CardHeader>
+        </Card>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
               <Card className="h-full">
-                  <CardHeader>
-                      <CardTitle className="text-2xl font-bold font-headline">{t('Table Management')}</CardTitle>
-                      <CardDescription>
-                          {t('Visualize your restaurant layout, manage tables, and track assignments in real-time.')}
-                      </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                      <div className="aspect-video bg-muted/50 border-t relative">
+                  <CardContent className="p-0 h-[60vh]">
+                      <div className="w-full h-full bg-muted/50 border-t relative">
                           {restaurantId ? <MapEditor restaurantId={restaurantId} /> : <p className="p-4">{t('Loading...')}</p>}
                       </div>
                   </CardContent>
