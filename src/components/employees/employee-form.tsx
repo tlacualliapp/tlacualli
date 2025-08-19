@@ -40,11 +40,11 @@ export function EmployeeForm({ restaurantId, onSuccess, employeeToEdit }: Employ
     const { t } = useTranslation();
 
     const [formData, setFormData] = useState({
-        nombre: employeeToEdit?.nombre || '',
-        apellidos: employeeToEdit?.apellidos || '',
-        telefono: employeeToEdit?.telefono || '',
-        email: employeeToEdit?.email || '',
-        perfil: employeeToEdit?.perfil || '',
+        nombre: '',
+        apellidos: '',
+        telefono: '',
+        email: '',
+        perfil: '',
     });
 
      useEffect(() => {
@@ -55,6 +55,15 @@ export function EmployeeForm({ restaurantId, onSuccess, employeeToEdit }: Employ
                 telefono: employeeToEdit.telefono || '',
                 email: employeeToEdit.email || '',
                 perfil: employeeToEdit.perfil || '',
+            });
+        } else {
+            // Reset form when adding a new employee
+            setFormData({
+                nombre: '',
+                apellidos: '',
+                telefono: '',
+                email: '',
+                perfil: '',
             });
         }
     }, [employeeToEdit]);
