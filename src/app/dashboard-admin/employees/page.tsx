@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Loader2, Users } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Loader2, Users, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmployeeForm } from '@/components/employees/employee-form';
+import { PermissionsForm } from '@/components/employees/permissions-form';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from 'firebase/firestore';
@@ -21,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -31,7 +33,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 interface Employee {
@@ -44,6 +45,7 @@ interface Employee {
   status: string;
   avatar?: string;
   hint?: string;
+  permissions?: { [key: string]: boolean };
 }
 
 export default function EmployeesPage() {
@@ -52,6 +54,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -94,6 +97,7 @@ export default function EmployeesPage() {
                 status: data.status,
                 email: data.email,
                 telefono: data.telefono,
+                permissions: data.permissions,
                 avatar: 'https://placehold.co/100x100.png', // Placeholder
                 hint: 'portrait person'
             });
@@ -118,6 +122,11 @@ export default function EmployeesPage() {
     setEmployeeToEdit(employee);
     setIsFormModalOpen(true);
   }
+
+  const handlePermissions = (employee: Employee) => {
+    setEmployeeToEdit(employee);
+    setIsPermissionsModalOpen(true);
+  };
 
   const handleDelete = async (employeeId: string) => {
     try {
@@ -160,6 +169,18 @@ export default function EmployeesPage() {
         </DialogContent>
       </Dialog>
       
+      <Dialog open={isPermissionsModalOpen} onOpenChange={setIsPermissionsModalOpen}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>{t('Module Permissions')}</DialogTitle>
+                 <DialogDescription>
+                    {t('Select the modules this employee can access.')}
+                </DialogDescription>
+            </DialogHeader>
+            {employeeToEdit && <PermissionsForm employee={employeeToEdit} onSuccess={() => setIsPermissionsModalOpen(false)} />}
+        </DialogContent>
+      </Dialog>
+
       <Card className="mb-6 bg-card/65 backdrop-blur-lg">
         <CardHeader>
             <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
@@ -208,6 +229,8 @@ export default function EmployeesPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
                               <DropdownMenuItem onSelect={() => handleEdit(employee)}><FilePenLine className="mr-2 h-4 w-4" />{t('Edit')}</DropdownMenuItem>
+                               <DropdownMenuItem onSelect={() => handlePermissions(employee)}><ShieldCheck className="mr-2 h-4 w-4" />{t('Permissions')}</DropdownMenuItem>
+                               <DropdownMenuSeparator />
                                <AlertDialogTrigger asChild>
                                 <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />{t('Deactivate')}</DropdownMenuItem>
                               </AlertDialogTrigger>

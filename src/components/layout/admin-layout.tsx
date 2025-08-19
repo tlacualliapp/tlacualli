@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -52,25 +52,28 @@ import { TacoIcon } from '@/components/icons/logo';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { updatePassword } from 'firebase/auth';
+import { doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { useAuthState } from 'react-firebase-hooks/auth';
 import { useToast } from '@/hooks/use-toast';
 import '@/app/i18n'; 
 
-const navItems = [
-  { href: '/dashboard-admin', label: 'Dashboard', icon: Home },
-  { href: '/orders', label: 'Orders', icon: ClipboardList },
-  { href: '/dashboard-admin/menu', label: 'Menu y recetas', icon: Utensils },
-  { href: '/dashboard-admin/employees', label: 'Staff', icon: Users },
-  { href: '/dashboard-admin/inventory', label: 'Inventory', icon: Package },
-  { href: '/kitchen', label: 'Kitchen', icon: ChefHat },
-  { href: '/deliveries', label: 'Deliveries', icon: Truck },
-  { href: '/reports', label: 'Reports', icon: BarChart },
-  { href: '/dashboard-admin/map', label: 'Digital Map', icon: Map },
+const allNavItems = [
+  { key: 'dashboard', href: '/dashboard-admin', label: 'Dashboard', icon: Home },
+  { key: 'orders', href: '/orders', label: 'Orders', icon: ClipboardList },
+  { key: 'menu', href: '/dashboard-admin/menu', label: 'Menu y recetas', icon: Utensils },
+  { key: 'staff', href: '/dashboard-admin/employees', label: 'Staff', icon: Users },
+  { key: 'inventory', href: '/dashboard-admin/inventory', label: 'Inventory', icon: Package },
+  { key: 'kitchen', href: '/kitchen', label: 'Kitchen', icon: ChefHat },
+  { key: 'deliveries', href: '/deliveries', label: 'Deliveries', icon: Truck },
+  { key: 'reports', href: '/reports', label: 'Reports', icon: BarChart },
+  { key: 'map', href: '/dashboard-admin/map', label: 'Digital Map', icon: Map },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [user, loading] = useAuthState(auth);
   const { setTheme } = useTheme();
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -78,6 +81,48 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [navItems, setNavItems] = useState(allNavItems);
+
+   useEffect(() => {
+    const fetchPermissions = async () => {
+      if (user) {
+        // Find user document by uid first
+        let userDocRef;
+        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          userDocRef = querySnapshot.docs[0].ref;
+        } else {
+          // Fallback for users who might not have UID stored (e.g. older records)
+          const legacyQ = query(collection(db, "usuarios"), where("email", "==", user.email));
+          const legacySnapshot = await getDocs(legacyQ);
+          if(!legacySnapshot.empty) {
+            userDocRef = legacySnapshot.docs[0].ref;
+          }
+        }
+        
+        if (userDocRef) {
+          const userSnap = await getDoc(userDocRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            // Administrator (Profile 1) has all permissions
+            if (userData.perfil === '1') {
+              setNavItems(allNavItems);
+            } else if (userData.permissions) {
+              const allowedItems = allNavItems.filter(item => userData.permissions[item.key]);
+              setNavItems(allowedItems);
+            } else {
+              setNavItems([]); // No permissions set, show nothing
+            }
+          }
+        }
+      }
+    };
+    if (!loading) {
+      fetchPermissions();
+    }
+  }, [user, loading]);
 
 
   const changeLanguage = (lng: string) => {
@@ -103,10 +148,10 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     }
 
     setIsUpdatingPassword(true);
-    const user = auth.currentUser;
-    if (user) {
+    const currentUser = auth.currentUser;
+    if (currentUser) {
       try {
-        await updatePassword(user, newPassword);
+        await updatePassword(currentUser, newPassword);
         toast({
           title: t('Success'),
           description: t('Password updated successfully.'),
