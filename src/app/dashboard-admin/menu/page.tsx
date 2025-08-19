@@ -104,7 +104,7 @@ export default function MenuPage() {
                  <CardDescription>{t('View and manage your current recipes.')}</CardDescription>
             </CardHeader>
             <CardContent>
-                <RecipesTable restaurantId={restaurantId} />
+                <RecipesTable restaurantId={restaurantId} t={t} />
             </CardContent>
         </Card>
 
@@ -115,7 +115,7 @@ export default function MenuPage() {
                 <CardDescription>{t('View and manage your current menu dishes.')}</CardDescription>
             </CardHeader>
             <CardContent>
-                <MenuTable restaurantId={restaurantId} />
+                <MenuTable restaurantId={restaurantId} t={t} />
             </CardContent>
         </Card>
       </div>
