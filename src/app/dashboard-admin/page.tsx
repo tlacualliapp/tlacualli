@@ -24,7 +24,7 @@ const modules = [
   { href: '/kitchen', icon: ChefHat, label: 'Kitchen', color: 'bg-gray-500' },
   { href: '/deliveries', icon: Truck, label: 'Deliveries', color: 'bg-indigo-500' },
   { href: '/reports', icon: BarChart, label: 'Reports', color: 'bg-green-500' },
-  { href: '/map', icon: Map, label: 'Digital Map', color: 'bg-purple-500' },
+  { href: '/dashboard-admin/map', icon: Map, label: 'Digital Map', color: 'bg-purple-500' },
 ];
 
 export default function AdminDashboard() {

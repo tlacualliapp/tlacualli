@@ -66,7 +66,7 @@ const navItems = [
   { href: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { href: '/deliveries', label: 'Deliveries', icon: Truck },
   { href: '/reports', label: 'Reports', icon: BarChart },
-  { href: '/map', label: 'Digital Map', icon: Map },
+  { href: '/dashboard-admin/map', label: 'Digital Map', icon: Map },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
