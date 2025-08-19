@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Loader2, Users } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmployeeForm } from '@/components/employees/employee-form';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
