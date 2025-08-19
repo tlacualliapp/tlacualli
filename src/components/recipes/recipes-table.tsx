@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, FilePenLine, Trash2, Loader2 } from 'lucide-react';
+import { MoreHorizontal, FilePenLine, Trash2, Loader2, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { RecipeForm } from './recipe-form';
+import { Card, CardContent, CardHeader } from '../ui/card';
 
 interface Ingredient {
   itemId: string;
@@ -38,6 +39,7 @@ export function RecipesTable({ restaurantId, t }: RecipesTableProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -89,6 +91,49 @@ export function RecipesTable({ restaurantId, t }: RecipesTableProps) {
             </DialogContent>
         </Dialog>
 
+        <Dialog open={selectedRecipe !== null} onOpenChange={(isOpen) => !isOpen && setSelectedRecipe(null)}>
+            <DialogContent className="sm:max-w-lg">
+                 {selectedRecipe && (
+                    <>
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-headline">{selectedRecipe.name}</DialogTitle>
+                        <DialogDescription>{t('Recipe Details')}</DialogDescription>
+                    </DialogHeader>
+                     <Card>
+                        <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-semibold">{t('Ingredients')}</h3>
+                                <div className="text-lg font-bold font-mono bg-primary/10 text-primary px-3 py-1 rounded-md">
+                                    {t('Cost')}: ${(selectedRecipe.cost || 0).toFixed(2)}
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                           <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>{t('Ingredient')}</TableHead>
+                                        <TableHead className="text-right">{t('Quantity')}</TableHead>
+                                        <TableHead>{t('Unit')}</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {selectedRecipe.ingredients?.map((ing, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell>{ing.itemName}</TableCell>
+                                            <TableCell className="text-right font-mono">{ing.quantity}</TableCell>
+                                            <TableCell>{ing.unit}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                    </>
+                 )}
+            </DialogContent>
+        </Dialog>
+
         <div className="rounded-md border h-full">
           <Table>
             <TableHeader>
@@ -104,7 +149,11 @@ export function RecipesTable({ restaurantId, t }: RecipesTableProps) {
               ) : recipes.length > 0 ? (
                 recipes.map(recipe => (
                   <TableRow key={recipe.id}>
-                    <TableCell className="font-medium">{recipe.name}</TableCell>
+                    <TableCell className="font-medium">
+                        <Button variant="link" className="p-0 h-auto" onClick={() => setSelectedRecipe(recipe)}>
+                            {recipe.name}
+                        </Button>
+                    </TableCell>
                     <TableCell className="text-right font-mono">${(recipe.cost || 0).toFixed(2)}</TableCell>
                      <TableCell className="text-right">
                       <AlertDialog>
