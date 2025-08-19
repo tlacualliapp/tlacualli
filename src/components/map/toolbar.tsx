@@ -15,8 +15,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
@@ -45,6 +43,7 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
       status: 'available',
       top: 50,
       left: 50,
+      seats: 4,
     });
   };
 
@@ -86,9 +85,7 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
                 <TabsList>
                     {rooms.map(room => (
                          <div key={room.id} className="relative group">
-                            <TabsTrigger value={room.id}>
-                                {room.name}
-                            </TabsTrigger>
+                            <TabsTrigger value={room.id}>{room.name}</TabsTrigger>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="absolute -right-1 -top-1 h-4 w-4 opacity-50 group-hover:opacity-100">

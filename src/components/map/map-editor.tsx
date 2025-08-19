@@ -9,6 +9,8 @@ import { Loader2 } from 'lucide-react';
 import { Toolbar } from './toolbar';
 import { TableItem, Table } from './table-item';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TableForm } from './table-form';
 
 
 export interface Room {
@@ -29,6 +31,8 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
   const [tables, setTables] = useState<{ [roomId: string]: Table[] }>({});
   const [activeRoom, setActiveRoom] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [tableToEdit, setTableToEdit] = useState<Table | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -69,6 +73,21 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
     toast({ title: "Mesa eliminada", description: "La mesa ha sido eliminada del plano." });
   };
 
+  const handleEditTable = (table: Table) => {
+    setTableToEdit(table);
+    setIsFormOpen(true);
+  }
+
+  const handleSaveTable = async (formData: {name: string, seats: number}) => {
+    if (!tableToEdit || !activeRoom) return;
+    const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`, tableToEdit.id);
+    await updateDoc(tableRef, { name: formData.name, seats: formData.seats });
+    toast({ title: "Mesa actualizada" });
+    setIsFormOpen(false);
+    setTableToEdit(null);
+  };
+
+
   const [, drop] = useDrop(() => ({
     accept: ItemTypes.TABLE,
     drop(item: Table, monitor) {
@@ -92,7 +111,7 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
             {rooms.map(room => (
                 <div key={room.id} style={{ display: activeRoom === room.id ? 'block' : 'none' }} className="w-full h-full">
                      {(tables[room.id] || []).map(table => (
-                        <TableItem key={table.id} {...table} onDelete={deleteTable} />
+                        <TableItem key={table.id} {...table} onDelete={deleteTable} onEdit={handleEditTable} />
                     ))}
                 </div>
             ))}
@@ -102,6 +121,16 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
                 </div>
             )}
         </div>
+
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Editar Mesa</DialogTitle>
+                    <DialogDescription>Modifica el nombre y el número de asientos de la mesa.</DialogDescription>
+                </DialogHeader>
+                {tableToEdit && <TableForm table={tableToEdit} onSave={handleSaveTable} onCancel={() => setIsFormOpen(false)} />}
+            </DialogContent>
+        </Dialog>
     </div>
   );
 };
