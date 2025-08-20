@@ -3,9 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, serverTimestamp, addDoc, runTransaction, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
-import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table as TableType } from '../map/table-item';
 import { ScrollArea } from '../ui/scroll-area';
@@ -56,16 +56,14 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
     };
     
     setIsLoading(true);
-    // Simplified query to avoid composite indexes
     const q = query(
         collection(db, "orders"), 
-        where("tableId", "==", table.id),
-        where("status", "in", ["open", "preparing"])
+        where("tableId", "==", table.id)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-            const activeOrderDoc = snapshot.docs[0];
+        const activeOrderDoc = snapshot.docs.find(doc => doc.data().status !== 'paid');
+        if (activeOrderDoc) {
             setOrder({ id: activeOrderDoc.id, ...activeOrderDoc.data() } as Order);
         } else {
             setOrder(null);
@@ -113,13 +111,8 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
     if(!order) return;
     
     try {
-        // We just mark the order as paid. The table status will be derived from active orders.
         const orderRef = doc(db, 'orders', order.id);
         await updateDoc(orderRef, { status: 'paid' });
-        
-        // Logic for dirty/reserved status would need to be handled separately,
-        // e.g., in a separate 'tableManagement' collection or similar.
-        // For now, closing the order makes the table 'available'.
         
         toast({ title: t('Order Closed'), description: `${t('Table')} ${table.name} ${t('is now')} ${t('available')}.`});
         setIsCloseOrderModalOpen(false);
@@ -127,6 +120,53 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
 
     } catch(e) {
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not close the order.')});
+    }
+  }
+
+  const handleRemoveItem = async (itemId: string) => {
+    if (!order) return;
+    const orderRef = doc(db, 'orders', order.id);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) {
+                throw new Error("Order does not exist!");
+            }
+
+            let currentItems: OrderItem[] = orderDoc.data().items || [];
+            let updatedItems = [...currentItems];
+
+            const itemIndex = updatedItems.findIndex(i => i.id === itemId);
+            if (itemIndex > -1) {
+                if (updatedItems[itemIndex].quantity > 1) {
+                    updatedItems[itemIndex].quantity -= 1;
+                } else {
+                    updatedItems.splice(itemIndex, 1);
+                }
+            }
+
+            const newSubtotal = updatedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+            transaction.update(orderRef, { items: updatedItems, subtotal: newSubtotal });
+        });
+        toast({
+            title: t('Item Removed'),
+            description: t('The item has been updated in the order.'),
+        });
+    } catch (error) {
+        console.error("Error removing item:", error);
+        toast({ variant: "destructive", title: t("Error"), description: t("Could not remove the item.") });
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if(!order) return;
+    try {
+        await deleteDoc(doc(db, 'orders', order.id));
+        toast({ title: t('Order Cancelled'), description: t('The order has been completely removed.') });
+        onOrderClosed();
+    } catch(error) {
+        toast({ variant: "destructive", title: t("Error"), description: t("Could not cancel the order.") });
     }
   }
 
@@ -162,15 +202,20 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
       <ScrollArea className="flex-grow pr-4 -mr-4 mb-4">
         <div className="space-y-3">
           {order.items.map(item => (
-            <div key={item.id}>
-              <div className="flex justify-between items-center">
+            <div key={item.id} className="flex justify-between items-center group">
                 <div>
                   <p className="font-semibold">{item.quantity}x {item.name}</p>
                    {item.notes && <p className="text-xs text-muted-foreground">- {item.notes}</p>}
                 </div>
-                <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
+                <div className="flex items-center gap-2">
+                    <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
+                    {order.status === 'open' && (
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item.id)}>
+                        <MinusCircle className="h-4 w-4" />
+                      </Button>
+                    )}
+                </div>
               </div>
-            </div>
           ))}
         </div>
       </ScrollArea>
@@ -211,28 +256,52 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
                 <Printer className="mr-2 h-4 w-4" />
                 {t('Print Pre-ticket')}
             </Button>
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button size="lg" variant="destructive" className="w-full">
-                        <XCircle className="mr-2 h-4 w-4" />
-                        {t('Close Order')}
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        {t('This will finalize the order and free the table. This action cannot be undone.')}
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleCloseOrder}>{t('Yes, close order')}</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            
+            <div className="grid grid-cols-2 gap-2">
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                         <Button size="lg" variant="destructive" className="w-full" disabled={order.status === 'preparing'}>
+                            <XCircle className="mr-2 h-4 w-4" />
+                            {t('Cancel Order')}
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t('This action will permanently delete the current order. This cannot be undone.')}
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>{t('Go Back')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive hover:bg-destructive/90">{t('Yes, cancel order')}</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button size="lg" variant="secondary" className="w-full">
+                            {t('Close Order')}
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>{t('Finalize and Close Order')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t('This will mark the order as paid and update the table status. This action cannot be undone.')}
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCloseOrder}>{t('Yes, close order')}</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
       </div>
 
     </div>
   );
 };
+
+    
