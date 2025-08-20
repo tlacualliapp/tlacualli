@@ -67,10 +67,12 @@ export const KitchenOrderCard = ({ order, onItemStatusChange, onOrderReady }: Ki
       <CardContent className="flex-grow p-4 space-y-3">
         {order.items.map((item, index) => {
           const uniqueItemId = `${item.id}-${index}`;
+          const isPending = item.status === 'pending' || !item.status;
           return (
             <div key={uniqueItemId} className={cn("p-2 rounded-md transition-colors", {
                 'bg-yellow-100/50': item.status === 'preparing',
                 'bg-green-100/50': item.status === 'ready',
+                'bg-orange-100/80 animate-pulse border border-orange-300': isPending,
             })}>
               <div className="flex justify-between items-start">
                 <p className="font-semibold">{item.quantity}x {item.name}</p>
