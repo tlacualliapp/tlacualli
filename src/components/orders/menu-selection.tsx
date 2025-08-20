@@ -3,13 +3,15 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, getDoc, doc } from 'firebase/firestore';
+import { collection, query, onSnapshot, getDoc, doc, where, getDocs, updateDoc, arrayUnion, runTransaction } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, Search } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table } from '../map/table-item';
+import { Input } from '../ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 interface MenuItem {
   id: string;
@@ -17,6 +19,14 @@ interface MenuItem {
   description?: string;
   price: number;
   categoryId: string;
+}
+
+interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  notes?: string;
 }
 
 interface Category {
@@ -35,6 +45,8 @@ export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProp
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
+  const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -58,10 +70,68 @@ export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProp
     };
   }, [restaurantId]);
 
-  const handleAddItemToOrder = (item: MenuItem) => {
-    // Placeholder for adding item to order logic
-    console.log(`Adding ${item.name} to order for table ${table.name}`);
+  const handleAddItemToOrder = async (item: MenuItem) => {
+    if (!restaurantId || !table.id) return;
+
+    const ordersQuery = query(
+      collection(db, "orders"),
+      where("tableId", "==", table.id),
+      where("status", "in", ["open", "preparing"])
+    );
+
+    try {
+        const querySnapshot = await getDocs(ordersQuery);
+        if (querySnapshot.empty) {
+            toast({ variant: 'destructive', title: t('Error'), description: t('No active order found for this table.') });
+            return;
+        }
+
+        const orderRef = querySnapshot.docs[0].ref;
+        
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) {
+                 throw new Error("Order document does not exist!");
+            }
+
+            const orderData = orderDoc.data();
+            const currentItems: OrderItem[] = orderData.items || [];
+            
+            const existingItemIndex = currentItems.findIndex(i => i.id === item.id);
+            let updatedItems;
+
+            if (existingItemIndex > -1) {
+                // Increment quantity
+                updatedItems = currentItems.map((orderItem, index) => 
+                    index === existingItemIndex 
+                    ? { ...orderItem, quantity: orderItem.quantity + 1 }
+                    : orderItem
+                );
+            } else {
+                // Add new item
+                updatedItems = [...currentItems, { id: item.id, name: item.name, price: item.price, quantity: 1 }];
+            }
+
+            const newSubtotal = updatedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+
+            transaction.update(orderRef, { items: updatedItems, subtotal: newSubtotal });
+        });
+        
+        toast({
+            title: `${t('Added')}!`,
+            description: `${item.name} ${t('has been added to the order.')}`
+        })
+
+
+    } catch (error) {
+        console.error("Error adding item to order:", error);
+        toast({ variant: 'destructive', title: t('Error'), description: t('Could not add item to order.') });
+    }
   };
+
+  const filteredMenuItems = menuItems.filter(item => 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (isLoading) {
     return (
@@ -79,6 +149,16 @@ export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProp
         </Button>
         <h2 className="text-xl font-bold font-headline ml-2">{t('Add to Order')}: {t('Table')} {table.name}</h2>
       </div>
+
+       <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            placeholder={t("Search items...")}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
       
       {categories.length > 0 ? (
         <Tabs defaultValue={categories[0].id} className="flex-grow flex flex-col">
@@ -90,7 +170,7 @@ export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProp
           {categories.map(cat => (
             <TabsContent key={cat.id} value={cat.id} className="flex-grow overflow-y-auto mt-4">
               <div className="grid grid-cols-2 gap-3">
-                {menuItems.filter(item => item.categoryId === cat.id).map(item => (
+                {filteredMenuItems.filter(item => item.categoryId === cat.id).map(item => (
                   <Card 
                     key={item.id} 
                     className="cursor-pointer hover:shadow-md hover:border-primary transition-all"
@@ -112,5 +192,3 @@ export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProp
     </div>
   );
 };
-
-    
