@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Loader2, Users, ShieldCheck } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, FilePenLine, Trash2, Loader2, Users, ShieldCheck, Undo, ShieldAlert } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmployeeForm } from '@/components/employees/employee-form';
 import { PermissionsForm } from '@/components/employees/permissions-form';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 import {
@@ -76,8 +76,7 @@ export default function EmployeesPage() {
     setIsLoading(true);
     const q = query(
         collection(db, "usuarios"), 
-        where("restauranteId", "==", restaurantId),
-        where("status", "==", "1")
+        where("restauranteId", "==", restaurantId)
     );
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const staff: Employee[] = [];
@@ -126,10 +125,9 @@ export default function EmployeesPage() {
     setIsPermissionsModalOpen(true);
   };
 
-  const handleDelete = async (employeeId: string) => {
+  const handleDeactivate = async (employeeId: string) => {
     try {
         const employeeRef = doc(db, "usuarios", employeeId);
-        // Logical delete by changing status
         await updateDoc(employeeRef, { status: "0" });
         toast({
             title: t("Employee Deactivated"),
@@ -144,6 +142,46 @@ export default function EmployeesPage() {
         });
     }
   };
+  
+  const handleActivate = async (employeeId: string) => {
+    try {
+        const employeeRef = doc(db, "usuarios", employeeId);
+        await updateDoc(employeeRef, { status: "1" });
+        toast({
+            title: t("Employee Activated"),
+            description: t("The employee has been marked as active."),
+        });
+    } catch (error) {
+        console.error("Error activating employee:", error);
+        toast({
+            variant: "destructive",
+            title: t("Error"),
+            description: t("Could not activate the employee."),
+        });
+    }
+  };
+
+  const handlePermanentDelete = async (employeeId: string) => {
+     try {
+        // This is a placeholder for a function that would call a backend
+        // to delete the Firebase Auth user, as this is a privileged operation.
+        // For now, we'll just delete the Firestore document.
+        console.log(`Requesting permanent deletion for user ID: ${employeeId}`);
+        await deleteDoc(doc(db, "usuarios", employeeId));
+        toast({
+            title: t("Employee Deleted"),
+            description: t("The employee has been permanently removed from the database."),
+        });
+    } catch (error) {
+        console.error("Error permanently deleting employee:", error);
+        toast({
+            variant: "destructive",
+            title: t("Error"),
+            description: t("Could not permanently delete the employee. Please contact support if the problem persists."),
+        });
+    }
+  };
+
 
  const getRoleName = (profileId: string) => {
     const roles: { [key: string]: string } = {
@@ -226,21 +264,46 @@ export default function EmployeesPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
-                              <DropdownMenuItem onSelect={() => handleEdit(employee)}><FilePenLine className="mr-2 h-4 w-4" />{t('Edit')}</DropdownMenuItem>
-                               <DropdownMenuItem onSelect={() => handlePermissions(employee)}><ShieldCheck className="mr-2 h-4 w-4" />{t('Permissions')}</DropdownMenuItem>
-                               <DropdownMenuSeparator />
-                               <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />{t('Deactivate')}</DropdownMenuItem>
-                              </AlertDialogTrigger>
+                              {employee.status === '1' ? (
+                                <>
+                                  <DropdownMenuItem onSelect={() => handleEdit(employee)}><FilePenLine className="mr-2 h-4 w-4" />{t('Edit')}</DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => handlePermissions(employee)}><ShieldCheck className="mr-2 h-4 w-4" />{t('Permissions')}</DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />{t('Deactivate')}</DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                </>
+                              ) : (
+                                <>
+                                  <DropdownMenuItem onSelect={() => handleActivate(employee.id)}><Undo className="mr-2 h-4 w-4" />{t('Activate')}</DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                   <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}><ShieldAlert className="mr-2 h-4 w-4" />{t('Delete Permanently')}</DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                          <AlertDialogContent>
-                            <AlertDialogHeader><AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle><AlertDialogDescription>{t("This action will mark the user as inactive and they won't be able to access the system. Do you want to continue?")}</AlertDialogDescription></AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(employee.id)} className="bg-destructive hover:bg-destructive/90">{t('Yes, deactivate')}</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
+                           {employee.status === '1' ? (
+                            <AlertDialogContent>
+                                <AlertDialogHeader><AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle><AlertDialogDescription>{t("This action will mark the user as inactive and they won't be able to access the system. Do you want to continue?")}</AlertDialogDescription></AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeactivate(employee.id)} className="bg-destructive hover:bg-destructive/90">{t('Yes, deactivate')}</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                           ) : (
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle className="flex items-center gap-2"><ShieldAlert className="h-6 w-6 text-destructive"/>{t('Permanent Deletion')}</AlertDialogTitle>
+                                    <AlertDialogDescription>{t('This action is irreversible. The user will be deleted from the authentication system and database. Are you absolutely sure?')}</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handlePermanentDelete(employee.id)} className="bg-destructive hover:bg-destructive/90">{t('Yes, delete permanently')}</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                           )}
                         </AlertDialog>
                     </div>
                   </div>
