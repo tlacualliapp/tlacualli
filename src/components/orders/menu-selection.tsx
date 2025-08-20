@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table } from '../map/table-item';
 import { Input } from '../ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface MenuItem {
   id: string;
@@ -47,6 +48,7 @@ export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProp
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const [clickedItemId, setClickedItemId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -72,6 +74,9 @@ export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProp
 
   const handleAddItemToOrder = async (item: MenuItem) => {
     if (!restaurantId || !table.id) return;
+    
+    setClickedItemId(item.id);
+    setTimeout(() => setClickedItemId(null), 300);
 
     const ordersQuery = query(
       collection(db, "orders"),
@@ -173,7 +178,10 @@ export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProp
                 {filteredMenuItems.filter(item => item.categoryId === cat.id).map(item => (
                   <Card 
                     key={item.id} 
-                    className="cursor-pointer hover:shadow-md hover:border-primary transition-all"
+                    className={cn(
+                        "cursor-pointer hover:shadow-md hover:border-primary transition-all",
+                        clickedItemId === item.id && "animate-pulse scale-105 bg-primary/10"
+                    )}
                     onClick={() => handleAddItemToOrder(item)}
                   >
                     <CardContent className="p-3">
