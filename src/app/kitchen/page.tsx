@@ -104,12 +104,14 @@ export default function KitchenPage() {
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       ) : orders.length === 0 ? (
-         <div className="flex flex-col items-center justify-center h-full text-center mt-16">
-            <h1 className="text-4xl font-bold font-headline mb-4">{t('Kitchen is Clear!')}</h1>
-            <p className="text-lg text-muted-foreground mb-8 max-w-md">
-              {t('There are no pending orders at the moment.')}
-            </p>
-          </div>
+         <Card className="bg-card/65 backdrop-blur-lg">
+            <CardContent className="flex flex-col items-center justify-center text-center p-16">
+                <h1 className="text-4xl font-bold font-headline mb-4">{t('Kitchen is Clear!')}</h1>
+                <p className="text-lg text-muted-foreground max-w-md">
+                {t('There are no pending orders at the moment.')}
+                </p>
+            </CardContent>
+         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {orders.map(order => (
