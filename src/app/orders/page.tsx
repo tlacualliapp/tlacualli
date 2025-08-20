@@ -3,7 +3,7 @@
 
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClipboardList, Loader2, Beer, CircleDollarSign, ConciergeBell } from 'lucide-react';
+import { ClipboardList, Loader2, Beer, CircleDollarSign, ConciergeBell, ShoppingBag } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { useState, useEffect } from 'react';
@@ -24,9 +24,14 @@ interface Room {
   name: string;
 }
 
+interface UserAssignments {
+    tables: string[];
+}
+
 export default function OrdersPage() {
   const [user] = useAuthState(auth);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [userAssignments, setUserAssignments] = useState<UserAssignments | null>(null);
   const { t } = useTranslation();
   const { toast } = useToast();
   
@@ -37,23 +42,26 @@ export default function OrdersPage() {
   const [view, setView] = useState<'table_map' | 'menu' | 'order_summary'>('table_map');
 
   useEffect(() => {
-    const fetchRestaurantId = async () => {
+    const fetchUserData = async () => {
       if (user) {
         const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
           const userData = querySnapshot.docs[0].data();
           setRestaurantId(userData.restauranteId);
+          setUserAssignments(userData.assignments || { tables: [] });
         } else {
             const legacyQ = query(collection(db, "usuarios"), where("email", "==", user.email));
             const legacySnapshot = await getDocs(legacyQ);
             if(!legacySnapshot.empty) {
-                setRestaurantId(legacySnapshot.docs[0].data().restauranteId);
+                const legacyUserData = legacySnapshot.docs[0].data();
+                setRestaurantId(legacyUserData.restauranteId);
+                setUserAssignments(legacyUserData.assignments || { tables: [] });
             }
         }
       }
     };
-    fetchRestaurantId();
+    fetchUserData();
   }, [user]);
 
   useEffect(() => {
@@ -74,27 +82,25 @@ export default function OrdersPage() {
   }, [restaurantId]);
   
   useEffect(() => {
-    if (!restaurantId || rooms.length === 0) return;
+    if (!restaurantId || rooms.length === 0 || !userAssignments) return;
   
     const unsubscribers = rooms.map(room => {
       const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
       return onSnapshot(tablesRef, (tableSnapshot) => {
         const tablesData = tableSnapshot.docs
           .map(doc => ({ id: doc.id, roomId: room.id, ...doc.data() } as Table))
+          .filter(table => userAssignments.tables.includes(table.id)) // Filter by assigned tables
           .sort((a, b) => a.name.localeCompare(b.name));
         
         setTables(prev => ({ ...prev, [room.id]: tablesData }));
 
-        // If the currently selected table is in this room, update its data
         if (selectedTable && selectedTable.roomId === room.id) {
             const updatedSelectedTable = tablesData.find(t => t.id === selectedTable.id);
             if (updatedSelectedTable) {
-                // This prevents re-render loops if the data hasn't actually changed.
                 if (JSON.stringify(updatedSelectedTable) !== JSON.stringify(selectedTable)) {
                     setSelectedTable(updatedSelectedTable);
                 }
             } else {
-                // The selected table was deleted
                 setSelectedTable(null);
             }
         }
@@ -105,7 +111,7 @@ export default function OrdersPage() {
   
     return () => unsubscribers.forEach(unsub => unsub());
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restaurantId, rooms]); // selectedTable is removed from dependencies to prevent loops
+  }, [restaurantId, rooms, userAssignments]);
 
 
   const handleTableClick = (table: Table) => {
@@ -113,14 +119,13 @@ export default function OrdersPage() {
     if (table.status === 'occupied' || table.status === 'billing') {
         setView('order_summary');
     } else {
-        setView('table_map'); // Stay on map, but show details on the right
+        setView('table_map'); 
     }
   };
   
   const handleStartNewOrder = async () => {
     if (!selectedTable || !restaurantId) return;
     
-    // Set table status to occupied
     try {
         const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${selectedTable.roomId}/tables`, selectedTable.id);
         await updateDoc(tableRef, { status: 'occupied' });
@@ -137,6 +142,13 @@ export default function OrdersPage() {
         });
     }
   };
+
+  const handleTakeoutOrder = () => {
+    toast({
+        title: t('Takeout Order'),
+        description: t('Functionality to register takeout orders coming soon.')
+    })
+  }
 
   const renderRightPanel = () => {
     if (!selectedTable) {
@@ -157,7 +169,6 @@ export default function OrdersPage() {
         return <OrderDetails restaurantId={restaurantId} table={selectedTable} onAddItems={() => setView('menu')} />;
     }
 
-    // Default view when a table is selected but no order is active
     return (
         <div className="p-6 flex flex-col h-full">
             <h2 className="text-2xl font-bold font-headline mb-2">{t('Table')} {selectedTable.name}</h2>
@@ -218,24 +229,30 @@ export default function OrdersPage() {
   return (
     <AdminLayout>
       <div className="grid gap-6 lg:grid-cols-3 h-full">
-        {/* Columna Izquierda - Mapa de Mesas */}
         <div className="lg:col-span-2">
             <Card className="h-full">
-                 <CardHeader>
+                 <CardHeader className="flex flex-row justify-between items-center">
+                    <div>
                       <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
                           <ClipboardList className="h-8 w-8" /> {t('Order Management')}
                       </CardTitle>
                       <CardDescription>
                           {t('Select a table to start an order or manage an existing one.')}
                       </CardDescription>
+                    </div>
+                     <Button variant="outline" onClick={handleTakeoutOrder}>
+                        <ShoppingBag className="mr-2 h-4 w-4" />
+                        {t('Register Takeout Order')}
+                    </Button>
                   </CardHeader>
                 <CardContent className="h-[calc(100vh-220px)]">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
                     ) : rooms.length > 0 ? (
-                        <Tabs defaultValue={rooms[0].id} className="h-full flex flex-col">
+                        <Tabs defaultValue={rooms.find(r => tables[r.id]?.length > 0)?.id || rooms[0].id} className="h-full flex flex-col">
                             <TabsList>
                                 {rooms.map(room => (
+                                   (tables[room.id] && tables[room.id].length > 0) &&
                                     <TabsTrigger key={room.id} value={room.id}>{room.name}</TabsTrigger>
                                 ))}
                             </TabsList>
@@ -249,7 +266,6 @@ export default function OrdersPage() {
                                                 onClick={() => handleTableClick(table)}
                                                 isSelected={selectedTable?.id === table.id}
                                                 view="operational"
-                                                // onDelete and onEdit are not needed in operational view
                                                 onDelete={() => {}} 
                                                 onEdit={() => {}}
                                             />
@@ -257,7 +273,7 @@ export default function OrdersPage() {
                                     </div>
                                     {(!tables[room.id] || tables[room.id].length === 0) && (
                                         <div className="flex items-center justify-center h-full text-muted-foreground">
-                                            <p>{t('No tables in this area.')}</p>
+                                            <p>{t('No tables assigned to you in this area.')}</p>
                                         </div>
                                     )}
                                 </TabsContent>
@@ -271,7 +287,6 @@ export default function OrdersPage() {
                 </CardContent>
             </Card>
         </div>
-        {/* Columna Derecha - Detalles de la Orden */}
         <div className="lg:col-span-1">
             <Card className="h-full">
                 {renderRightPanel()}
