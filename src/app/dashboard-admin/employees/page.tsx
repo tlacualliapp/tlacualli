@@ -149,11 +149,11 @@ export default function EmployeesPage() {
   };
 
   const getRoleName = (profileId: string) => {
-    switch (profileId) {
-        case '1': return t('Administrator');
-        case '2': return t('Employee');
-        default: return t('Unknown');
-    }
+    const roles: { [key: string]: string } = {
+        '1': 'Administrator',
+        '2': 'Employee'
+    };
+    return t(roles[profileId] || 'Unknown');
   }
 
   return (
