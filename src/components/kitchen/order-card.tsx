@@ -65,8 +65,8 @@ export const KitchenOrderCard = ({ order, onItemStatusChange, onOrderReady }: Ki
         <Badge variant="outline" className="text-sm font-mono">{elapsedTime}</Badge>
       </CardHeader>
       <CardContent className="flex-grow p-4 space-y-3">
-        {order.items.map((item) => (
-          <div key={item.id} className={cn("p-2 rounded-md transition-colors", {
+        {order.items.map((item, index) => (
+          <div key={`${item.id}-${index}`} className={cn("p-2 rounded-md transition-colors", {
               'bg-yellow-100/50': item.status === 'preparing',
               'bg-green-100/50': item.status === 'ready',
           })}>
