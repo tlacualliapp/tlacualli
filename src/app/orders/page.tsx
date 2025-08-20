@@ -33,7 +33,7 @@ interface SubAccount {
 interface Order {
     id: string;
     tableId?: string;
-    status: 'open' | 'preparing' | 'paid';
+    status: 'open' | 'preparing' | 'paid' | 'ready_for_pickup';
     type?: 'dine-in' | 'takeout';
     takeoutId?: string;
     sentToKitchenAt?: Timestamp;
@@ -91,7 +91,7 @@ export default function OrdersPage() {
     const ordersQuery = query(
       collection(db, "orders"),
       where("restaurantId", "==", restaurantId),
-      where("status", "in", ["open", "preparing"])
+      where("status", "in", ["open", "preparing", "ready_for_pickup"])
     );
     const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
         const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
@@ -103,7 +103,7 @@ export default function OrdersPage() {
             id: o.id, // The order ID is used as the table ID for takeouts
             name: o.takeoutId!,
             shape: 'square', // Represent takeout as a square
-            status: o.status as 'open' | 'preparing',
+            status: o.status as 'open' | 'preparing' | 'ready_for_pickup',
             top: 0, left: 0, seats: 0,
             isTakeout: true,
           } as Table));
@@ -179,7 +179,7 @@ export default function OrdersPage() {
     const elapsedTime = activeOrder ? elapsedTimes[activeOrder.id] : undefined;
 
     if (activeOrder) {
-      return { ...table, status: activeOrder.status as 'open' | 'preparing', elapsedTime };
+      return { ...table, status: activeOrder.status as 'open' | 'preparing' | 'ready_for_pickup', elapsedTime };
     }
     
     if (dbStatus && ['dirty', 'reserved'].includes(dbStatus)) {
@@ -357,6 +357,7 @@ export default function OrdersPage() {
                             'bg-green-400': status === 'available',
                             'bg-red-400': status === 'open',
                             'bg-purple-400': status === 'preparing',
+                            'bg-cyan-400': status === 'ready_for_pickup',
                             'bg-orange-400': status === 'dirty',
                             'bg-yellow-400': status === 'reserved',
                         }
@@ -367,6 +368,7 @@ export default function OrdersPage() {
                             'bg-green-500': status === 'available',
                             'bg-red-500': status === 'open',
                             'bg-purple-500': status === 'preparing',
+                            'bg-cyan-500': status === 'ready_for_pickup',
                             'bg-orange-500': status === 'dirty',
                             'bg-yellow-500': status === 'reserved',
                          }
@@ -392,7 +394,7 @@ export default function OrdersPage() {
                             </div>
                         </div>
                     )}
-                    {(status === 'open' || status === 'preparing') && 
+                    {(status === 'open' || status === 'preparing' || status === 'ready_for_pickup') && 
                         <Button size="lg" variant="outline" onClick={() => setView('order_summary')}>{t('View Order')}</Button>
                     }
                     {(status === 'dirty' || status === 'reserved') &&

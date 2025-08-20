@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, serverTimestamp, addDoc, runTransaction, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
-import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle, Users, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle, Users, Trash2, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
@@ -21,6 +21,7 @@ interface OrderItem {
   price: number;
   notes?: string;
   subAccountId: string;
+  status?: 'pending' | 'preparing' | 'ready';
 }
 
 interface SubAccount {
@@ -32,7 +33,7 @@ interface Order {
   id: string;
   items: OrderItem[];
   subtotal: number;
-  status: 'open' | 'preparing' | 'paid';
+  status: 'open' | 'preparing' | 'paid' | 'ready_for_pickup';
   sentToKitchenAt?: Timestamp;
   subaccounts: SubAccount[];
 }
@@ -108,12 +109,15 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }, [order]);
   
   const handleSendToKitchen = async () => {
-    if (!order || !restaurantId) return;
+    if (!order || !restaurantId || order.items.length === 0) return;
     try {
         const orderRef = doc(db, 'orders', order.id);
+        const itemsWithStatus = order.items.map(item => ({...item, status: 'pending'}));
+        
         await updateDoc(orderRef, {
             status: 'preparing',
             sentToKitchenAt: serverTimestamp(),
+            items: itemsWithStatus
         });
         toast({ title: t('Order Sent'), description: t('The order has been sent to the kitchen.')});
     } catch(e) {
@@ -244,6 +248,17 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
       toast({ variant: 'destructive', title: t('Error'), description: t('Could not remove sub-account.') });
     }
   }
+  
+  const handleAcknowledgePickup = async () => {
+    if (!order) return;
+    try {
+        const orderRef = doc(db, 'orders', order.id);
+        await updateDoc(orderRef, { status: 'preparing' });
+        toast({ title: t('Order Acknowledged'), description: t('The order is now being served.') });
+    } catch (error) {
+         toast({ variant: 'destructive', title: t('Error'), description: t('Could not update order status.') });
+    }
+  }
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -277,6 +292,12 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                 <span>{elapsedTime}</span>
             </div>
         )}
+         {order.status === 'ready_for_pickup' && (
+             <div className="flex items-center gap-2 text-sm font-semibold bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full animate-pulse">
+                <BellRing className="h-4 w-4" />
+                <span>{t('Ready for pickup')}</span>
+            </div>
+         )}
       </div>
       
       <ScrollArea className="flex-grow pr-4 -mr-4 mb-4">
@@ -361,6 +382,12 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                  <Button size="lg" className="w-full" onClick={handleSendToKitchen} disabled={!order.items || order.items.length === 0}>
                     <Send className="mr-2 h-4 w-4" />
                     {t('Send to Kitchen')}
+                </Button>
+            )}
+             {order.status === 'ready_for_pickup' && (
+                <Button size="lg" className="w-full" onClick={handleAcknowledgePickup}>
+                    <BellRing className="mr-2 h-4 w-4" />
+                    {t('Acknowledge Pickup')}
                 </Button>
             )}
             <Button size="lg" variant="outline" className="w-full">

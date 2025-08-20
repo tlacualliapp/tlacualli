@@ -6,7 +6,7 @@ import { useDrag } from 'react-dnd';
 import { ItemTypes } from './map-editor';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { Trash2, Edit, Armchair, ChefHat, ShoppingBag } from 'lucide-react';
+import { Trash2, Edit, Armchair, ChefHat, ShoppingBag, BellRing } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useTranslation } from 'react-i18next';
 
@@ -14,7 +14,7 @@ export interface Table {
   id: string;
   name: string;
   shape: 'square' | 'circle';
-  status?: 'available' | 'open' | 'preparing' | 'billing' | 'dirty' | 'reserved';
+  status?: 'available' | 'open' | 'preparing' | 'billing' | 'dirty' | 'reserved' | 'ready_for_pickup';
   top: number;
   left: number;
   seats: number;
@@ -38,6 +38,7 @@ const statusClasses: { [key in NonNullable<Table['status']>]: string } = {
   billing: 'bg-blue-500/80 border-blue-700 hover:bg-blue-500',
   dirty: 'bg-orange-500/80 border-orange-700 hover:bg-orange-500',
   reserved: 'bg-yellow-500/80 border-yellow-700 hover:bg-yellow-500',
+  ready_for_pickup: 'bg-cyan-500/80 border-cyan-700 hover:bg-cyan-500 animate-pulse',
 };
 
 
@@ -65,6 +66,9 @@ const TableView: React.FC<Omit<TableItemProps, 'left' | 'top'>> = (props) => {
                     <span>{elapsedTime}</span>
                 </div>
             ) : <ChefHat className="h-4 w-4" />;
+        }
+        if (status === 'ready_for_pickup') {
+            return <BellRing className="h-6 w-6" />;
         }
         return (
             <div className="flex items-center gap-1 text-xs font-normal">
