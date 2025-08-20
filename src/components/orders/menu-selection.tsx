@@ -128,8 +128,20 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
             }
 
             const newSubtotal = updatedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+            
+            const updatePayload: any = { 
+                items: updatedItems, 
+                subtotal: newSubtotal 
+            };
 
-            transaction.update(orderRef, { items: updatedItems, subtotal: newSubtotal });
+            // If order was already served, re-open it to send new items to kitchen.
+            if (orderData.status === 'served') {
+                updatePayload.status = 'open';
+                updatePayload.sentToKitchenAt = null;
+                updatePayload.pickupAcknowledgedAt = null;
+            }
+            
+            transaction.update(orderRef, updatePayload);
         });
         
         toast({
