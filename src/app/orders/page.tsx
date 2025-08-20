@@ -3,11 +3,11 @@
 
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClipboardList, Loader2, Beer, CircleDollarSign, ConciergeBell, ShoppingBag } from 'lucide-react';
+import { ClipboardList, Loader2, Beer, CircleDollarSign, ConciergeBell, ShoppingBag, Send } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import '@/app/i18n';
 import { TableItem, Table } from '@/components/map/table-item';
@@ -81,42 +81,55 @@ export default function OrdersPage() {
     return () => unsubscribeRooms();
   }, [restaurantId]);
   
-  useEffect(() => {
-    if (!restaurantId || rooms.length === 0 || !userAssignments) return;
-  
-    const unsubscribers = rooms.map(room => {
-      const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
-      return onSnapshot(tablesRef, (tableSnapshot) => {
-        const tablesData = tableSnapshot.docs
-          .map(doc => ({ id: doc.id, roomId: room.id, ...doc.data() } as Table))
-          .filter(table => userAssignments.tables.includes(table.id)) // Filter by assigned tables
-          .sort((a, b) => a.name.localeCompare(b.name));
-        
-        setTables(prev => ({ ...prev, [room.id]: tablesData }));
+ useEffect(() => {
+    if (!restaurantId || rooms.length === 0) return;
+    
+    // Set loading to false only when there are rooms but no tables.
+    if (rooms.length > 0 && Object.keys(tables).length === 0) {
+        // This handles the case where rooms are loaded but tables are still coming.
+        // Or if there are truly no tables.
+    }
 
-        if (selectedTable && selectedTable.roomId === room.id) {
-            const updatedSelectedTable = tablesData.find(t => t.id === selectedTable.id);
-            if (updatedSelectedTable) {
-                if (JSON.stringify(updatedSelectedTable) !== JSON.stringify(selectedTable)) {
-                    setSelectedTable(updatedSelectedTable);
-                }
-            } else {
-                setSelectedTable(null);
+    const unsubscribers = rooms.map(room => {
+        const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
+        return onSnapshot(tablesRef, (tableSnapshot) => {
+            const tablesData = tableSnapshot.docs
+                .map(doc => ({ id: doc.id, roomId: room.id, ...doc.data() } as Table))
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+            setTables(prev => ({ ...prev, [room.id]: tablesData }));
+
+            if (selectedTable && selectedTable.roomId === room.id) {
+                 const updatedSelectedTable = tablesData.find(t => t.id === selectedTable.id);
+                 if (updatedSelectedTable && JSON.stringify(updatedSelectedTable) !== JSON.stringify(selectedTable)) {
+                     setSelectedTable(updatedSelectedTable);
+                 }
             }
-        }
-      });
+        });
     });
-  
+
     setIsLoading(false);
-  
     return () => unsubscribers.forEach(unsub => unsub());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restaurantId, rooms, userAssignments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [restaurantId, rooms]);
+
+ useEffect(() => {
+     if (userAssignments === null) return;
+     const filteredTables: { [roomId: string]: Table[] } = {};
+     for (const roomId in tables) {
+         filteredTables[roomId] = tables[roomId].filter(table => userAssignments.tables.includes(table.id));
+     }
+     // Only update if the filtered result is different.
+     if (JSON.stringify(filteredTables) !== JSON.stringify(tables)) {
+         setTables(filteredTables);
+     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [userAssignments, tables]);
 
 
   const handleTableClick = (table: Table) => {
     setSelectedTable(table);
-    if (table.status === 'occupied' || table.status === 'billing') {
+    if (table.status === 'occupied' || table.status === 'billing' || table.status === 'preparing') {
         setView('order_summary');
     } else {
         setView('table_map'); 
@@ -129,6 +142,18 @@ export default function OrdersPage() {
     try {
         const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${selectedTable.roomId}/tables`, selectedTable.id);
         await updateDoc(tableRef, { status: 'occupied' });
+
+        await addDoc(collection(db, 'orders'), {
+            tableId: selectedTable.id,
+            tableName: selectedTable.name,
+            restaurantId: restaurantId,
+            status: 'open',
+            items: [],
+            subtotal: 0,
+            createdAt: serverTimestamp(),
+            createdBy: user?.uid,
+        });
+
         setView('menu');
         toast({
             title: t('Order Started'),
@@ -142,6 +167,11 @@ export default function OrdersPage() {
         });
     }
   };
+  
+  const handleOrderClosed = () => {
+      setSelectedTable(null);
+      setView('table_map');
+  }
 
   const handleTakeoutOrder = () => {
     toast({
@@ -166,7 +196,7 @@ export default function OrdersPage() {
     }
 
     if (view === 'order_summary' && restaurantId) {
-        return <OrderDetails restaurantId={restaurantId} table={selectedTable} onAddItems={() => setView('menu')} />;
+        return <OrderDetails restaurantId={restaurantId} table={selectedTable} onAddItems={() => setView('menu')} onOrderClosed={handleOrderClosed} />;
     }
 
     return (
@@ -182,6 +212,7 @@ export default function OrdersPage() {
                             'bg-yellow-400': selectedTable.status === 'reserved',
                             'bg-blue-400': selectedTable.status === 'billing',
                             'bg-orange-400': selectedTable.status === 'dirty',
+                            'bg-purple-400': selectedTable.status === 'preparing',
                         }
                     )}></span>
                     <span className={cn(
@@ -192,6 +223,7 @@ export default function OrdersPage() {
                             'bg-yellow-500': selectedTable.status === 'reserved',
                             'bg-blue-500': selectedTable.status === 'billing',
                             'bg-orange-500': selectedTable.status === 'dirty',
+                             'bg-purple-500': selectedTable.status === 'preparing',
                         }
                     )}></span>
                 </span>
@@ -209,7 +241,9 @@ export default function OrdersPage() {
                             </Button>
                         </div>
                     )}
-                    { selectedTable.status === 'occupied' && <p>{t('Order in progress. View summary.')}</p> }
+                    { (selectedTable.status === 'occupied' || selectedTable.status === 'preparing') && 
+                        <Button size="lg" variant="outline" onClick={() => setView('order_summary')}>{t('View Order')}</Button>
+                     }
                     { selectedTable.status === 'billing' && (
                         <div className="flex flex-col items-center gap-4">
                             <CircleDollarSign className="h-20 w-20 text-primary/50" />

@@ -6,7 +6,7 @@ import { useDrag } from 'react-dnd';
 import { ItemTypes } from './map-editor';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { Trash2, Edit, Armchair } from 'lucide-react';
+import { Trash2, Edit, Armchair, ChefHat } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useTranslation } from 'react-i18next';
 
@@ -14,7 +14,7 @@ export interface Table {
   id: string;
   name: string;
   shape: 'square' | 'circle';
-  status: 'available' | 'occupied' | 'reserved' | 'billing' | 'dirty';
+  status: 'available' | 'occupied' | 'reserved' | 'billing' | 'dirty' | 'preparing';
   top: number;
   left: number;
   seats: number;
@@ -35,10 +35,11 @@ const statusClasses = {
   reserved: 'bg-yellow-500/80 border-yellow-700 hover:bg-yellow-500',
   billing: 'bg-blue-500/80 border-blue-700 hover:bg-blue-500',
   dirty: 'bg-orange-500/80 border-orange-700 hover:bg-orange-500',
+  preparing: 'bg-purple-500/80 border-purple-700 hover:bg-purple-500',
 };
 
 
-const TableView: React.FC<TableItemProps> = (props) => {
+const TableView: React.FC<Omit<TableItemProps, 'left' | 'top'>> = (props) => {
     const { id, name, shape, status, seats, onDelete, onEdit, onClick, view, isSelected } = props;
     const { t } = useTranslation();
 
@@ -46,6 +47,18 @@ const TableView: React.FC<TableItemProps> = (props) => {
         square: 'rounded-lg',
         circle: 'rounded-full'
     };
+    
+    const renderIcon = () => {
+        if (status === 'preparing') {
+            return <ChefHat className="h-4 w-4" />;
+        }
+        return (
+            <div className="flex items-center gap-1 text-xs font-normal">
+                <Armchair className="h-3 w-3" />
+                <span>{seats}</span>
+            </div>
+        )
+    }
 
     return (
         <div className={cn("group relative flex flex-col items-center", view === 'operational' && 'cursor-pointer')} onClick={() => onClick(props)}>
@@ -83,10 +96,7 @@ const TableView: React.FC<TableItemProps> = (props) => {
                 !isSelected && 'hover:scale-105'
             )}>
                 <span className="text-xl">{name}</span>
-                <div className="flex items-center gap-1 text-xs font-normal">
-                    <Armchair className="h-3 w-3" />
-                    <span>{seats}</span>
-                </div>
+                {renderIcon()}
             </div>
         </div>
     );
@@ -123,7 +133,5 @@ export const TableItem: React.FC<TableItemProps> = (props) => {
   }
 
   // In operational view, don't wrap with Draggable context
-  return <TableView {...props} />;
+  return <div style={{ position: 'relative' }}><TableView {...props} /></div>;
 };
-
-    
