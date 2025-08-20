@@ -46,7 +46,7 @@ export default function MapPage() {
         <Card className="mb-6 bg-card/65 backdrop-blur-lg">
             <CardHeader>
                 <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
-                    <MapIcon className="h-8 w-8" /> {t('Table Management')}
+                    <MapIcon className="h-8 w-8" /> {t('Table and Assignment Management')}
                 </CardTitle>
                 <CardDescription>
                     {t('Visualize your restaurant layout, manage tables, and track assignments in real-time.')}
