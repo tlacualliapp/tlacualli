@@ -44,7 +44,7 @@ export const TableItem: React.FC<TableItemProps> = (props) => {
     item: { id, left, top },
     canDrag: view === 'admin',
     collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
+      isDragging: view === 'admin' ? monitor.isDragging() : false,
     }),
   }), [id, left, top, view]);
 
