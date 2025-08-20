@@ -7,7 +7,6 @@ import Link from 'next/link';
 import {
   Users,
   Package,
-  BookOpen,
   ClipboardList,
   ChefHat,
   Truck,

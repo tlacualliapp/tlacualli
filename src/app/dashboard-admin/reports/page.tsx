@@ -1,23 +1,49 @@
 
+'use client';
 import { AdminLayout } from '@/components/layout/admin-layout';
-import { ReportForm } from './report-form';
-import { Lightbulb } from 'lucide-react';
+import { ReportsDashboard } from '@/components/reports/reports-dashboard';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { useState, useEffect } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
 
 export default function ReportsPage() {
+  const [user] = useAuthState(auth);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    const fetchRestaurantId = async () => {
+      if (user) {
+        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          setRestaurantId(userData.restauranteId);
+        }
+        setIsLoading(false);
+      } else if (!user && !isLoading) {
+        setIsLoading(false);
+      }
+    };
+    fetchRestaurantId();
+  }, [user, isLoading]);
+
   return (
     <AdminLayout>
-      <div className="flex items-start gap-4 mb-6">
-        <div className="p-3 bg-primary/10 rounded-full">
-            <Lightbulb className="h-6 w-6 text-primary" />
+      {isLoading ? (
+         <div className="flex justify-center items-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin" />
         </div>
-        <div>
-            <h1 className="text-3xl font-bold font-headline">Menu Optimization Insights</h1>
-            <p className="text-muted-foreground">
-            Generate AI-powered reports to optimize your menu based on sales data.
-            </p>
-        </div>
-      </div>
-      <ReportForm />
+      ) : restaurantId ? (
+        <ReportsDashboard restaurantId={restaurantId} />
+      ) : (
+        <p>{t('Restaurant not found.')}</p>
+      )}
     </AdminLayout>
   );
 }
