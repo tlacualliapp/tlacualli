@@ -123,7 +123,7 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
     }
   }
 
-  const handleRemoveItem = async (itemId: string) => {
+  const handleRemoveItem = async (itemToRemove: OrderItem) => {
     if (!order) return;
     const orderRef = doc(db, 'orders', order.id);
 
@@ -137,7 +137,7 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
             let currentItems: OrderItem[] = orderDoc.data().items || [];
             let updatedItems = [...currentItems];
 
-            const itemIndex = updatedItems.findIndex(i => i.id === itemId);
+            const itemIndex = updatedItems.findIndex(i => i.id === itemToRemove.id);
             if (itemIndex > -1) {
                 if (updatedItems[itemIndex].quantity > 1) {
                     updatedItems[itemIndex].quantity -= 1;
@@ -149,10 +149,20 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
             const newSubtotal = updatedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
             transaction.update(orderRef, { items: updatedItems, subtotal: newSubtotal });
         });
+
         toast({
             title: t('Item Removed'),
             description: t('The item has been updated in the order.'),
         });
+
+        if (order.status === 'preparing') {
+             toast({
+                variant: 'destructive',
+                title: t('Kitchen Notified'),
+                description: t('Item removed from order in preparation: {{itemName}}', { itemName: itemToRemove.name }),
+            });
+        }
+
     } catch (error) {
         console.error("Error removing item:", error);
         toast({ variant: "destructive", title: t("Error"), description: t("Could not remove the item.") });
@@ -164,6 +174,15 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
     try {
         await deleteDoc(doc(db, 'orders', order.id));
         toast({ title: t('Order Cancelled'), description: t('The order has been completely removed.') });
+        
+        if (order.status === 'preparing') {
+             toast({
+                variant: 'destructive',
+                title: t('Kitchen Notified'),
+                description: t('Order for table {{tableName}} has been cancelled.', { tableName: table.name }),
+            });
+        }
+        
         onOrderClosed();
     } catch(error) {
         toast({ variant: "destructive", title: t("Error"), description: t("Could not cancel the order.") });
@@ -202,15 +221,15 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
       <ScrollArea className="flex-grow pr-4 -mr-4 mb-4">
         <div className="space-y-3">
           {order.items.map(item => (
-            <div key={item.id} className="flex justify-between items-center group">
+            <div key={`${item.id}-${item.quantity}`} className="flex justify-between items-center group">
                 <div>
                   <p className="font-semibold">{item.quantity}x {item.name}</p>
                    {item.notes && <p className="text-xs text-muted-foreground">- {item.notes}</p>}
                 </div>
                 <div className="flex items-center gap-2">
                     <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
-                    {order.status === 'open' && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item.id)}>
+                    {(order.status === 'open' || order.status === 'preparing') && (
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item)}>
                         <MinusCircle className="h-4 w-4" />
                       </Button>
                     )}
@@ -260,7 +279,7 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
             <div className="grid grid-cols-2 gap-2">
                  <AlertDialog>
                     <AlertDialogTrigger asChild>
-                         <Button size="lg" variant="destructive" className="w-full" disabled={order.status === 'preparing'}>
+                         <Button size="lg" variant="destructive" className="w-full">
                             <XCircle className="mr-2 h-4 w-4" />
                             {t('Cancel Order')}
                         </Button>
@@ -303,5 +322,3 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
     </div>
   );
 };
-
-    
