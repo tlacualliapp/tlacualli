@@ -5,13 +5,14 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, serverTimestamp, addDoc, runTransaction, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
-import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle, Users, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { Timestamp } from 'firebase/firestore';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 
 interface OrderItem {
   id: string;
@@ -19,6 +20,12 @@ interface OrderItem {
   quantity: number;
   price: number;
   notes?: string;
+  subAccountId: string;
+}
+
+interface SubAccount {
+  id: string;
+  name: string;
 }
 
 interface Order {
@@ -27,13 +34,14 @@ interface Order {
   subtotal: number;
   status: 'open' | 'preparing' | 'paid';
   sentToKitchenAt?: Timestamp;
+  subaccounts: SubAccount[];
 }
 
 interface OrderDetailsProps {
   restaurantId: string;
   orderId: string;
   tableName: string;
-  onAddItems: () => void;
+  onAddItems: (subAccountId: string) => void;
   onOrderClosed: () => void;
 }
 
@@ -57,7 +65,19 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     
     const unsubscribe = onSnapshot(orderRef, (docSnapshot) => {
         if (docSnapshot.exists()) {
-            setOrder({ id: docSnapshot.id, ...docSnapshot.data() } as Order);
+            const data = docSnapshot.data();
+            const initialOrder = { id: docSnapshot.id, ...data } as Order;
+            if (!initialOrder.subaccounts || initialOrder.subaccounts.length === 0) {
+              initialOrder.subaccounts = [{ id: 'main', name: t('General') }];
+            }
+             if (initialOrder.items) {
+                initialOrder.items.forEach(item => {
+                    if (!item.subAccountId) {
+                        item.subAccountId = 'main';
+                    }
+                });
+            }
+            setOrder(initialOrder);
         } else {
             setOrder(null);
             console.warn(`Order with ID ${orderId} not found.`);
@@ -69,7 +89,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     });
 
     return () => unsubscribe();
-  }, [orderId]);
+  }, [orderId, t]);
 
 
   useEffect(() => {
@@ -130,7 +150,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
             let currentItems: OrderItem[] = orderDoc.data().items || [];
             let updatedItems = [...currentItems];
 
-            const itemIndex = updatedItems.findIndex(i => i.id === itemToRemove.id);
+            const itemIndex = updatedItems.findIndex(i => i.id === itemToRemove.id && i.subAccountId === itemToRemove.subAccountId);
             if (itemIndex > -1) {
                 if (updatedItems[itemIndex].quantity > 1) {
                     updatedItems[itemIndex].quantity -= 1;
@@ -182,6 +202,22 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     }
   }
 
+  const handleAddSubAccount = async () => {
+    if (!order) return;
+    const orderRef = doc(db, 'orders', order.id);
+    const newSubAccount: SubAccount = {
+      id: `sub_${Date.now()}`,
+      name: `${t('Diner')} ${order.subaccounts.length + 1}`
+    };
+    try {
+      await updateDoc(orderRef, {
+        subaccounts: [...order.subaccounts, newSubAccount]
+      });
+      toast({ title: t('Sub-account added') });
+    } catch (error) {
+      toast({ variant: 'destructive', title: t('Error'), description: t('Could not add sub-account.') });
+    }
+  };
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -194,6 +230,12 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
          </div>
     )
   }
+
+  const getSubAccountTotal = (subAccountId: string) => {
+    return order.items
+      .filter(item => item.subAccountId === subAccountId)
+      .reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  };
 
   return (
     <div className="p-4 flex flex-col h-full">
@@ -208,25 +250,48 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
       </div>
       
       <ScrollArea className="flex-grow pr-4 -mr-4 mb-4">
-        <div className="space-y-3">
-          {order.items.map(item => (
-            <div key={`${item.id}-${item.quantity}`} className="flex justify-between items-center group">
-                <div>
-                  <p className="font-semibold">{item.quantity}x {item.name}</p>
-                   {item.notes && <p className="text-xs text-muted-foreground">- {item.notes}</p>}
+        <Accordion type="multiple" defaultValue={order.subaccounts.map(sa => sa.id)} className="w-full">
+          {order.subaccounts.map(subAccount => (
+            <AccordionItem value={subAccount.id} key={subAccount.id}>
+              <AccordionTrigger>
+                <div className="flex justify-between w-full pr-4">
+                    <span>{subAccount.name}</span>
+                    <span className="font-mono">${getSubAccountTotal(subAccount.id).toFixed(2)}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                    <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
-                    {(order.status === 'open' || order.status === 'preparing') && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item)}>
-                        <MinusCircle className="h-4 w-4" />
-                      </Button>
-                    )}
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3 pl-4">
+                  {order.items.filter(item => item.subAccountId === subAccount.id).map(item => (
+                    <div key={`${item.id}-${item.subAccountId}`} className="flex justify-between items-center group">
+                        <div>
+                          <p className="font-semibold">{item.quantity}x {item.name}</p>
+                           {item.notes && <p className="text-xs text-muted-foreground">- {item.notes}</p>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
+                            {(order.status === 'open' || order.status === 'preparing') && (
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item)}>
+                                <MinusCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                        </div>
+                      </div>
+                  ))}
+                  <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => onAddItems(subAccount.id)}>
+                      <PlusCircle className="mr-2 h-4 w-4" /> {t('Add Item')}
+                  </Button>
                 </div>
-              </div>
+              </AccordionContent>
+            </AccordionItem>
           ))}
-        </div>
+        </Accordion>
       </ScrollArea>
+      
+      <div className="flex items-center justify-center my-2">
+          <Button variant="outline" onClick={handleAddSubAccount}>
+              <Users className="mr-2 h-4 w-4" /> {t('Split Account')}
+          </Button>
+      </div>
 
       <Separator className="my-4" />
 
@@ -246,10 +311,6 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
       </div>
 
        <div className="mt-6 space-y-2">
-            <Button size="lg" className="w-full bg-accent hover:bg-accent/90" onClick={onAddItems}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                {t('Add More Items')}
-            </Button>
             {order.status === 'open' && (
                  <Button size="lg" className="w-full" onClick={handleSendToKitchen} disabled={!order.items || order.items.length === 0}>
                     <Send className="mr-2 h-4 w-4" />
@@ -311,5 +372,3 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     </div>
   );
 };
-
-    

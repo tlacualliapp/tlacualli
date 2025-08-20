@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '../ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface MenuItem {
   id: string;
@@ -27,6 +28,12 @@ interface OrderItem {
   quantity: number;
   price: number;
   notes?: string;
+  subAccountId: string;
+}
+
+interface SubAccount {
+  id: string;
+  name: string;
 }
 
 interface Category {
@@ -39,11 +46,14 @@ interface MenuSelectionProps {
   orderId: string;
   tableName: string;
   onBack: () => void;
+  subAccountId: string;
 }
 
-export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: MenuSelectionProps) => {
+export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAccountId }: MenuSelectionProps) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subAccounts, setSubAccounts] = useState<SubAccount[]>([]);
+  const [selectedSubAccountId, setSelectedSubAccountId] = useState(subAccountId);
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,6 +66,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: Menu
     setIsLoading(true);
     const categoriesQuery = query(collection(db, `restaurantes/${restaurantId}/menuCategories`));
     const itemsQuery = query(collection(db, `restaurantes/${restaurantId}/menuItems`));
+    const orderRef = doc(db, 'orders', orderId);
 
     const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
       setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
@@ -66,11 +77,19 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: Menu
       setIsLoading(false);
     });
 
+    const unsubOrder = onSnapshot(orderRef, (doc) => {
+      if (doc.exists()) {
+        const orderData = doc.data();
+        setSubAccounts(orderData.subaccounts || [{ id: 'main', name: 'General' }]);
+      }
+    });
+
     return () => {
       unsubCategories();
       unsubItems();
+      unsubOrder();
     };
-  }, [restaurantId]);
+  }, [restaurantId, orderId]);
 
   const handleAddItemToOrder = async (item: MenuItem) => {
     if (!restaurantId || !orderId) {
@@ -93,7 +112,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: Menu
             const orderData = orderDoc.data();
             const currentItems: OrderItem[] = orderData.items || [];
             
-            const existingItemIndex = currentItems.findIndex(i => i.id === item.id);
+            const existingItemIndex = currentItems.findIndex(i => i.id === item.id && i.subAccountId === selectedSubAccountId);
             let updatedItems;
 
             if (existingItemIndex > -1) {
@@ -105,7 +124,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: Menu
                 );
             } else {
                 // Add new item
-                updatedItems = [...currentItems, { id: item.id, name: item.name, price: item.price, quantity: 1 }];
+                updatedItems = [...currentItems, { id: item.id, name: item.name, price: item.price, quantity: 1, subAccountId: selectedSubAccountId }];
             }
 
             const newSubtotal = updatedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
@@ -146,14 +165,28 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: Menu
         <h2 className="text-xl font-bold font-headline ml-2">{t('Add to Order')}: {t('Table')} {tableName}</h2>
       </div>
 
-       <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            placeholder={t("Search items...")}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+       <div className="grid grid-cols-2 gap-4 mb-4">
+         <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder={t("Search items...")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div>
+            <Select value={selectedSubAccountId} onValueChange={setSelectedSubAccountId}>
+                <SelectTrigger>
+                    <SelectValue placeholder={t('Select a sub-account')} />
+                </SelectTrigger>
+                <SelectContent>
+                    {subAccounts.map(sa => (
+                        <SelectItem key={sa.id} value={sa.id}>{sa.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </div>
         </div>
       
       {categories.length > 0 ? (
@@ -191,5 +224,3 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: Menu
     </div>
   );
 };
-
-    

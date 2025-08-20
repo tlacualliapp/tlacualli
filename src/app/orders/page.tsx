@@ -25,6 +25,11 @@ interface Room {
   name: string;
 }
 
+interface SubAccount {
+  id: string;
+  name: string;
+}
+
 interface Order {
     id: string;
     tableId?: string;
@@ -32,6 +37,7 @@ interface Order {
     type?: 'dine-in' | 'takeout';
     takeoutId?: string;
     sentToKitchenAt?: Timestamp;
+    subaccounts: SubAccount[];
 }
 
 interface UserAssignments {
@@ -54,6 +60,7 @@ export default function OrdersPage() {
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [view, setView] = useState<'table_map' | 'menu' | 'order_summary'>('table_map');
   const [elapsedTimes, setElapsedTimes] = useState<{ [orderId: string]: string }>({});
+  const [activeSubAccountId, setActiveSubAccountId] = useState<string>('main');
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -235,11 +242,13 @@ export default function OrdersPage() {
             type: 'dine-in',
             items: [],
             subtotal: 0,
+            subaccounts: [{ id: 'main', name: 'General' }],
             createdAt: serverTimestamp(),
             createdBy: user?.uid,
         });
 
         setActiveOrderId(newOrderRef.id);
+        setActiveSubAccountId('main');
         setView('menu');
         toast({
             title: t('Order Started'),
@@ -273,6 +282,7 @@ export default function OrdersPage() {
             takeoutId: newTakeoutId,
             items: [],
             subtotal: 0,
+            subaccounts: [{ id: 'main', name: t('General') }],
             createdAt: serverTimestamp(),
             createdBy: user?.uid,
         };
@@ -290,6 +300,7 @@ export default function OrdersPage() {
         
         setSelectedTable(newTakeoutAsTable);
         setActiveOrderId(docRef.id);
+        setActiveSubAccountId('main');
         setView('menu');
 
         toast({
@@ -306,6 +317,11 @@ export default function OrdersPage() {
         });
     }
   }
+
+  const handleGoToMenu = (subAccountId: string) => {
+    setActiveSubAccountId(subAccountId);
+    setView('menu');
+  }
   
   const renderRightPanel = () => {
     if (!selectedTable) {
@@ -319,11 +335,11 @@ export default function OrdersPage() {
     }
     
     if (view === 'menu' && restaurantId && activeOrderId) {
-        return <MenuSelection restaurantId={restaurantId} orderId={activeOrderId} tableName={selectedTable.name} onBack={() => setView('order_summary')} />;
+        return <MenuSelection restaurantId={restaurantId} orderId={activeOrderId} tableName={selectedTable.name} onBack={() => setView('order_summary')} subAccountId={activeSubAccountId} />;
     }
 
     if (view === 'order_summary' && restaurantId && activeOrderId) {
-        return <OrderDetails restaurantId={restaurantId} orderId={activeOrderId} tableName={selectedTable.name} onAddItems={() => setView('menu')} onOrderClosed={handleOrderClosed} />;
+        return <OrderDetails restaurantId={restaurantId} orderId={activeOrderId} tableName={selectedTable.name} onAddItems={handleGoToMenu} onOrderClosed={handleOrderClosed} />;
     }
 
     // Default view for a selected table
@@ -493,9 +509,3 @@ export default function OrdersPage() {
     </AdminLayout>
   );
 }
-
-
-
-    
-
-    
