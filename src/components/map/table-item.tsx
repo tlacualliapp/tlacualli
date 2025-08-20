@@ -48,12 +48,14 @@ export const TableItem: React.FC<TableItemProps> = (props) => {
     }),
   }), [id, left, top, view]);
 
-  const style: React.CSSProperties = {
+  const style: React.CSSProperties = view === 'admin' ? {
     position: 'absolute',
     left,
     top,
     opacity: isDragging ? 0.5 : 1,
-    cursor: view === 'admin' ? 'move' : 'pointer',
+    cursor: 'move',
+  } : {
+    cursor: 'pointer'
   };
 
   const shapeClasses = {
@@ -63,8 +65,8 @@ export const TableItem: React.FC<TableItemProps> = (props) => {
 
   const tableContent = (
     <div className={cn(
-        "w-20 h-20 flex flex-col items-center justify-center text-white font-bold text-lg shadow-md border-2 transition-colors",
-        statusClasses[status],
+        "w-24 h-24 aspect-square flex flex-col items-center justify-center text-white font-bold text-lg shadow-md border-2 transition-transform hover:scale-105",
+        statusClasses[status || 'available'],
         shapeClasses[shape]
         )}>
         <span className="text-xl">{name}</span>
@@ -74,9 +76,11 @@ export const TableItem: React.FC<TableItemProps> = (props) => {
         </div>
     </div>
   );
+  
+  const ref = view === 'admin' ? drag : null;
 
   return (
-    <div ref={drag} style={style} className="group relative flex flex-col items-center" onClick={() => onClick(props)}>
+    <div ref={ref} style={style} className="group relative flex flex-col items-center" onClick={() => onClick(props)}>
         {view === 'admin' && (
             <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 p-1 rounded-full bg-background/80 shadow-md">
                 <AlertDialog>
