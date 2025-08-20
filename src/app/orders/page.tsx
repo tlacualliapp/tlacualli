@@ -115,16 +115,25 @@ export default function OrdersPage() {
 
  useEffect(() => {
      if (userAssignments === null) return;
+     const allTables = rooms.flatMap(room => tables[room.id] || []);
+     if(allTables.length === 0) return;
+
      const filteredTables: { [roomId: string]: Table[] } = {};
      for (const roomId in tables) {
-         filteredTables[roomId] = tables[roomId].filter(table => userAssignments.tables.includes(table.id));
+         if (userAssignments.tables.length > 0) {
+            filteredTables[roomId] = tables[roomId].filter(table => userAssignments.tables.includes(table.id));
+         } else {
+            // If no assignments, show all (or keep current logic)
+            filteredTables[roomId] = tables[roomId];
+         }
      }
-     // Only update if the filtered result is different.
+     
+    // Only update if the filtered result is different.
      if (JSON.stringify(filteredTables) !== JSON.stringify(tables)) {
          setTables(filteredTables);
      }
      // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [userAssignments, tables]);
+ }, [userAssignments, tables, rooms]);
 
 
   const handleTableClick = (table: Table) => {
@@ -330,3 +339,5 @@ export default function OrdersPage() {
     </AdminLayout>
   );
 }
+
+    
