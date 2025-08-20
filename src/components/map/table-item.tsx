@@ -20,6 +20,7 @@ export interface Table {
   seats: number;
   roomId?: string;
   isTakeout?: boolean;
+  elapsedTime?: string;
 }
 
 interface TableItemProps extends Table {
@@ -41,7 +42,7 @@ const statusClasses: { [key in NonNullable<Table['status']>]: string } = {
 
 
 const TableView: React.FC<Omit<TableItemProps, 'left' | 'top'>> = (props) => {
-    const { id, name, shape, status, seats, onDelete, onEdit, onClick, view, isSelected, isTakeout } = props;
+    const { id, name, shape, status, seats, onDelete, onEdit, onClick, view, isSelected, isTakeout, elapsedTime } = props;
     const { t } = useTranslation();
 
     const shapeClasses = {
@@ -51,10 +52,19 @@ const TableView: React.FC<Omit<TableItemProps, 'left' | 'top'>> = (props) => {
     
     const renderIcon = () => {
         if (isTakeout) {
-            return <ShoppingBag className="h-6 w-6" />;
+            return elapsedTime ? (
+                <div className="flex items-center gap-1 text-xs font-normal">
+                    <span>{elapsedTime}</span>
+                </div>
+            ) : <ShoppingBag className="h-6 w-6" />;
         }
         if (status === 'preparing') {
-            return <ChefHat className="h-4 w-4" />;
+             return elapsedTime ? (
+                <div className="flex items-center gap-1 text-xs font-normal">
+                    <ChefHat className="h-4 w-4" />
+                    <span>{elapsedTime}</span>
+                </div>
+            ) : <ChefHat className="h-4 w-4" />;
         }
         return (
             <div className="flex items-center gap-1 text-xs font-normal">

@@ -7,7 +7,7 @@ import { ClipboardList, Loader2, Beer, CircleDollarSign, ConciergeBell, Shopping
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import '@/app/i18n';
 import { TableItem, Table } from '@/components/map/table-item';
@@ -31,6 +31,7 @@ interface Order {
     status: 'open' | 'preparing' | 'paid';
     type?: 'dine-in' | 'takeout';
     takeoutId?: string;
+    sentToKitchenAt?: Timestamp;
 }
 
 interface UserAssignments {
@@ -51,6 +52,7 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [view, setView] = useState<'table_map' | 'menu' | 'order_summary'>('table_map');
+  const [elapsedTimes, setElapsedTimes] = useState<{ [orderId: string]: string }>({});
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -139,16 +141,37 @@ export default function OrdersPage() {
     return () => unsubscribeRooms();
   }, [restaurantId]);
 
+   useEffect(() => {
+    const timerInterval = setInterval(() => {
+      const newElapsedTimes: { [orderId: string]: string } = {};
+      activeOrders.forEach(order => {
+        if (order.status === 'preparing' && order.sentToKitchenAt) {
+          const sentTime = order.sentToKitchenAt.toDate().getTime();
+          const now = new Date().getTime();
+          const difference = now - sentTime;
+          const minutes = String(Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+          const seconds = String(Math.floor((difference % (1000 * 60)) / 1000)).padStart(2, '0');
+          newElapsedTimes[order.id] = `${minutes}:${seconds}`;
+        }
+      });
+      setElapsedTimes(newElapsedTimes);
+    }, 1000);
+    return () => clearInterval(timerInterval);
+  }, [activeOrders]);
+
 
  const getTableWithStatus = (table: Table): Table => {
     if (table.isTakeout) {
-        return table;
+        const activeOrder = activeOrders.find(o => o.id === table.id);
+        const elapsedTime = activeOrder ? elapsedTimes[activeOrder.id] : undefined;
+        return { ...table, elapsedTime };
     }
     const activeOrder = activeOrders.find(o => o.tableId === table.id && o.type !== 'takeout');
     const dbStatus = table.status;
+    const elapsedTime = activeOrder ? elapsedTimes[activeOrder.id] : undefined;
 
     if (activeOrder) {
-      return { ...table, status: activeOrder.status as 'open' | 'preparing' };
+      return { ...table, status: activeOrder.status as 'open' | 'preparing', elapsedTime };
     }
     
     if (dbStatus && ['dirty', 'reserved'].includes(dbStatus)) {
@@ -195,7 +218,7 @@ export default function OrdersPage() {
     }
 
     try {
-        await addDoc(collection(db, 'orders'), {
+        const newOrderRef = await addDoc(collection(db, 'orders'), {
             tableId: selectedTable.id,
             tableName: selectedTable.name,
             restaurantId: restaurantId,
@@ -207,6 +230,8 @@ export default function OrdersPage() {
             createdBy: user?.uid,
         });
 
+        // We need to update the local selectedTable state to include the new order ID.
+        setSelectedTable(prev => prev ? {...prev, id: newOrderRef.id } : null);
         setView('menu');
         toast({
             title: t('Order Started'),
@@ -398,7 +423,7 @@ export default function OrdersPage() {
                                     {takeoutOrders.map(order => (
                                          <TableItem 
                                             key={order.id}
-                                            {...order}
+                                            {...getTableWithStatus(order)}
                                             onClick={() => handleTableClick(order)}
                                             isSelected={selectedTable?.id === order.id}
                                             view="operational"
