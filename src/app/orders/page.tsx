@@ -89,8 +89,7 @@ export default function OrdersPage() {
   useEffect(() => {
     if (!restaurantId) return;
     const ordersQuery = query(
-      collection(db, "orders"),
-      where("restaurantId", "==", restaurantId),
+      collection(db, `restaurantes/${restaurantId}/orders`),
       where("status", "in", ["open", "preparing", "ready_for_pickup"])
     );
     const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
@@ -234,7 +233,7 @@ export default function OrdersPage() {
     }
 
     try {
-        const newOrderRef = await addDoc(collection(db, 'orders'), {
+        const newOrderRef = await addDoc(collection(db, `restaurantes/${restaurantId}/orders`), {
             tableId: selectedTable.id,
             tableName: selectedTable.name,
             restaurantId: restaurantId,
@@ -287,7 +286,7 @@ export default function OrdersPage() {
             createdBy: user?.uid,
         };
 
-        const docRef = await addDoc(collection(db, 'orders'), newOrder);
+        const docRef = await addDoc(collection(db, `restaurantes/${restaurantId}/orders`), newOrder);
 
         const newTakeoutAsTable: Table = {
             id: docRef.id,

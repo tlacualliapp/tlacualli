@@ -33,15 +33,12 @@ export default function KitchenPage() {
 
   useEffect(() => {
     if (!restaurantId) {
-        // If there's no restaurant ID yet, we don't query.
-        // We could even set loading to false if we are sure there will be no ID.
         if (!user) setIsLoading(false);
         return;
     };
 
     const q = query(
-      collection(db, 'orders'), 
-      where('restaurantId', '==', restaurantId),
+      collection(db, `restaurantes/${restaurantId}/orders`), 
       where('status', 'in', ['preparing', 'ready_for_pickup'])
     );
 
@@ -62,16 +59,30 @@ export default function KitchenPage() {
   }, [restaurantId, t, toast, user]);
 
   const handleItemStatusChange = async (orderId: string, itemId: string, newStatus: 'pending' | 'preparing' | 'ready') => {
+    if (!restaurantId) return;
+
     try {
-      const orderRef = doc(db, 'orders', orderId);
+      const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
       const currentOrder = orders.find(o => o.id === orderId);
       if (!currentOrder) return;
       
-      const updatedItems = currentOrder.items.map(item => 
-        item.id === itemId ? { ...item, status: newStatus } : item
+      const updatedItems = currentOrder.items.map((item, index) => 
+        `${item.id}-${index}` === itemId ? { ...item, status: newStatus } : item
       );
 
-      await updateDoc(orderRef, { items: updatedItems });
+      const allItemsReady = updatedItems.every(item => item.status === 'ready');
+      
+      const updatePayload: { items: typeof updatedItems, status?: 'ready_for_pickup'} = { items: updatedItems };
+
+      if (allItemsReady) {
+        updatePayload.status = 'ready_for_pickup';
+      }
+
+      await updateDoc(orderRef, updatePayload);
+      
+      if(allItemsReady) {
+         toast({ title: t('Order Ready'), description: t('The order is now ready for pickup.') });
+      }
 
     } catch (error) {
        toast({ variant: 'destructive', title: t('Error'), description: t('Could not update item status.') });
@@ -79,8 +90,9 @@ export default function KitchenPage() {
   };
 
   const handleOrderReady = async (orderId: string) => {
+    if (!restaurantId) return;
     try {
-      const orderRef = doc(db, 'orders', orderId);
+      const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
       await updateDoc(orderRef, { status: 'ready_for_pickup' });
       toast({ title: t('Order Ready'), description: t('The order is now ready for pickup.') });
     } catch (error) {

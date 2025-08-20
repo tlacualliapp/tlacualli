@@ -55,14 +55,14 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
 
   useEffect(() => {
-    if (!orderId) {
+    if (!orderId || !restaurantId) {
         setIsLoading(false);
         setOrder(null);
         return;
     };
     
     setIsLoading(true);
-    const orderRef = doc(db, "orders", orderId);
+    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
     
     const unsubscribe = onSnapshot(orderRef, (docSnapshot) => {
         if (docSnapshot.exists()) {
@@ -90,7 +90,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     });
 
     return () => unsubscribe();
-  }, [orderId, t]);
+  }, [orderId, restaurantId, t]);
 
 
   useEffect(() => {
@@ -111,7 +111,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const handleSendToKitchen = async () => {
     if (!order || !restaurantId || order.items.length === 0) return;
     try {
-        const orderRef = doc(db, 'orders', order.id);
+        const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
         const itemsWithStatus = order.items.map(item => ({...item, status: 'pending'}));
         
         await updateDoc(orderRef, {
@@ -126,10 +126,10 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
   
   const handleCloseOrder = async () => {
-    if(!order) return;
+    if(!order || !restaurantId) return;
     
     try {
-        const orderRef = doc(db, 'orders', order.id);
+        const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
         await updateDoc(orderRef, { status: 'paid' });
         
         toast({ title: t('Order Closed'), description: `${t('Table')} ${tableName} ${t('is now')} ${t('available')}.`});
@@ -141,8 +141,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
 
   const handleRemoveItem = async (itemToRemove: OrderItem) => {
-    if (!order) return;
-    const orderRef = doc(db, 'orders', order.id);
+    if (!order || !restaurantId) return;
+    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -187,9 +187,9 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   };
 
   const handleCancelOrder = async () => {
-    if(!order) return;
+    if(!order || !restaurantId) return;
     try {
-        await deleteDoc(doc(db, 'orders', order.id));
+        await deleteDoc(doc(db, `restaurantes/${restaurantId}/orders`, order.id));
         toast({ title: t('Order Cancelled'), description: t('The order has been completely removed.') });
         
         if (order.status === 'preparing') {
@@ -207,8 +207,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
 
   const handleAddSubAccount = async () => {
-    if (!order) return;
-    const orderRef = doc(db, 'orders', order.id);
+    if (!order || !restaurantId) return;
+    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
     const newSubAccount: SubAccount = {
       id: `sub_${Date.now()}`,
       name: `${t('Diner')} ${order.subaccounts.length + 1}`
@@ -224,7 +224,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   };
 
   const handleRemoveSubAccount = async (subAccountId: string) => {
-    if (!order) return;
+    if (!order || !restaurantId) return;
     
     const itemsInSubAccount = order.items.filter(item => item.subAccountId === subAccountId);
     if (itemsInSubAccount.length > 0) {
@@ -236,7 +236,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
       return;
     }
 
-    const orderRef = doc(db, 'orders', order.id);
+    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
     const updatedSubAccounts = order.subaccounts.filter(sa => sa.id !== subAccountId);
 
     try {
@@ -250,9 +250,9 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
   
   const handleAcknowledgePickup = async () => {
-    if (!order) return;
+    if (!order || !restaurantId) return;
     try {
-        const orderRef = doc(db, 'orders', order.id);
+        const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
         await updateDoc(orderRef, { status: 'preparing' });
         toast({ title: t('Order Acknowledged'), description: t('The order is now being served.') });
     } catch (error) {
@@ -309,11 +309,11 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
             return (
             <AccordionItem value={subAccount.id} key={subAccount.id}>
               <div className="flex items-center w-full group">
-                <AccordionTrigger className="flex-grow">
-                  <div className="flex justify-between items-center w-full pr-4">
-                      <span className="flex items-center">{subAccount.name}</span>
-                      <span className="font-mono">${getSubAccountTotal(subAccount.id).toFixed(2)}</span>
-                  </div>
+                 <AccordionTrigger className="flex-grow p-2">
+                    <div className="flex justify-between items-center w-full">
+                        <span className="flex items-center">{subAccount.name}</span>
+                        <span className="font-mono pr-2">${getSubAccountTotal(subAccount.id).toFixed(2)}</span>
+                    </div>
                 </AccordionTrigger>
                 {isSubAccountEmpty && (
                   <Button 
@@ -328,8 +328,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
               </div>
               <AccordionContent>
                 <div className="space-y-3 pl-4">
-                  {itemsInSubAccount.map(item => (
-                    <div key={`${item.id}-${item.subAccountId}`} className="flex justify-between items-center group">
+                  {itemsInSubAccount.map((item, index) => (
+                    <div key={`${item.id}-${item.subAccountId}-${index}`} className="flex justify-between items-center group">
                         <div>
                           <p className="font-semibold">{item.quantity}x {item.name}</p>
                            {item.notes && <p className="text-xs text-muted-foreground">- {item.notes}</p>}

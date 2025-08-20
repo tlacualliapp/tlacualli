@@ -66,7 +66,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
     setIsLoading(true);
     const categoriesQuery = query(collection(db, `restaurantes/${restaurantId}/menuCategories`));
     const itemsQuery = query(collection(db, `restaurantes/${restaurantId}/menuItems`));
-    const orderRef = doc(db, 'orders', orderId);
+    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
 
     const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
       setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
@@ -100,7 +100,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
     setClickedItemId(item.id);
     setTimeout(() => setClickedItemId(null), 300);
 
-    const orderRef = doc(db, 'orders', orderId);
+    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
 
     try {
         await runTransaction(db, async (transaction) => {
