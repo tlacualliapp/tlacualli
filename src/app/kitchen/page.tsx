@@ -5,12 +5,13 @@ import React, { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { AdminLayout } from '@/components/layout/admin-layout';
-import { Loader2 } from 'lucide-react';
+import { ChefHat, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { KitchenOrderCard, Order } from '@/components/kitchen/order-card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { getRestaurantIdForCurrentUser } from '@/lib/users';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -89,12 +90,21 @@ export default function KitchenPage() {
 
   return (
     <AdminLayout>
+      <Card className="mb-6 bg-card/65 backdrop-blur-lg">
+        <CardHeader>
+            <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
+                <ChefHat className="h-8 w-8" /> {t('Kitchen Management')}
+            </CardTitle>
+            <CardDescription>{t('View and manage incoming orders in real-time.')}</CardDescription>
+        </CardHeader>
+      </Card>
+
       {isLoading ? (
         <div className="flex justify-center items-center h-full">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       ) : orders.length === 0 ? (
-         <div className="flex flex-col items-center justify-center h-full text-center">
+         <div className="flex flex-col items-center justify-center h-full text-center mt-16">
             <h1 className="text-4xl font-bold font-headline mb-4">{t('Kitchen is Clear!')}</h1>
             <p className="text-lg text-muted-foreground mb-8 max-w-md">
               {t('There are no pending orders at the moment.')}
