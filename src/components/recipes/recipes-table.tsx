@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { RecipeForm } from './recipe-form';
 import { Card, CardContent, CardHeader } from '../ui/card';
+import { useTranslation } from 'react-i18next';
 
 interface Ingredient {
   itemId: string;
@@ -31,16 +32,16 @@ interface Recipe {
 
 interface RecipesTableProps {
   restaurantId: string;
-  t: (key: string) => string;
 }
 
-export function RecipesTable({ restaurantId, t }: RecipesTableProps) {
+export function RecipesTable({ restaurantId }: RecipesTableProps) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -101,7 +102,6 @@ export function RecipesTable({ restaurantId, t }: RecipesTableProps) {
                     restaurantId={restaurantId} 
                     onSuccess={() => setIsFormModalOpen(false)} 
                     recipeToEdit={recipeToEdit}
-                    t={t}
                 />
             </DialogContent>
         </Dialog>

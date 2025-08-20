@@ -28,15 +28,15 @@ interface MenuItem {
 
 interface MenuTableProps {
   restaurantId: string;
-  t: (key: string) => string;
 }
 
-export function MenuTable({ restaurantId, t }: MenuTableProps) {
+export function MenuTable({ restaurantId }: MenuTableProps) {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [menuItemToEdit, setMenuItemToEdit] = useState<MenuItem | null>(null);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -109,7 +109,6 @@ export function MenuTable({ restaurantId, t }: MenuTableProps) {
             restaurantId={restaurantId} 
             onSuccess={() => setIsFormModalOpen(false)} 
             menuItemToEdit={menuItemToEdit}
-            t={t}
           />
         </DialogContent>
       </Dialog>

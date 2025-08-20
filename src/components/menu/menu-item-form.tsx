@@ -12,6 +12,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs, onSnapshot } from 'firebase/firestore';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { useTranslation } from 'react-i18next';
 
 interface MenuItem {
   id?: string;
@@ -38,11 +39,11 @@ interface MenuItemFormProps {
   restaurantId: string;
   onSuccess?: () => void;
   menuItemToEdit?: MenuItem | null;
-  t: (key: string) => string;
 }
 
-export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit, t }: MenuItemFormProps) {
+export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuItemFormProps) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);

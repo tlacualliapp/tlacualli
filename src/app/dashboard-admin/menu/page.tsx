@@ -71,7 +71,7 @@ export default function MenuPage() {
                     <DialogTitle>{t('Create New Recipe')}</DialogTitle>
                     <DialogDescription>{t('Define the ingredients and cost for a new dish.')}</DialogDescription>
                 </DialogHeader>
-                <RecipeForm restaurantId={restaurantId} onSuccess={() => setIsRecipeModalOpen(false)} t={t} />
+                <RecipeForm restaurantId={restaurantId} onSuccess={() => setIsRecipeModalOpen(false)} />
             </DialogContent>
         </Dialog>
         
@@ -93,7 +93,7 @@ export default function MenuPage() {
                     <DialogTitle>{t('Create Menu Item')}</DialogTitle>
                     <DialogDescription>{t('Add a new dish to your menu, linking it to a recipe.')}</DialogDescription>
                 </DialogHeader>
-                <MenuItemForm restaurantId={restaurantId} onSuccess={() => setIsMenuItemModalOpen(false)} t={t} />
+                <MenuItemForm restaurantId={restaurantId} onSuccess={() => setIsMenuItemModalOpen(false)} />
             </DialogContent>
         </Dialog>
       </div>
@@ -106,7 +106,7 @@ export default function MenuPage() {
                  <CardDescription>{t('View and manage your current recipes.')}</CardDescription>
             </CardHeader>
             <CardContent>
-                <RecipesTable restaurantId={restaurantId} t={t} />
+                <RecipesTable restaurantId={restaurantId} />
             </CardContent>
         </Card>
 
@@ -117,7 +117,7 @@ export default function MenuPage() {
                 <CardDescription>{t('View and manage your current menu dishes.')}</CardDescription>
             </CardHeader>
             <CardContent>
-                <MenuTable restaurantId={restaurantId} t={t} />
+                <MenuTable restaurantId={restaurantId} />
             </CardContent>
         </Card>
       </div>
