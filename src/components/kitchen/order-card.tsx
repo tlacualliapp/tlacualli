@@ -65,30 +65,32 @@ export const KitchenOrderCard = ({ order, onItemStatusChange, onOrderReady }: Ki
         <Badge variant="outline" className="text-sm font-mono">{elapsedTime}</Badge>
       </CardHeader>
       <CardContent className="flex-grow p-4 space-y-3">
-        {order.items.map((item, index) => (
-          <div key={`${item.id}-${index}`} className={cn("p-2 rounded-md transition-colors", {
-              'bg-yellow-100/50': item.status === 'preparing',
-              'bg-green-100/50': item.status === 'ready',
-          })}>
-            <div className="flex justify-between items-start">
-              <p className="font-semibold">{item.quantity}x {item.name}</p>
-              <div className="flex items-center gap-1">
-                 {item.status !== 'ready' && (
-                    <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-7 w-7 text-green-600 hover:bg-green-200"
-                        onClick={() => onItemStatusChange(order.id, item.id, 'ready')}
-                        disabled={true}
-                    >
-                        <Check className="h-4 w-4"/>
-                    </Button>
-                 )}
+        {order.items.map((item, index) => {
+          const uniqueItemId = `${item.id}-${index}`;
+          return (
+            <div key={uniqueItemId} className={cn("p-2 rounded-md transition-colors", {
+                'bg-yellow-100/50': item.status === 'preparing',
+                'bg-green-100/50': item.status === 'ready',
+            })}>
+              <div className="flex justify-between items-start">
+                <p className="font-semibold">{item.quantity}x {item.name}</p>
+                <div className="flex items-center gap-1">
+                   {item.status !== 'ready' && (
+                      <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-7 w-7 text-green-600 hover:bg-green-200"
+                          onClick={() => onItemStatusChange(order.id, uniqueItemId, 'ready')}
+                      >
+                          <Check className="h-4 w-4"/>
+                      </Button>
+                   )}
+                </div>
               </div>
+              {item.notes && <p className="text-xs text-muted-foreground pl-1">- {item.notes}</p>}
             </div>
-            {item.notes && <p className="text-xs text-muted-foreground pl-1">- {item.notes}</p>}
-          </div>
-        ))}
+          )
+        })}
       </CardContent>
       <Separator />
       <CardFooter className="p-2">
@@ -96,6 +98,7 @@ export const KitchenOrderCard = ({ order, onItemStatusChange, onOrderReady }: Ki
              <Button 
                 className="w-full"
                 onClick={() => onOrderReady(order.id)}
+                disabled={!allItemsReady}
              >
                 <CheckCheck className="mr-2"/> {t('Mark as Ready')}
             </Button>

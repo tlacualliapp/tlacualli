@@ -93,7 +93,18 @@ export default function KitchenPage() {
     if (!restaurantId) return;
     try {
       const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
-      await updateDoc(orderRef, { status: 'ready_for_pickup' });
+      
+      const currentOrder = orders.find(o => o.id === orderId);
+      if (!currentOrder) return;
+
+      // Mark all items as ready
+      const updatedItems = currentOrder.items.map(item => ({ ...item, status: 'ready' }));
+
+      await updateDoc(orderRef, { 
+        status: 'ready_for_pickup',
+        items: updatedItems 
+      });
+
       toast({ title: t('Order Ready'), description: t('The order is now ready for pickup.') });
     } catch (error) {
        toast({ variant: 'destructive', title: t('Error'), description: t('Could not mark the order as ready.') });
