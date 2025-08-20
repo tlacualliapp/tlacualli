@@ -36,8 +36,9 @@ interface Order {
   id: string;
   items: OrderItem[];
   subtotal: number;
-  status: 'open' | 'preparing' | 'paid' | 'ready_for_pickup';
+  status: 'open' | 'preparing' | 'paid' | 'ready_for_pickup' | 'served';
   sentToKitchenAt?: Timestamp;
+  pickupAcknowledgedAt?: Timestamp;
   subaccounts: SubAccount[];
 }
 
@@ -105,7 +106,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
   useEffect(() => {
     let timerInterval: NodeJS.Timeout;
-    if (order?.status === 'preparing' && order.sentToKitchenAt) {
+    if (order?.status === 'preparing' && order.sentToKitchenAt && !order.pickupAcknowledgedAt) {
       const sentTime = order.sentToKitchenAt.toDate().getTime();
       timerInterval = setInterval(() => {
         const now = new Date().getTime();
@@ -263,8 +264,11 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     if (!order || !restaurantId) return;
     try {
         const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
-        await updateDoc(orderRef, { status: 'preparing' });
-        toast({ title: t('Order Acknowledged'), description: t('The order is now being served.') });
+        await updateDoc(orderRef, { 
+            status: 'served',
+            pickupAcknowledgedAt: serverTimestamp()
+        });
+        toast({ title: t('Order Served'), description: t('The order has been marked as served.') });
     } catch (error) {
          toast({ variant: 'destructive', title: t('Error'), description: t('Could not update order status.') });
     }
@@ -292,23 +296,22 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
      return order.items.filter(item => item.subAccountId === subAccountId);
   }
 
-  const pendingItemsCount = order.items?.filter(item => item.status === 'pending' || item.status === 'preparing').length || 0;
+  const pendingItemsCount = order.items?.filter(item => item.status !== 'ready').length || 0;
 
   return (
     <div className="p-4 flex flex-col h-full">
       <div className="flex justify-between items-start mb-1">
         <div>
             <h2 className="text-2xl font-bold font-headline">{t('Order Summary')}: {tableName}</h2>
-            {order.status === 'preparing' || order.status === 'ready_for_pickup' ? (
+            {order.status === 'preparing' || order.status === 'ready_for_pickup' || order.status === 'served' ? (
                 <div className="text-sm text-muted-foreground">
-                    {pendingItemsCount > 0 ? 
-                        t('{{count}} items pending', { count: pendingItemsCount }) :
-                        t('Order Complete')
+                    {order.status === 'served' ? t('Order Complete') : 
+                        (pendingItemsCount > 0 ? t('{{count}} items pending', { count: pendingItemsCount }) : t('All items ready'))
                     }
                 </div>
             ) : null}
         </div>
-         {order.status === 'preparing' && (
+         {order.status === 'preparing' && !order.pickupAcknowledgedAt && (
             <div className="flex items-center gap-2 text-sm font-semibold bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
                 <ChefHat className="h-4 w-4" />
                 <span>{elapsedTime}</span>
@@ -318,6 +321,12 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
              <div className="flex items-center gap-2 text-sm font-semibold bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full animate-pulse">
                 <BellRing className="h-4 w-4" />
                 <span>{t('Ready for pickup')}</span>
+            </div>
+         )}
+         {order.status === 'served' && (
+             <div className="flex items-center gap-2 text-sm font-semibold bg-green-100 text-green-700 px-3 py-1 rounded-full">
+                <CheckCircle className="h-4 w-4" />
+                <span>{t('Table Served')}</span>
             </div>
          )}
       </div>
