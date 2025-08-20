@@ -1,7 +1,8 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
@@ -18,7 +19,6 @@ interface Employee {
   nombre: string;
   apellidos: string;
   assignments?: {
-    rooms?: string[];
     tables?: string[];
   };
 }
@@ -49,20 +49,17 @@ export const AssignmentManager = ({ restaurantId }: AssignmentManagerProps) => {
   useEffect(() => {
     if (!restaurantId) return;
 
-    // Fetch active employees
     const employeesQuery = query(collection(db, "usuarios"), where("restauranteId", "==", restaurantId), where("status", "==", "1"));
     const unsubscribeEmployees = onSnapshot(employeesQuery, snapshot => {
       setEmployees(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee)));
       setIsLoading(false);
     });
 
-    // Fetch rooms
     const roomsQuery = query(collection(db, `restaurantes/${restaurantId}/rooms`));
     const unsubscribeRooms = onSnapshot(roomsQuery, snapshot => {
       const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
       setRooms(roomsData);
 
-      // Fetch tables for each room
       roomsData.forEach(room => {
         const tablesQuery = query(collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`));
         onSnapshot(tablesQuery, tablesSnapshot => {
@@ -83,23 +80,23 @@ export const AssignmentManager = ({ restaurantId }: AssignmentManagerProps) => {
     setSelectedEmployee(employee || null);
   };
 
-  const handleAssignmentChange = async (type: 'rooms' | 'tables', id: string, checked: boolean) => {
+  const handleAssignmentChange = async (id: string, checked: boolean) => {
     if (!selectedEmployee) return;
 
-    const currentAssignments = selectedEmployee.assignments || { rooms: [], tables: [] };
+    const currentAssignments = selectedEmployee.assignments || { tables: [] };
     let newAssignments: string[];
 
     if (checked) {
-      newAssignments = [...(currentAssignments[type] || []), id];
+      newAssignments = [...(currentAssignments.tables || []), id];
     } else {
-      newAssignments = (currentAssignments[type] || []).filter(itemId => itemId !== id);
+      newAssignments = (currentAssignments.tables || []).filter(itemId => itemId !== id);
     }
     
     const updatedEmployee = {
       ...selectedEmployee,
       assignments: {
         ...currentAssignments,
-        [type]: newAssignments,
+        tables: newAssignments,
       }
     };
     setSelectedEmployee(updatedEmployee);
@@ -110,23 +107,18 @@ export const AssignmentManager = ({ restaurantId }: AssignmentManagerProps) => {
       toast({ title: t('Assignment Updated'), description: t('The assignment has been saved successfully.') });
     } catch (error) {
       toast({ variant: 'destructive', title: t('Error'), description: t('Could not save the assignment.') });
-      // Revert state on error
       setSelectedEmployee(selectedEmployee);
     }
   };
-
-  const handleSelectAll = (type: 'rooms' | 'tables', selectAll: boolean) => {
+  
+  const handleSelectAll = (selectAll: boolean) => {
      if (!selectedEmployee) return;
 
-    const allIds = type === 'rooms' 
-        ? rooms.map(r => r.id)
-        : Object.values(tablesByRoom).flat().map(t => t.id);
+    const allTableIds = Object.values(tablesByRoom).flat().map(t => t.id);
 
-    const currentAssignments = selectedEmployee.assignments || { rooms: [], tables: [] };
-     
     const updatedAssignments = {
-        ...currentAssignments,
-        [type]: selectAll ? allIds : []
+        ...selectedEmployee.assignments,
+        tables: selectAll ? allTableIds : []
     };
 
     const updatedEmployee = { ...selectedEmployee, assignments: updatedAssignments };
@@ -157,54 +149,37 @@ export const AssignmentManager = ({ restaurantId }: AssignmentManagerProps) => {
 
       {selectedEmployee && (
         <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
-            <div className="flex justify-between items-center">
-                 <Label>{t('Areas')}</Label>
-                 <div>
-                    <Button variant="link" size="sm" onClick={() => handleSelectAll('rooms', true)}>{t('Assign all')}</Button>
-                    <Button variant="link" size="sm" onClick={() => handleSelectAll('rooms', false)}>{t('Remove all')}</Button>
-                 </div>
+            <div className="flex justify-between items-center pt-4">
+                <Label>{t('Tables')}</Label>
+                <div>
+                <Button variant="link" size="sm" onClick={() => handleSelectAll(true)}>{t('Assign all')}</Button>
+                <Button variant="link" size="sm" onClick={() => handleSelectAll(false)}>{t('Remove all')}</Button>
+                </div>
             </div>
-            {rooms.map(room => (
-                 <div key={room.id} className="flex items-center space-x-2 p-2 rounded hover:bg-muted">
-                    <Checkbox
-                        id={`room-${room.id}`}
-                        checked={selectedEmployee.assignments?.rooms?.includes(room.id) || false}
-                        onCheckedChange={(checked) => handleAssignmentChange('rooms', room.id, !!checked)}
-                    />
-                    <Label htmlFor={`room-${room.id}`} className="font-normal flex-1 cursor-pointer">{room.name}</Label>
-                 </div>
-            ))}
-             <div className="flex justify-between items-center pt-4">
-                 <Label>{t('Tables')}</Label>
-                 <div>
-                    <Button variant="link" size="sm" onClick={() => handleSelectAll('tables', true)}>{t('Assign all')}</Button>
-                    <Button variant="link" size="sm" onClick={() => handleSelectAll('tables', false)}>{t('Remove all')}</Button>
-                 </div>
-            </div>
-          <Accordion type="multiple" className="w-full">
-            {rooms.map(room => (
-              <AccordionItem key={`acc-${room.id}`} value={`item-${room.id}`}>
-                <AccordionTrigger>{room.name}</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-2 pl-4">
-                    {(tablesByRoom[room.id] || []).map(table => (
-                       <div key={table.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`table-${table.id}`}
-                            checked={selectedEmployee.assignments?.tables?.includes(table.id) || false}
-                            onCheckedChange={(checked) => handleAssignmentChange('tables', table.id, !!checked)}
-                          />
-                          <Label htmlFor={`table-${table.id}`} className="font-normal cursor-pointer">{t('Table')} {table.name}</Label>
-                       </div>
-                    ))}
-                    {(!tablesByRoom[room.id] || tablesByRoom[room.id].length === 0) && (
-                        <p className="text-xs text-muted-foreground">{t('No tables in this area.')}</p>
-                    )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+            <Accordion type="multiple" className="w-full">
+                {rooms.map(room => (
+                <AccordionItem key={`acc-${room.id}`} value={`item-${room.id}`}>
+                    <AccordionTrigger>{room.name}</AccordionTrigger>
+                    <AccordionContent>
+                    <div className="space-y-2 pl-4">
+                        {(tablesByRoom[room.id] || []).map(table => (
+                        <div key={table.id} className="flex items-center space-x-2">
+                            <Checkbox
+                                id={`table-${table.id}`}
+                                checked={selectedEmployee.assignments?.tables?.includes(table.id) || false}
+                                onCheckedChange={(checked) => handleAssignmentChange(table.id, !!checked)}
+                            />
+                            <Label htmlFor={`table-${table.id}`} className="font-normal cursor-pointer">{t('Table')} {table.name}</Label>
+                        </div>
+                        ))}
+                        {(!tablesByRoom[room.id] || tablesByRoom[room.id].length === 0) && (
+                            <p className="text-xs text-muted-foreground">{t('No tables in this area.')}</p>
+                        )}
+                    </div>
+                    </AccordionContent>
+                </AccordionItem>
+                ))}
+            </Accordion>
         </div>
       )}
     </div>
