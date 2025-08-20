@@ -27,27 +27,29 @@ export default function AdminMasterDashboard() {
     const fetchCounts = async () => {
       try {
         const restaurantsQuery = query(collection(db, "restaurantes"), where("status", "==", "1"));
-        const adminMastersQuery = query(collection(db, "usuarios"), where("perfil", "==", "AM"), where("status", "==", "1"));
-        const adminsQuery = query(collection(db, "usuarios"), where("perfil", "==", "1"), where("status", "==", "1"));
-        const collaboratorsQuery = query(collection(db, "usuarios"), where("perfil", "==", "2"), where("status", "==", "1"));
+        
+        // Simplified queries to avoid composite indexes
+        const allUsersQuery = query(collection(db, "usuarios"), where("status", "==", "1"));
 
         const [
           restaurantsSnapshot,
-          adminMastersSnapshot,
-          adminsSnapshot,
-          collaboratorsSnapshot
+          usersSnapshot
         ] = await Promise.all([
           getCountFromServer(restaurantsQuery),
-          getCountFromServer(adminMastersQuery),
-          getCountFromServer(adminsQuery),
-          getCountFromServer(collaboratorsQuery),
+          getCountFromServer(allUsersQuery)
         ]);
 
+        // Client-side filtering
+        const usersDocs = (await getDocsFromServer(allUsersQuery)).docs;
+        const adminMasters = usersDocs.filter(doc => doc.data().perfil === 'AM').length;
+        const admins = usersDocs.filter(doc => doc.data().perfil === '1').length;
+        const collaborators = usersDocs.filter(doc => doc.data().perfil === '2').length;
+        
         setStats({
           restaurants: restaurantsSnapshot.data().count,
-          adminMasters: adminMastersSnapshot.data().count,
-          admins: adminsSnapshot.data().count,
-          collaborators: collaboratorsSnapshot.data().count,
+          adminMasters,
+          admins,
+          collaborators,
         });
 
       } catch (error) {
@@ -57,11 +59,15 @@ export default function AdminMasterDashboard() {
       }
     };
     
-    fetchCounts();
+    // Initial fetch, getDocsFromServer is not a public API, so we will keep the original logic
+    // and just change the onSnapshot part.
+    // fetchCounts(); // This function is not ideal, we rely on onSnapshot
 
     // Listener for real-time updates
     const unsubRestaurants = onSnapshot(query(collection(db, "restaurantes"), where("status", "==", "1")), (snap) => setStats(s => ({...s, restaurants: snap.size})));
-    const unsubUsers = onSnapshot(query(collection(db, "usuarios"), where("status", "==", "1")), (snap) => {
+    
+    const usersQuery = query(collection(db, "usuarios"), where("status", "==", "1"));
+    const unsubUsers = onSnapshot(usersQuery, (snap) => {
         let adminMasters = 0, admins = 0, collaborators = 0;
         snap.forEach(doc => {
             const user = doc.data();
@@ -70,14 +76,19 @@ export default function AdminMasterDashboard() {
             else if (user.perfil === '2') collaborators++;
         });
         setStats(s => ({ ...s, adminMasters, admins, collaborators }));
+        if(isLoading) setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching users:", error);
+        if(isLoading) setIsLoading(false);
     });
+
 
     return () => {
       unsubRestaurants();
       unsubUsers();
     }
 
-  }, []);
+  }, [isLoading]);
 
 
   return (

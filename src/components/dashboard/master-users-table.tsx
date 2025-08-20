@@ -44,30 +44,35 @@ export function MasterUsersTable() {
 
   useEffect(() => {
     setIsLoading(true);
+    // Simplified query to avoid composite index
     const q = query(
       collection(db, "usuarios"),
-      where("perfil", "==", "AM"),
-      where("status", "==", "1")
+      where("perfil", "==", "AM")
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const usersData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        
-        let registeredDate = 'N/A';
-        if (data.fecharegistro && data.fecharegistro instanceof Timestamp) {
-          registeredDate = data.fecharegistro.toDate().toLocaleDateString();
-        }
+      const usersData = querySnapshot.docs
+        .map(doc => {
+            const data = doc.data();
+            // Client-side filtering for status
+            if (data.status !== "1") return null;
 
-        return {
-          id: doc.id,
-          nombre: data.nombre || '',
-          apellidos: data.apellidos || '',
-          email: data.email || t('Not specified'),
-          telefono: data.telefono || '',
-          registered: registeredDate,
-        };
-      });
+            let registeredDate = 'N/A';
+            if (data.fecharegistro && data.fecharegistro instanceof Timestamp) {
+            registeredDate = data.fecharegistro.toDate().toLocaleDateString();
+            }
+
+            return {
+            id: doc.id,
+            nombre: data.nombre || '',
+            apellidos: data.apellidos || '',
+            email: data.email || t('Not specified'),
+            telefono: data.telefono || '',
+            registered: registeredDate,
+            };
+        })
+        .filter((user): user is MasterUser => user !== null);
+
       setUsers(usersData);
       setIsLoading(false);
     }, (error) => {

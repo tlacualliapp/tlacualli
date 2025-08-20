@@ -56,12 +56,15 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
     };
     
     setIsLoading(true);
-    const q = query(collection(db, "orders"), where("tableId", "==", table.id), where("status", "!=", "paid"));
+    // Simplified query to avoid composite indexes
+    const q = query(collection(db, "orders"), where("tableId", "==", table.id));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-            const orderDoc = snapshot.docs[0];
-            setOrder({ id: orderDoc.id, ...orderDoc.data() } as Order);
+        // Client-side filtering
+        const activeOrderDoc = snapshot.docs.find(doc => doc.data().status !== 'paid');
+        
+        if (activeOrderDoc) {
+            setOrder({ id: activeOrderDoc.id, ...activeOrderDoc.data() } as Order);
         } else {
             setOrder(null);
         }
@@ -116,8 +119,8 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
         if (order) {
             const orderRef = doc(db, 'orders', order.id);
             // Here you might want to move the order to a historical collection
-            // instead of deleting it. For now, we'll delete.
-            await deleteDoc(orderRef);
+            // instead of deleting it. For now, we'll mark as paid.
+            await updateDoc(orderRef, { status: 'paid' });
         }
         
         toast({ title: t('Order Closed'), description: `${t('Table')} ${table.name} ${t('is now')} ${t(newTableStatus)}.`});
