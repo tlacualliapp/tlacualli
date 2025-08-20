@@ -18,6 +18,7 @@ export interface Table {
   top: number;
   left: number;
   seats: number;
+  roomId: string;
 }
 
 interface TableItemProps extends Table {
@@ -25,6 +26,7 @@ interface TableItemProps extends Table {
     onEdit: (table: Table) => void;
     onClick: (table: Table) => void;
     view: 'admin' | 'operational';
+    isSelected?: boolean;
 }
 
 const statusClasses = {
@@ -35,8 +37,9 @@ const statusClasses = {
   dirty: 'bg-orange-500/80 border-orange-700 hover:bg-orange-500',
 };
 
+
 const TableView: React.FC<TableItemProps> = (props) => {
-    const { id, name, shape, status, seats, onDelete, onEdit, onClick, view } = props;
+    const { id, name, shape, status, seats, onDelete, onEdit, onClick, view, isSelected } = props;
     const { t } = useTranslation();
 
     const shapeClasses = {
@@ -45,9 +48,9 @@ const TableView: React.FC<TableItemProps> = (props) => {
     };
 
     return (
-        <div className="group relative flex flex-col items-center" onClick={() => onClick(props)}>
+        <div className={cn("group relative flex flex-col items-center", view === 'operational' && 'cursor-pointer')} onClick={() => onClick(props)}>
             {view === 'admin' && (
-                <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 p-1 rounded-full bg-background/80 shadow-md">
+                <div className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 p-1 rounded-full bg-background/80 shadow-md">
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive">
@@ -73,10 +76,11 @@ const TableView: React.FC<TableItemProps> = (props) => {
                 </div>
             )}
             <div className={cn(
-                "w-24 h-24 aspect-square flex flex-col items-center justify-center text-white font-bold text-lg shadow-md border-2 transition-transform hover:scale-105",
+                "w-24 h-24 aspect-square flex flex-col items-center justify-center text-white font-bold text-lg shadow-md border-2 transition-all",
                 statusClasses[status || 'available'],
                 shapeClasses[shape],
-                view === 'operational' && 'cursor-pointer'
+                isSelected && 'ring-4 ring-offset-2 ring-primary scale-105',
+                !isSelected && 'hover:scale-105'
             )}>
                 <span className="text-xl">{name}</span>
                 <div className="flex items-center gap-1 text-xs font-normal">
@@ -113,10 +117,13 @@ const DraggableTableItem: React.FC<TableItemProps> = (props) => {
     );
 };
 
-
 export const TableItem: React.FC<TableItemProps> = (props) => {
   if (props.view === 'admin') {
     return <DraggableTableItem {...props} />;
   }
+
+  // In operational view, don't wrap with Draggable context
   return <TableView {...props} />;
 };
+
+    
