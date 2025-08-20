@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card
 import { Timestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
-import { Check, CheckCheck, Send } from 'lucide-react';
+import { Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
@@ -79,6 +79,7 @@ export const KitchenOrderCard = ({ order, onItemStatusChange, onOrderReady }: Ki
                         variant="ghost" 
                         className="h-7 w-7 text-green-600 hover:bg-green-200"
                         onClick={() => onItemStatusChange(order.id, item.id, 'ready')}
+                        disabled={true}
                     >
                         <Check className="h-4 w-4"/>
                     </Button>
@@ -94,7 +95,6 @@ export const KitchenOrderCard = ({ order, onItemStatusChange, onOrderReady }: Ki
          {order.status !== 'ready_for_pickup' ? (
              <Button 
                 className="w-full"
-                disabled={!allItemsReady}
                 onClick={() => onOrderReady(order.id)}
              >
                 <CheckCheck className="mr-2"/> {t('Mark as Ready')}
