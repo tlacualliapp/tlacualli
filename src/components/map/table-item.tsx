@@ -14,7 +14,7 @@ export interface Table {
   id: string;
   name: string;
   shape: 'square' | 'circle';
-  status: 'available' | 'occupied' | 'reserved' | 'billing' | 'dirty' | 'preparing';
+  status: 'available' | 'open' | 'preparing' | 'billing' | 'dirty' | 'reserved';
   top: number;
   left: number;
   seats: number;
@@ -29,13 +29,13 @@ interface TableItemProps extends Table {
     isSelected?: boolean;
 }
 
-const statusClasses = {
+const statusClasses: { [key in Table['status']]: string } = {
   available: 'bg-green-500/80 border-green-700 hover:bg-green-500',
-  occupied: 'bg-red-500/80 border-red-700 hover:bg-red-500',
-  reserved: 'bg-yellow-500/80 border-yellow-700 hover:bg-yellow-500',
+  open: 'bg-red-500/80 border-red-700 hover:bg-red-500',
+  preparing: 'bg-purple-500/80 border-purple-700 hover:bg-purple-500',
   billing: 'bg-blue-500/80 border-blue-700 hover:bg-blue-500',
   dirty: 'bg-orange-500/80 border-orange-700 hover:bg-orange-500',
-  preparing: 'bg-purple-500/80 border-purple-700 hover:bg-purple-500',
+  reserved: 'bg-yellow-500/80 border-yellow-700 hover:bg-yellow-500',
 };
 
 
@@ -127,11 +127,19 @@ const DraggableTableItem: React.FC<TableItemProps> = (props) => {
     );
 };
 
+const NonDraggableTableItem: React.FC<TableItemProps> = (props) => {
+  return (
+    <div>
+        <TableView {...props} />
+    </div>
+  )
+}
+
+
 export const TableItem: React.FC<TableItemProps> = (props) => {
   if (props.view === 'admin') {
     return <DraggableTableItem {...props} />;
   }
 
-  // In operational view, don't wrap with Draggable context
-  return <div style={{ position: 'relative' }}><TableView {...props} /></div>;
+  return <NonDraggableTableItem {...props} />
 };

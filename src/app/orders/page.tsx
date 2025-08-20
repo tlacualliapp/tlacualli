@@ -24,6 +24,12 @@ interface Room {
   name: string;
 }
 
+interface Order {
+    id: string;
+    tableId: string;
+    status: 'open' | 'preparing' | 'paid';
+}
+
 interface UserAssignments {
     tables: string[];
 }
@@ -36,7 +42,8 @@ export default function OrdersPage() {
   const { toast } = useToast();
   
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [tables, setTables] = useState<{ [roomId: string]: Table[] }>({});
+  const [tablesByRoom, setTablesByRoom] = useState<{ [roomId: string]: Table[] }>({});
+  const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [view, setView] = useState<'table_map' | 'menu' | 'order_summary'>('table_map');
@@ -64,10 +71,26 @@ export default function OrdersPage() {
     fetchUserData();
   }, [user]);
 
+  // Effect to fetch active orders
   useEffect(() => {
     if (!restaurantId) return;
+    const ordersQuery = query(
+      collection(db, "orders"),
+      where("restaurantId", "==", restaurantId),
+      where("status", "in", ["open", "preparing"])
+    );
+    const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
+        const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+        setActiveOrders(ordersData);
+    });
+    return () => unsubscribeOrders();
+  }, [restaurantId]);
 
+  // Effect to fetch rooms and tables
+  useEffect(() => {
+    if (!restaurantId) return;
     setIsLoading(true);
+
     const roomsRef = collection(db, `restaurantes/${restaurantId}/rooms`);
     const unsubscribeRooms = onSnapshot(roomsRef, (snapshot) => {
       const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)).sort((a,b) => a.name.localeCompare(b.name));
@@ -75,83 +98,70 @@ export default function OrdersPage() {
 
       if (roomsData.length === 0) {
         setIsLoading(false);
+        return;
       }
+
+      let activeSubscriptions = 0;
+      const newTablesByRoom: { [roomId: string]: Table[] } = {};
+
+      roomsData.forEach(room => {
+        const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
+        onSnapshot(tablesRef, (tableSnapshot) => {
+          const tablesData = tableSnapshot.docs.map(doc => ({
+              id: doc.id,
+              roomId: room.id,
+              ...doc.data()
+          } as Table)).sort((a, b) => a.name.localeCompare(b.name));
+          
+          newTablesByRoom[room.id] = tablesData;
+          activeSubscriptions++;
+
+          if (activeSubscriptions === roomsData.length) {
+              setTablesByRoom(newTablesByRoom);
+              setIsLoading(false);
+          }
+        });
+      });
     });
 
     return () => unsubscribeRooms();
   }, [restaurantId]);
-  
- useEffect(() => {
-    if (!restaurantId || rooms.length === 0) return;
-    
-    // Set loading to false only when there are rooms but no tables.
-    if (rooms.length > 0 && Object.keys(tables).length === 0) {
-        // This handles the case where rooms are loaded but tables are still coming.
-        // Or if there are truly no tables.
+
+
+ const getTableWithStatus = (table: Table): Table => {
+    const activeOrder = activeOrders.find(o => o.tableId === table.id);
+    if (activeOrder) {
+      return { ...table, status: activeOrder.status as 'open' | 'preparing' };
     }
-
-    const unsubscribers = rooms.map(room => {
-        const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
-        return onSnapshot(tablesRef, (tableSnapshot) => {
-            const tablesData = tableSnapshot.docs
-                .map(doc => ({ id: doc.id, roomId: room.id, ...doc.data() } as Table))
-                .sort((a, b) => a.name.localeCompare(b.name));
-
-            setTables(prev => ({ ...prev, [room.id]: tablesData }));
-
-            if (selectedTable && selectedTable.roomId === room.id) {
-                 const updatedSelectedTable = tablesData.find(t => t.id === selectedTable.id);
-                 if (updatedSelectedTable && JSON.stringify(updatedSelectedTable) !== JSON.stringify(selectedTable)) {
-                     setSelectedTable(updatedSelectedTable);
-                 }
-            }
-        });
-    });
-
-    setIsLoading(false);
-    return () => unsubscribers.forEach(unsub => unsub());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [restaurantId, rooms]);
-
- useEffect(() => {
-     if (userAssignments === null) return;
-     const allTables = rooms.flatMap(room => tables[room.id] || []);
-     if(allTables.length === 0) return;
-
-     const filteredTables: { [roomId: string]: Table[] } = {};
-     for (const roomId in tables) {
-         if (userAssignments.tables.length > 0) {
-            filteredTables[roomId] = tables[roomId].filter(table => userAssignments.tables.includes(table.id));
-         } else {
-            // If no assignments, show all (or keep current logic)
-            filteredTables[roomId] = tables[roomId];
-         }
-     }
-     
-    // Only update if the filtered result is different.
-     if (JSON.stringify(filteredTables) !== JSON.stringify(tables)) {
-         setTables(filteredTables);
-     }
-     // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [userAssignments, tables, rooms]);
-
+    // TODO: This doesn't account for reserved or dirty, as that logic is not implemented yet.
+    return { ...table, status: 'available' };
+  };
 
   const handleTableClick = (table: Table) => {
-    setSelectedTable(table);
-    if (table.status === 'occupied' || table.status === 'billing' || table.status === 'preparing') {
-        setView('order_summary');
+    const tableWithStatus = getTableWithStatus(table);
+    setSelectedTable(tableWithStatus);
+    if (tableWithStatus.status === 'open' || tableWithStatus.status === 'preparing') {
+      setView('order_summary');
     } else {
-        setView('table_map'); 
+      setView('table_map'); 
     }
   };
   
   const handleStartNewOrder = async () => {
     if (!selectedTable || !restaurantId) return;
     
-    try {
-        const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${selectedTable.roomId}/tables`, selectedTable.id);
-        await updateDoc(tableRef, { status: 'occupied' });
+    // Double check if an order already exists for this table
+    const existingOrder = activeOrders.find(o => o.tableId === selectedTable.id);
+    if (existingOrder) {
+        toast({
+            variant: 'destructive',
+            title: t('Error'),
+            description: t('An active order already exists for this table.'),
+        });
+        return;
+    }
 
+    try {
         await addDoc(collection(db, 'orders'), {
             tableId: selectedTable.id,
             tableName: selectedTable.name,
@@ -172,7 +182,7 @@ export default function OrdersPage() {
         toast({
             variant: 'destructive',
             title: t('Error'),
-            description: t('Could not update table status.'),
+            description: t('Could not start a new order.'),
         });
     }
   };
@@ -188,7 +198,7 @@ export default function OrdersPage() {
         description: t('Functionality to register takeout orders coming soon.')
     })
   }
-
+  
   const renderRightPanel = () => {
     if (!selectedTable) {
         return (
@@ -208,6 +218,10 @@ export default function OrdersPage() {
         return <OrderDetails restaurantId={restaurantId} table={selectedTable} onAddItems={() => setView('menu')} onOrderClosed={handleOrderClosed} />;
     }
 
+    // Default view for a selected table
+    const tableWithStatus = getTableWithStatus(selectedTable);
+    const status = tableWithStatus.status;
+
     return (
         <div className="p-6 flex flex-col h-full">
             <h2 className="text-2xl font-bold font-headline mb-2">{t('Table')} {selectedTable.name}</h2>
@@ -216,32 +230,28 @@ export default function OrdersPage() {
                     <span className={cn(
                         "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
                         {
-                            'bg-green-400': selectedTable.status === 'available',
-                            'bg-red-400': selectedTable.status === 'occupied',
-                            'bg-yellow-400': selectedTable.status === 'reserved',
-                            'bg-blue-400': selectedTable.status === 'billing',
-                            'bg-orange-400': selectedTable.status === 'dirty',
-                            'bg-purple-400': selectedTable.status === 'preparing',
+                            'bg-green-400': status === 'available',
+                            'bg-red-400': status === 'open',
+                            'bg-purple-400': status === 'preparing',
                         }
                     )}></span>
                     <span className={cn(
                         "relative inline-flex rounded-full h-3 w-3",
                          {
-                            'bg-green-500': selectedTable.status === 'available',
-                            'bg-red-500': selectedTable.status === 'occupied',
-                            'bg-yellow-500': selectedTable.status === 'reserved',
-                            'bg-blue-500': selectedTable.status === 'billing',
-                            'bg-orange-500': selectedTable.status === 'dirty',
-                             'bg-purple-500': selectedTable.status === 'preparing',
-                        }
+                            'bg-green-500': status === 'available',
+                            'bg-red-500': status === 'open',
+                            'bg-purple-500': status === 'preparing',
+                         }
                     )}></span>
                 </span>
-                <span className="capitalize text-muted-foreground">{t(selectedTable.status)}</span>
+                <span className="capitalize text-muted-foreground">
+                    {status === 'open' ? t('Occupied') : t(status)}
+                </span>
             </div>
 
             <div className="flex-grow flex items-center justify-center">
                  <div className="text-center">
-                    { (selectedTable.status === 'available' || selectedTable.status === 'reserved' || selectedTable.status === 'dirty') && (
+                    {status === 'available' && (
                        <div className="flex flex-col items-center gap-4">
                             <Beer className="h-20 w-20 text-primary/50" />
                             <p className="text-muted-foreground">{t('This table is ready for a new order.')}</p>
@@ -250,18 +260,9 @@ export default function OrdersPage() {
                             </Button>
                         </div>
                     )}
-                    { (selectedTable.status === 'occupied' || selectedTable.status === 'preparing') && 
+                    {(status === 'open' || status === 'preparing') && 
                         <Button size="lg" variant="outline" onClick={() => setView('order_summary')}>{t('View Order')}</Button>
-                     }
-                    { selectedTable.status === 'billing' && (
-                        <div className="flex flex-col items-center gap-4">
-                            <CircleDollarSign className="h-20 w-20 text-primary/50" />
-                            <p className="text-muted-foreground">{t('This table is pending payment.')}</p>
-                            <Button size="lg" variant="outline" onClick={() => setView('order_summary')}>
-                                {t('View Account')}
-                            </Button>
-                        </div>
-                    )}
+                    }
                  </div>
             </div>
         </div>
@@ -292,20 +293,31 @@ export default function OrdersPage() {
                     {isLoading ? (
                         <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
                     ) : rooms.length > 0 ? (
-                        <Tabs defaultValue={rooms.find(r => tables[r.id]?.length > 0)?.id || rooms[0].id} className="h-full flex flex-col">
+                        <Tabs defaultValue={rooms.find(r => (tablesByRoom[r.id] || []).length > 0)?.id || rooms[0].id} className="h-full flex flex-col">
                             <TabsList>
-                                {rooms.map(room => (
-                                   (tables[room.id] && tables[room.id].length > 0) &&
-                                    <TabsTrigger key={room.id} value={room.id}>{room.name}</TabsTrigger>
-                                ))}
+                                {rooms.map(room => {
+                                   const filteredTables = (tablesByRoom[room.id] || []).filter(table =>
+                                        userAssignments?.tables.length ? userAssignments.tables.includes(table.id) : true
+                                    );
+                                    return filteredTables.length > 0 ? (
+                                        <TabsTrigger key={room.id} value={room.id}>{room.name}</TabsTrigger>
+                                    ) : null;
+                                })}
                             </TabsList>
-                            {rooms.map(room => (
+                            {rooms.map(room => {
+                                const filteredTables = (tablesByRoom[room.id] || []).filter(table =>
+                                    userAssignments?.tables.length ? userAssignments.tables.includes(table.id) : true
+                                );
+
+                                if (filteredTables.length === 0) return <TabsContent key={room.id} value={room.id}></TabsContent>;
+
+                                return (
                                 <TabsContent key={room.id} value={room.id} className="flex-grow bg-muted/50 rounded-b-lg overflow-auto p-4">
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                                        {(tables[room.id] || []).map(table => (
+                                        {filteredTables.map(table => (
                                             <TableItem 
                                                 key={table.id}
-                                                {...table}
+                                                {...getTableWithStatus(table)}
                                                 onClick={() => handleTableClick(table)}
                                                 isSelected={selectedTable?.id === table.id}
                                                 view="operational"
@@ -314,13 +326,14 @@ export default function OrdersPage() {
                                             />
                                         ))}
                                     </div>
-                                    {(!tables[room.id] || tables[room.id].length === 0) && (
+                                    {filteredTables.length === 0 && (
                                         <div className="flex items-center justify-center h-full text-muted-foreground">
                                             <p>{t('No tables assigned to you in this area.')}</p>
                                         </div>
                                     )}
                                 </TabsContent>
-                            ))}
+                                )
+                            })}
                         </Tabs>
                     ) : (
                          <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -339,5 +352,3 @@ export default function OrdersPage() {
     </AdminLayout>
   );
 }
-
-    

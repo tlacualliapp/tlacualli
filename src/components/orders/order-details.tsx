@@ -57,13 +57,15 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
     
     setIsLoading(true);
     // Simplified query to avoid composite indexes
-    const q = query(collection(db, "orders"), where("tableId", "==", table.id));
+    const q = query(
+        collection(db, "orders"), 
+        where("tableId", "==", table.id),
+        where("status", "in", ["open", "preparing"])
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        // Client-side filtering
-        const activeOrderDoc = snapshot.docs.find(doc => doc.data().status !== 'paid');
-        
-        if (activeOrderDoc) {
+        if (!snapshot.empty) {
+            const activeOrderDoc = snapshot.docs[0];
             setOrder({ id: activeOrderDoc.id, ...activeOrderDoc.data() } as Order);
         } else {
             setOrder(null);
@@ -101,8 +103,6 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
             status: 'preparing',
             sentToKitchenAt: serverTimestamp(),
         });
-        const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${table.roomId}/tables`, table.id);
-        await updateDoc(tableRef, { status: 'preparing' });
         toast({ title: t('Order Sent'), description: t('The order has been sent to the kitchen.')});
     } catch(e) {
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not send the order.')});
@@ -110,20 +110,18 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
   }
   
   const handleCloseOrder = async () => {
-    if(!restaurantId || !table.id) return;
+    if(!order) return;
     
     try {
-        const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${table.roomId}/tables`, table.id);
-        await updateDoc(tableRef, { status: newTableStatus });
+        // We just mark the order as paid. The table status will be derived from active orders.
+        const orderRef = doc(db, 'orders', order.id);
+        await updateDoc(orderRef, { status: 'paid' });
         
-        if (order) {
-            const orderRef = doc(db, 'orders', order.id);
-            // Here you might want to move the order to a historical collection
-            // instead of deleting it. For now, we'll mark as paid.
-            await updateDoc(orderRef, { status: 'paid' });
-        }
+        // Logic for dirty/reserved status would need to be handled separately,
+        // e.g., in a separate 'tableManagement' collection or similar.
+        // For now, closing the order makes the table 'available'.
         
-        toast({ title: t('Order Closed'), description: `${t('Table')} ${table.name} ${t('is now')} ${t(newTableStatus)}.`});
+        toast({ title: t('Order Closed'), description: `${t('Table')} ${table.name} ${t('is now')} ${t('available')}.`});
         setIsCloseOrderModalOpen(false);
         onOrderClosed();
 
@@ -213,42 +211,27 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
                 <Printer className="mr-2 h-4 w-4" />
                 {t('Print Pre-ticket')}
             </Button>
-            <Button size="lg" variant="destructive" className="w-full" onClick={() => setIsCloseOrderModalOpen(true)}>
-                <XCircle className="mr-2 h-4 w-4" />
-                {t('Close Order')}
-            </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button size="lg" variant="destructive" className="w-full">
+                        <XCircle className="mr-2 h-4 w-4" />
+                        {t('Close Order')}
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {t('This will finalize the order and free the table. This action cannot be undone.')}
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleCloseOrder}>{t('Yes, close order')}</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
       </div>
-
-       <AlertDialog open={isCloseOrderModalOpen} onOpenChange={setIsCloseOrderModalOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-            <AlertDialogTitle>{t('Close Order and Free Table')}</AlertDialogTitle>
-            <AlertDialogDescription>
-                {t('Select the new status for the table after closing this order.')}
-            </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="py-4">
-                <RadioGroup defaultValue="available" onValueChange={(v: 'available' | 'reserved' | 'dirty') => setNewTableStatus(v)}>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="available" id="r1" />
-                        <Label htmlFor="r1">{t('Available')}</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="dirty" id="r2" />
-                        <Label htmlFor="r2">{t('Dirty')}</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="reserved" id="r3" />
-                        <Label htmlFor="r3">{t('Reserved')}</Label>
-                    </div>
-                </RadioGroup>
-            </div>
-            <AlertDialogFooter>
-            <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCloseOrder}>{t('Confirm')}</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
 
     </div>
   );

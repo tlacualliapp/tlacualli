@@ -42,7 +42,6 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
     await addDoc(tablesRef, {
       name: `M${Math.floor(Math.random() * 100)}`,
       shape: shape,
-      status: 'available',
       top: 50,
       left: 50,
       seats: 4,
