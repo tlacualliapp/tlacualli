@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, serverTimestamp, addDoc, runTransaction, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
-import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle, Users, ArrowRight } from 'lucide-react';
+import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle, Users, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
@@ -219,6 +219,32 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     }
   };
 
+  const handleRemoveSubAccount = async (subAccountId: string) => {
+    if (!order) return;
+    
+    const itemsInSubAccount = order.items.filter(item => item.subAccountId === subAccountId);
+    if (itemsInSubAccount.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: t('Cannot Delete'),
+        description: t('This sub-account has items and cannot be deleted.'),
+      });
+      return;
+    }
+
+    const orderRef = doc(db, 'orders', order.id);
+    const updatedSubAccounts = order.subaccounts.filter(sa => sa.id !== subAccountId);
+
+    try {
+      await updateDoc(orderRef, {
+        subaccounts: updatedSubAccounts
+      });
+      toast({ title: t('Sub-account removed') });
+    } catch (error) {
+      toast({ variant: 'destructive', title: t('Error'), description: t('Could not remove sub-account.') });
+    }
+  }
+
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
@@ -236,6 +262,10 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
       .filter(item => item.subAccountId === subAccountId)
       .reduce((acc, item) => acc + (item.price * item.quantity), 0);
   };
+  
+  const getItemsForSubAccount = (subAccountId: string) => {
+     return order.items.filter(item => item.subAccountId === subAccountId);
+  }
 
   return (
     <div className="p-4 flex flex-col h-full">
@@ -251,17 +281,33 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
       
       <ScrollArea className="flex-grow pr-4 -mr-4 mb-4">
         <Accordion type="multiple" defaultValue={order.subaccounts.map(sa => sa.id)} className="w-full">
-          {order.subaccounts.map(subAccount => (
+          {order.subaccounts.map(subAccount => {
+            const itemsInSubAccount = getItemsForSubAccount(subAccount.id);
+            const isSubAccountEmpty = itemsInSubAccount.length === 0;
+
+            return (
             <AccordionItem value={subAccount.id} key={subAccount.id}>
               <AccordionTrigger>
-                <div className="flex justify-between w-full pr-4">
-                    <span>{subAccount.name}</span>
-                    <span className="font-mono">${getSubAccountTotal(subAccount.id).toFixed(2)}</span>
+                <div className="flex justify-between items-center w-full pr-4 group">
+                    <span className="flex items-center">{subAccount.name}</span>
+                    <div className="flex items-center gap-2">
+                        <span className="font-mono">${getSubAccountTotal(subAccount.id).toFixed(2)}</span>
+                        {isSubAccountEmpty && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100"
+                            onClick={(e) => { e.stopPropagation(); handleRemoveSubAccount(subAccount.id); }}
+                          >
+                              <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                    </div>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-3 pl-4">
-                  {order.items.filter(item => item.subAccountId === subAccount.id).map(item => (
+                  {itemsInSubAccount.map(item => (
                     <div key={`${item.id}-${item.subAccountId}`} className="flex justify-between items-center group">
                         <div>
                           <p className="font-semibold">{item.quantity}x {item.name}</p>
@@ -283,7 +329,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                 </div>
               </AccordionContent>
             </AccordionItem>
-          ))}
+          )})}
         </Accordion>
       </ScrollArea>
       
