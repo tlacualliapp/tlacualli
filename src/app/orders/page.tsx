@@ -17,6 +17,7 @@ import { OrderDetails } from '@/components/orders/order-details';
 import { MenuSelection } from '@/components/orders/menu-selection';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getNextTakeoutId } from '@/lib/counters';
 
 
 interface Room {
@@ -28,6 +29,8 @@ interface Order {
     id: string;
     tableId: string;
     status: 'open' | 'preparing' | 'paid';
+    type?: 'dine-in' | 'takeout';
+    takeoutId?: string;
 }
 
 interface UserAssignments {
@@ -44,6 +47,7 @@ export default function OrdersPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tablesByRoom, setTablesByRoom] = useState<{ [roomId: string]: Table[] }>({});
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
+  const [takeoutOrders, setTakeoutOrders] = useState<Table[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [view, setView] = useState<'table_map' | 'menu' | 'order_summary'>('table_map');
@@ -82,6 +86,18 @@ export default function OrdersPage() {
     const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
         const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
         setActiveOrders(ordersData);
+        
+        const currentTakeoutOrders = ordersData
+          .filter(o => o.type === 'takeout' && o.takeoutId)
+          .map(o => ({
+            id: o.id,
+            name: o.takeoutId!,
+            shape: 'square', // Represent takeout as a square
+            status: o.status as 'open' | 'preparing',
+            top: 0, left: 0, seats: 0,
+            isTakeout: true,
+          } as Table));
+        setTakeoutOrders(currentTakeoutOrders);
     });
     return () => unsubscribeOrders();
   }, [restaurantId]);
@@ -101,27 +117,23 @@ export default function OrdersPage() {
         return;
       }
 
-      let activeSubscriptions = 0;
-      const newTablesByRoom: { [roomId: string]: Table[] } = {};
-
-      roomsData.forEach(room => {
+      const tableSubscriptions = roomsData.map(room => {
         const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
-        onSnapshot(tablesRef, (tableSnapshot) => {
+        return onSnapshot(tablesRef, (tableSnapshot) => {
           const tablesData = tableSnapshot.docs.map(doc => ({
               id: doc.id,
               roomId: room.id,
               ...doc.data()
           } as Table)).sort((a, b) => a.name.localeCompare(b.name));
           
-          newTablesByRoom[room.id] = tablesData;
-          activeSubscriptions++;
-
-          if (activeSubscriptions === roomsData.length) {
-              setTablesByRoom(newTablesByRoom);
-              setIsLoading(false);
-          }
+          setTablesByRoom(prev => ({...prev, [room.id]: tablesData}));
         });
       });
+      
+      setIsLoading(false);
+
+      // Unsubscribe from all table listeners on cleanup
+      return () => tableSubscriptions.forEach(unsub => unsub());
     });
 
     return () => unsubscribeRooms();
@@ -129,13 +141,34 @@ export default function OrdersPage() {
 
 
  const getTableWithStatus = (table: Table): Table => {
-    const activeOrder = activeOrders.find(o => o.tableId === table.id);
+    if (table.isTakeout) {
+        return table;
+    }
+    const activeOrder = activeOrders.find(o => o.tableId === table.id && o.type !== 'takeout');
+    const dbStatus = table.status;
+
     if (activeOrder) {
       return { ...table, status: activeOrder.status as 'open' | 'preparing' };
     }
-    // TODO: This doesn't account for reserved or dirty, as that logic is not implemented yet.
+    
+    if (dbStatus && ['dirty', 'reserved'].includes(dbStatus)) {
+        return { ...table, status: dbStatus };
+    }
+
     return { ...table, status: 'available' };
   };
+  
+   const handleSetTableStatus = async (table: Table, status: 'available' | 'dirty' | 'reserved') => {
+      if (!restaurantId || !table.roomId) return;
+      const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${table.roomId}/tables`, table.id);
+      try {
+        await updateDoc(tableRef, { status });
+        toast({ title: t('Status Updated'), description: `${t('Table')} ${table.name} ${t('is now')} ${t(status)}.`});
+      } catch (error) {
+         toast({ variant: 'destructive', title: t('Error'), description: t('Could not update table status.') });
+      }
+    }
+
 
   const handleTableClick = (table: Table) => {
     const tableWithStatus = getTableWithStatus(table);
@@ -148,7 +181,7 @@ export default function OrdersPage() {
   };
   
   const handleStartNewOrder = async () => {
-    if (!selectedTable || !restaurantId) return;
+    if (!selectedTable || !restaurantId || selectedTable.isTakeout) return;
     
     // Double check if an order already exists for this table
     const existingOrder = activeOrders.find(o => o.tableId === selectedTable.id);
@@ -167,6 +200,7 @@ export default function OrdersPage() {
             tableName: selectedTable.name,
             restaurantId: restaurantId,
             status: 'open',
+            type: 'dine-in',
             items: [],
             subtotal: 0,
             createdAt: serverTimestamp(),
@@ -192,11 +226,50 @@ export default function OrdersPage() {
       setView('table_map');
   }
 
-  const handleTakeoutOrder = () => {
-    toast({
-        title: t('Takeout Order'),
-        description: t('Functionality to register takeout orders coming soon.')
-    })
+  const handleTakeoutOrder = async () => {
+    if (!restaurantId) return;
+
+    try {
+        const newTakeoutId = await getNextTakeoutId(restaurantId);
+        
+        const newOrder = {
+            restaurantId: restaurantId,
+            status: 'open',
+            type: 'takeout',
+            takeoutId: newTakeoutId,
+            items: [],
+            subtotal: 0,
+            createdAt: serverTimestamp(),
+            createdBy: user?.uid,
+        };
+
+        const docRef = await addDoc(collection(db, 'orders'), newOrder);
+
+        const newTakeoutAsTable: Table = {
+            id: docRef.id,
+            name: newTakeoutId,
+            shape: 'square',
+            status: 'open',
+            top: 0, left: 0, seats: 0,
+            isTakeout: true,
+        };
+        
+        setSelectedTable(newTakeoutAsTable);
+        setView('menu');
+
+        toast({
+            title: t('Takeout Order Created'),
+            description: `${t('Order')} #${newTakeoutId} ${t('has been created.')}`
+        });
+
+    } catch (error) {
+        console.error("Error creating takeout order: ", error);
+        toast({
+            variant: 'destructive',
+            title: t('Error'),
+            description: t('Could not create takeout order.'),
+        });
+    }
   }
   
   const renderRightPanel = () => {
@@ -211,11 +284,11 @@ export default function OrdersPage() {
     }
     
     if (view === 'menu' && restaurantId) {
-        return <MenuSelection restaurantId={restaurantId} table={selectedTable} onBack={() => setView('order_summary')} />;
+        return <MenuSelection restaurantId={restaurantId} orderId={selectedTable.id} tableName={selectedTable.name} onBack={() => setView('order_summary')} />;
     }
 
     if (view === 'order_summary' && restaurantId) {
-        return <OrderDetails restaurantId={restaurantId} table={selectedTable} onAddItems={() => setView('menu')} onOrderClosed={handleOrderClosed} />;
+        return <OrderDetails restaurantId={restaurantId} orderId={selectedTable.id} tableName={selectedTable.name} onAddItems={() => setView('menu')} onOrderClosed={handleOrderClosed} />;
     }
 
     // Default view for a selected table
@@ -233,6 +306,8 @@ export default function OrdersPage() {
                             'bg-green-400': status === 'available',
                             'bg-red-400': status === 'open',
                             'bg-purple-400': status === 'preparing',
+                            'bg-orange-400': status === 'dirty',
+                            'bg-yellow-400': status === 'reserved',
                         }
                     )}></span>
                     <span className={cn(
@@ -241,6 +316,8 @@ export default function OrdersPage() {
                             'bg-green-500': status === 'available',
                             'bg-red-500': status === 'open',
                             'bg-purple-500': status === 'preparing',
+                            'bg-orange-500': status === 'dirty',
+                            'bg-yellow-500': status === 'reserved',
                          }
                     )}></span>
                 </span>
@@ -258,10 +335,20 @@ export default function OrdersPage() {
                             <Button size="lg" className="bg-accent hover:bg-accent/90" onClick={handleStartNewOrder}>
                                 {t('Start New Order')}
                             </Button>
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={() => handleSetTableStatus(selectedTable, 'reserved')}>{t('Mark as Reserved')}</Button>
+                                <Button variant="outline" onClick={() => handleSetTableStatus(selectedTable, 'dirty')}>{t('Mark as Dirty')}</Button>
+                            </div>
                         </div>
                     )}
                     {(status === 'open' || status === 'preparing') && 
                         <Button size="lg" variant="outline" onClick={() => setView('order_summary')}>{t('View Order')}</Button>
+                    }
+                    {(status === 'dirty' || status === 'reserved') &&
+                        <div className="flex flex-col items-center gap-4">
+                            <p>{t('This table is currently')} <span className="font-bold">{t(status)}</span>.</p>
+                            <Button size="lg" onClick={() => handleSetTableStatus(selectedTable, 'available')}>{t('Mark as Available')}</Button>
+                        </div>
                     }
                  </div>
             </div>
@@ -292,9 +379,10 @@ export default function OrdersPage() {
                 <CardContent className="h-[calc(100vh-220px)]">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
-                    ) : rooms.length > 0 ? (
-                        <Tabs defaultValue={rooms.find(r => (tablesByRoom[r.id] || []).length > 0)?.id || rooms[0].id} className="h-full flex flex-col">
+                    ) : (
+                        <Tabs defaultValue={(rooms.find(r => (tablesByRoom[r.id] || []).length > 0) || rooms[0])?.id || 'takeout'} className="h-full flex flex-col">
                             <TabsList>
+                                 <TabsTrigger value="takeout">{t('Takeout')}</TabsTrigger>
                                 {rooms.map(room => {
                                    const filteredTables = (tablesByRoom[room.id] || []).filter(table =>
                                         userAssignments?.tables.length ? userAssignments.tables.includes(table.id) : true
@@ -304,12 +392,34 @@ export default function OrdersPage() {
                                     ) : null;
                                 })}
                             </TabsList>
+
+                            <TabsContent value="takeout" className="flex-grow bg-muted/50 rounded-b-lg overflow-auto p-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                    {takeoutOrders.map(order => (
+                                         <TableItem 
+                                            key={order.id}
+                                            {...order}
+                                            onClick={() => handleTableClick(order)}
+                                            isSelected={selectedTable?.id === order.id}
+                                            view="operational"
+                                            onDelete={() => {}} 
+                                            onEdit={() => {}}
+                                        />
+                                    ))}
+                                </div>
+                                {takeoutOrders.length === 0 && (
+                                     <div className="flex items-center justify-center h-full text-muted-foreground">
+                                        <p>{t('No active takeout orders.')}</p>
+                                    </div>
+                                )}
+                            </TabsContent>
+
                             {rooms.map(room => {
                                 const filteredTables = (tablesByRoom[room.id] || []).filter(table =>
                                     userAssignments?.tables.length ? userAssignments.tables.includes(table.id) : true
                                 );
 
-                                if (filteredTables.length === 0) return <TabsContent key={room.id} value={room.id}></TabsContent>;
+                                if (filteredTables.length === 0 && room.id !== 'takeout') return <TabsContent key={room.id} value={room.id}></TabsContent>;
 
                                 return (
                                 <TabsContent key={room.id} value={room.id} className="flex-grow bg-muted/50 rounded-b-lg overflow-auto p-4">
@@ -335,10 +445,6 @@ export default function OrdersPage() {
                                 )
                             })}
                         </Tabs>
-                    ) : (
-                         <div className="flex items-center justify-center h-full text-muted-foreground">
-                            <p>{t('No areas have been configured. Please go to the Digital Map in the admin dashboard.')}</p>
-                        </div>
                     )}
                 </CardContent>
             </Card>

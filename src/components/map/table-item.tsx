@@ -6,7 +6,7 @@ import { useDrag } from 'react-dnd';
 import { ItemTypes } from './map-editor';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { Trash2, Edit, Armchair, ChefHat } from 'lucide-react';
+import { Trash2, Edit, Armchair, ChefHat, ShoppingBag } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useTranslation } from 'react-i18next';
 
@@ -14,11 +14,12 @@ export interface Table {
   id: string;
   name: string;
   shape: 'square' | 'circle';
-  status: 'available' | 'open' | 'preparing' | 'billing' | 'dirty' | 'reserved';
+  status?: 'available' | 'open' | 'preparing' | 'billing' | 'dirty' | 'reserved';
   top: number;
   left: number;
   seats: number;
-  roomId: string;
+  roomId?: string;
+  isTakeout?: boolean;
 }
 
 interface TableItemProps extends Table {
@@ -29,7 +30,7 @@ interface TableItemProps extends Table {
     isSelected?: boolean;
 }
 
-const statusClasses: { [key in Table['status']]: string } = {
+const statusClasses: { [key in NonNullable<Table['status']>]: string } = {
   available: 'bg-green-500/80 border-green-700 hover:bg-green-500',
   open: 'bg-red-500/80 border-red-700 hover:bg-red-500',
   preparing: 'bg-purple-500/80 border-purple-700 hover:bg-purple-500',
@@ -40,7 +41,7 @@ const statusClasses: { [key in Table['status']]: string } = {
 
 
 const TableView: React.FC<Omit<TableItemProps, 'left' | 'top'>> = (props) => {
-    const { id, name, shape, status, seats, onDelete, onEdit, onClick, view, isSelected } = props;
+    const { id, name, shape, status, seats, onDelete, onEdit, onClick, view, isSelected, isTakeout } = props;
     const { t } = useTranslation();
 
     const shapeClasses = {
@@ -49,6 +50,9 @@ const TableView: React.FC<Omit<TableItemProps, 'left' | 'top'>> = (props) => {
     };
     
     const renderIcon = () => {
+        if (isTakeout) {
+            return <ShoppingBag className="h-6 w-6" />;
+        }
         if (status === 'preparing') {
             return <ChefHat className="h-4 w-4" />;
         }
@@ -59,10 +63,12 @@ const TableView: React.FC<Omit<TableItemProps, 'left' | 'top'>> = (props) => {
             </div>
         )
     }
+    
+    const tableStatus = status || 'available';
 
     return (
         <div className={cn("group relative flex flex-col items-center", view === 'operational' && 'cursor-pointer')} onClick={() => onClick(props)}>
-            {view === 'admin' && (
+            {view === 'admin' && !isTakeout && (
                 <div className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 p-1 rounded-full bg-background/80 shadow-md">
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -90,12 +96,12 @@ const TableView: React.FC<Omit<TableItemProps, 'left' | 'top'>> = (props) => {
             )}
             <div className={cn(
                 "w-24 h-24 aspect-square flex flex-col items-center justify-center text-white font-bold text-lg shadow-md border-2 transition-all",
-                statusClasses[status || 'available'],
+                statusClasses[tableStatus],
                 shapeClasses[shape],
                 isSelected && 'ring-4 ring-offset-2 ring-primary scale-105',
                 !isSelected && 'hover:scale-105'
             )}>
-                <span className="text-xl">{name}</span>
+                <span className={cn("text-xl", isTakeout && "text-sm")}>{name}</span>
                 {renderIcon()}
             </div>
         </div>
@@ -110,14 +116,15 @@ const DraggableTableItem: React.FC<TableItemProps> = (props) => {
         collect: (monitor) => ({
             isDragging: monitor.isDragging(),
         }),
-    }), [props.id, left, top]);
+        canDrag: !props.isTakeout
+    }), [props.id, left, top, props.isTakeout]);
 
     const style: React.CSSProperties = {
         position: 'absolute',
         left,
         top,
         opacity: isDragging ? 0.5 : 1,
-        cursor: 'move',
+        cursor: props.isTakeout ? 'default' : 'move',
     };
 
     return (

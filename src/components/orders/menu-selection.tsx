@@ -9,7 +9,6 @@ import { Loader2, ArrowLeft, Search } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table } from '../map/table-item';
 import { Input } from '../ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -37,11 +36,12 @@ interface Category {
 
 interface MenuSelectionProps {
   restaurantId: string;
-  table: Table;
+  orderId: string;
+  tableName: string;
   onBack: () => void;
 }
 
-export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProps) => {
+export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: MenuSelectionProps) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,26 +73,14 @@ export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProp
   }, [restaurantId]);
 
   const handleAddItemToOrder = async (item: MenuItem) => {
-    if (!restaurantId || !table.id) return;
+    if (!restaurantId || !orderId) return;
     
     setClickedItemId(item.id);
     setTimeout(() => setClickedItemId(null), 300);
 
-    const ordersQuery = query(
-      collection(db, "orders"),
-      where("tableId", "==", table.id),
-      where("status", "in", ["open", "preparing"])
-    );
+    const orderRef = doc(db, 'orders', orderId);
 
     try {
-        const querySnapshot = await getDocs(ordersQuery);
-        if (querySnapshot.empty) {
-            toast({ variant: 'destructive', title: t('Error'), description: t('No active order found for this table.') });
-            return;
-        }
-
-        const orderRef = querySnapshot.docs[0].ref;
-        
         await runTransaction(db, async (transaction) => {
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) {
@@ -152,7 +140,7 @@ export const MenuSelection = ({ restaurantId, table, onBack }: MenuSelectionProp
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft />
         </Button>
-        <h2 className="text-xl font-bold font-headline ml-2">{t('Add to Order')}: {t('Table')} {table.name}</h2>
+        <h2 className="text-xl font-bold font-headline ml-2">{t('Add to Order')}: {t('Table')} {tableName}</h2>
       </div>
 
        <div className="relative mb-4">

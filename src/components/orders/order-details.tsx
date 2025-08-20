@@ -7,12 +7,9 @@ import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, server
 import { useTranslation } from 'react-i18next';
 import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Table as TableType } from '../map/table-item';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from '../ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Timestamp } from 'firebase/firestore';
 
@@ -34,39 +31,35 @@ interface Order {
 
 interface OrderDetailsProps {
   restaurantId: string;
-  table: TableType;
+  orderId: string;
+  tableName: string;
   onAddItems: () => void;
   onOrderClosed: () => void;
 }
 
-export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }: OrderDetailsProps) => {
+export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onOrderClosed }: OrderDetailsProps) => {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
   const [elapsedTime, setElapsedTime] = useState('00:00');
-  const [isCloseOrderModalOpen, setIsCloseOrderModalOpen] = useState(false);
-  const [newTableStatus, setNewTableStatus] = useState<'available' | 'reserved' | 'dirty'>('available');
   const { toast } = useToast();
 
 
   useEffect(() => {
-    if (!restaurantId || !table.id) {
+    if (!orderId) {
         setIsLoading(false);
         return;
     };
     
     setIsLoading(true);
-    const q = query(
-        collection(db, "orders"), 
-        where("tableId", "==", table.id)
-    );
+    const orderRef = doc(db, "orders", orderId);
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const activeOrderDoc = snapshot.docs.find(doc => doc.data().status !== 'paid');
-        if (activeOrderDoc) {
-            setOrder({ id: activeOrderDoc.id, ...activeOrderDoc.data() } as Order);
+    const unsubscribe = onSnapshot(orderRef, (docSnapshot) => {
+        if (docSnapshot.exists()) {
+            setOrder({ id: docSnapshot.id, ...docSnapshot.data() } as Order);
         } else {
             setOrder(null);
+            console.warn(`Order with ID ${orderId} not found.`);
         }
         setIsLoading(false);
     }, (error) => {
@@ -75,7 +68,7 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
     });
 
     return () => unsubscribe();
-  }, [restaurantId, table.id]);
+  }, [orderId]);
 
 
   useEffect(() => {
@@ -114,8 +107,7 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
         const orderRef = doc(db, 'orders', order.id);
         await updateDoc(orderRef, { status: 'paid' });
         
-        toast({ title: t('Order Closed'), description: `${t('Table')} ${table.name} ${t('is now')} ${t('available')}.`});
-        setIsCloseOrderModalOpen(false);
+        toast({ title: t('Order Closed'), description: `${t('Table')} ${tableName} ${t('is now')} ${t('available')}.`});
         onOrderClosed();
 
     } catch(e) {
@@ -179,7 +171,7 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
              toast({
                 variant: 'destructive',
                 title: t('Kitchen Notified'),
-                description: t('Order for table {{tableName}} has been cancelled.', { tableName: table.name }),
+                description: t('Order for table {{tableName}} has been cancelled.', { tableName: tableName }),
             });
         }
         
@@ -209,7 +201,7 @@ export const OrderDetails = ({ restaurantId, table, onAddItems, onOrderClosed }:
   return (
     <div className="p-4 flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold font-headline">{t('Order Summary')}: {t('Table')} {table.name}</h2>
+        <h2 className="text-2xl font-bold font-headline">{t('Order Summary')}: {tableName}</h2>
          {order.status === 'preparing' && (
             <div className="flex items-center gap-2 text-sm font-semibold bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
                 <ChefHat className="h-4 w-4" />
