@@ -75,26 +75,37 @@ export default function OrdersPage() {
   
   useEffect(() => {
     if (!restaurantId || rooms.length === 0) return;
-
+  
     const unsubscribers = rooms.map(room => {
-        const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
-        return onSnapshot(tablesRef, (tableSnapshot) => {
-            const tablesData = tableSnapshot.docs.map(doc => ({ id: doc.id, roomId: room.id, ...doc.data() } as Table)).sort((a,b) => a.name.localeCompare(b.name));
-            setTables(prev => ({ ...prev, [room.id]: tablesData }));
-            
-            if(selectedTable && selectedTable.roomId === room.id){
-                const updatedSelectedTable = tablesData.find(t => t.id === selectedTable.id);
-                if(updatedSelectedTable) {
+      const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
+      return onSnapshot(tablesRef, (tableSnapshot) => {
+        const tablesData = tableSnapshot.docs
+          .map(doc => ({ id: doc.id, roomId: room.id, ...doc.data() } as Table))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        
+        setTables(prev => ({ ...prev, [room.id]: tablesData }));
+
+        // If the currently selected table is in this room, update its data
+        if (selectedTable && selectedTable.roomId === room.id) {
+            const updatedSelectedTable = tablesData.find(t => t.id === selectedTable.id);
+            if (updatedSelectedTable) {
+                // This prevents re-render loops if the data hasn't actually changed.
+                if (JSON.stringify(updatedSelectedTable) !== JSON.stringify(selectedTable)) {
                     setSelectedTable(updatedSelectedTable);
                 }
+            } else {
+                // The selected table was deleted
+                setSelectedTable(null);
             }
-        });
+        }
+      });
     });
-
+  
     setIsLoading(false);
-
+  
     return () => unsubscribers.forEach(unsub => unsub());
-  }, [restaurantId, rooms, selectedTable]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId, rooms]); // selectedTable is removed from dependencies to prevent loops
 
 
   const handleTableClick = (table: Table) => {
