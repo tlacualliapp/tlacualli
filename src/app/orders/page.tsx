@@ -187,6 +187,9 @@ export default function OrdersPage() {
       try {
         await updateDoc(tableRef, { status });
         toast({ title: t('Status Updated'), description: `${t('Table')} ${table.name} ${t('is now')} ${t(status)}.`});
+        if (selectedTable && selectedTable.id === table.id) {
+          setSelectedTable(prev => prev ? ({ ...prev, status }) : null);
+        }
       } catch (error) {
          toast({ variant: 'destructive', title: t('Error'), description: t('Could not update table status.') });
       }
@@ -483,3 +486,4 @@ export default function OrdersPage() {
     </AdminLayout>
   );
 }
+
