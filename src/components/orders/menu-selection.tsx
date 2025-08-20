@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,6 +14,7 @@ import { Input } from '../ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { serverTimestamp } from 'firebase/firestore';
 
 interface MenuItem {
   id: string;
@@ -29,6 +31,7 @@ interface OrderItem {
   price: number;
   notes?: string;
   subAccountId: string;
+  status?: 'pending' | 'preparing' | 'ready';
 }
 
 interface SubAccount {
@@ -110,13 +113,13 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
             }
 
             const orderData = orderDoc.data();
-            const currentItems: OrderItem[] = orderData.items || [];
+            let currentItems: OrderItem[] = orderData.items || [];
             
-            const existingItemIndex = currentItems.findIndex(i => i.id === item.id && i.subAccountId === selectedSubAccountId);
+            const existingItemIndex = currentItems.findIndex(i => i.id === item.id && i.subAccountId === selectedSubAccountId && i.status !== 'ready');
             let updatedItems;
 
             if (existingItemIndex > -1) {
-                // Increment quantity
+                // Increment quantity of an existing, non-ready item
                 updatedItems = currentItems.map((orderItem, index) => 
                     index === existingItemIndex 
                     ? { ...orderItem, quantity: orderItem.quantity + 1 }
@@ -124,7 +127,14 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
                 );
             } else {
                 // Add new item
-                updatedItems = [...currentItems, { id: item.id, name: item.name, price: item.price, quantity: 1, subAccountId: selectedSubAccountId }];
+                updatedItems = [...currentItems, { 
+                    id: item.id, 
+                    name: item.name, 
+                    price: item.price, 
+                    quantity: 1, 
+                    subAccountId: selectedSubAccountId,
+                    status: 'pending' // New items are always pending
+                }];
             }
 
             const newSubtotal = updatedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
@@ -134,10 +144,10 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
                 subtotal: newSubtotal 
             };
 
-            // If order was already served, re-open it to send new items to kitchen.
+            // If order was already served, change status to 'preparing' to signal new items.
             if (orderData.status === 'served') {
-                updatePayload.status = 'open';
-                updatePayload.sentToKitchenAt = null;
+                updatePayload.status = 'preparing';
+                updatePayload.sentToKitchenAt = serverTimestamp(); // new items sent now
                 updatePayload.pickupAcknowledgedAt = null;
             }
             
