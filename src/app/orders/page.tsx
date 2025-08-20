@@ -61,21 +61,37 @@ export default function OrdersPage() {
 
       if (roomsData.length === 0) {
         setIsLoading(false);
-      }
-
-      roomsData.forEach(room => {
-        const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
-        onSnapshot(tablesRef, (tableSnapshot) => {
-            const tablesData = tableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Table));
-            setTables(prev => ({...prev, [room.id]: tablesData}));
-            setIsLoading(false);
+      } else if (roomsData.length > 0 && !rooms.find(r => r.id === roomsData[0].id)) { // Prevent unnecessary re-renders
+         // Set initial tables data
+        roomsData.forEach(room => {
+            const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
+            onSnapshot(tablesRef, (tableSnapshot) => {
+                const tablesData = tableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Table));
+                setTables(prev => ({...prev, [room.id]: tablesData}));
+            });
         });
-      });
+      }
+      setIsLoading(false);
     });
 
     return () => unsubscribeRooms();
   }, [restaurantId]);
   
+  useEffect(() => {
+    if (!restaurantId || rooms.length === 0) return;
+
+    const unsubscribers = rooms.map(room => {
+        const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
+        return onSnapshot(tablesRef, (tableSnapshot) => {
+            const tablesData = tableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Table));
+            setTables(prev => ({ ...prev, [room.id]: tablesData }));
+        });
+    });
+
+    return () => unsubscribers.forEach(unsub => unsub());
+  }, [restaurantId, rooms]);
+
+
   const handleTableClick = (table: Table) => {
     toast({
         title: t('Table Selected'),

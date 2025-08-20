@@ -3,7 +3,7 @@
 
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, Users, Map as MapIcon } from 'lucide-react';
+import { Users, Map as MapIcon } from 'lucide-react';
 import { MapEditor } from '@/components/map/map-editor';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';

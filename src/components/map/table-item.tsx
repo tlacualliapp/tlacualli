@@ -35,79 +35,88 @@ const statusClasses = {
   dirty: 'bg-orange-500/80 border-orange-700 hover:bg-orange-500',
 };
 
-export const TableItem: React.FC<TableItemProps> = (props) => {
-  const { id, name, shape, status, top, left, seats, onDelete, onEdit, onClick, view } = props;
-  const { t } = useTranslation();
-  
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: ItemTypes.TABLE,
-    item: { id, left, top },
-    canDrag: view === 'admin',
-    collect: (monitor) => ({
-      isDragging: view === 'admin' ? monitor.isDragging() : false,
-    }),
-  }), [id, left, top, view]);
+const TableView: React.FC<TableItemProps> = (props) => {
+    const { id, name, shape, status, seats, onDelete, onEdit, onClick, view } = props;
+    const { t } = useTranslation();
 
-  const style: React.CSSProperties = view === 'admin' ? {
-    position: 'absolute',
-    left,
-    top,
-    opacity: isDragging ? 0.5 : 1,
-    cursor: 'move',
-  } : {
-    cursor: 'pointer'
-  };
+    const shapeClasses = {
+        square: 'rounded-lg',
+        circle: 'rounded-full'
+    };
 
-  const shapeClasses = {
-    square: 'rounded-lg',
-    circle: 'rounded-full'
-  }
-
-  const tableContent = (
-    <div className={cn(
-        "w-24 h-24 aspect-square flex flex-col items-center justify-center text-white font-bold text-lg shadow-md border-2 transition-transform hover:scale-105",
-        statusClasses[status || 'available'],
-        shapeClasses[shape]
-        )}>
-        <span className="text-xl">{name}</span>
-        <div className="flex items-center gap-1 text-xs font-normal">
-            <Armchair className="h-3 w-3" />
-            <span>{seats}</span>
-        </div>
-    </div>
-  );
-  
-  const ref = view === 'admin' ? drag : null;
-
-  return (
-    <div ref={ref} style={style} className="group relative flex flex-col items-center" onClick={() => onClick(props)}>
-        {view === 'admin' && (
-            <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 p-1 rounded-full bg-background/80 shadow-md">
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive">
-                            <Trash2 className="h-3 w-3" />
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {t('This action cannot be undone. This will permanently delete the table from the room plan.')}
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => onDelete(id)} className="bg-destructive hover:bg-destructive/90">{t('Delete')}</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={(e) => { e.stopPropagation(); onEdit(props); }}>
-                    <Edit className="h-3 w-3" />
-                </Button>
+    return (
+        <div className="group relative flex flex-col items-center" onClick={() => onClick(props)}>
+            {view === 'admin' && (
+                <div className="absolute top-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 p-1 rounded-full bg-background/80 shadow-md">
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive">
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    {t('This action cannot be undone. This will permanently delete the table from the room plan.')}
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => onDelete(id)} className="bg-destructive hover:bg-destructive/90">{t('Delete')}</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={(e) => { e.stopPropagation(); onEdit(props); }}>
+                        <Edit className="h-3 w-3" />
+                    </Button>
+                </div>
+            )}
+            <div className={cn(
+                "w-24 h-24 aspect-square flex flex-col items-center justify-center text-white font-bold text-lg shadow-md border-2 transition-transform hover:scale-105",
+                statusClasses[status || 'available'],
+                shapeClasses[shape],
+                view === 'operational' && 'cursor-pointer'
+            )}>
+                <span className="text-xl">{name}</span>
+                <div className="flex items-center gap-1 text-xs font-normal">
+                    <Armchair className="h-3 w-3" />
+                    <span>{seats}</span>
+                </div>
             </div>
-        )}
-        {tableContent}
-    </div>
-  );
+        </div>
+    );
+}
+
+const DraggableTableItem: React.FC<TableItemProps> = (props) => {
+    const { left, top } = props;
+    const [{ isDragging }, drag] = useDrag(() => ({
+        type: ItemTypes.TABLE,
+        item: { id: props.id, left: props.left, top: props.top },
+        collect: (monitor) => ({
+            isDragging: monitor.isDragging(),
+        }),
+    }), [props.id, left, top]);
+
+    const style: React.CSSProperties = {
+        position: 'absolute',
+        left,
+        top,
+        opacity: isDragging ? 0.5 : 1,
+        cursor: 'move',
+    };
+
+    return (
+        <div ref={drag} style={style}>
+            <TableView {...props} />
+        </div>
+    );
+};
+
+
+export const TableItem: React.FC<TableItemProps> = (props) => {
+  if (props.view === 'admin') {
+    return <DraggableTableItem {...props} />;
+  }
+  return <TableView {...props} />;
 };
