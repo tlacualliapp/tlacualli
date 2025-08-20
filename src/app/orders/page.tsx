@@ -14,7 +14,6 @@ import { TableItem, Table } from '@/components/map/table-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { OrderDetails } from '@/components/orders/order-details';
-import { MenuSelection } from '@/components/orders/menu-selection';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getNextTakeoutId } from '@/lib/counters';
@@ -33,7 +32,7 @@ interface SubAccount {
 interface Order {
     id: string;
     tableId?: string;
-    status: 'open' | 'preparing' | 'paid' | 'ready_for_pickup';
+    status: 'open' | 'preparing' | 'paid' | 'ready_for_pickup' | 'served';
     type?: 'dine-in' | 'takeout';
     takeoutId?: string;
     sentToKitchenAt?: Timestamp;
@@ -90,7 +89,7 @@ export default function OrdersPage() {
     if (!restaurantId) return;
     const ordersQuery = query(
       collection(db, `restaurantes/${restaurantId}/orders`),
-      where("status", "in", ["open", "preparing", "ready_for_pickup"])
+      where("status", "in", ["open", "preparing", "ready_for_pickup", "served"])
     );
     const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
         const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
@@ -102,7 +101,7 @@ export default function OrdersPage() {
             id: o.id, // The order ID is used as the table ID for takeouts
             name: o.takeoutId!,
             shape: 'square', // Represent takeout as a square
-            status: o.status as 'open' | 'preparing' | 'ready_for_pickup',
+            status: o.status as 'open' | 'preparing' | 'ready_for_pickup' | 'served',
             top: 0, left: 0, seats: 0,
             isTakeout: true,
           } as Table));
@@ -178,7 +177,7 @@ export default function OrdersPage() {
     const elapsedTime = activeOrder ? elapsedTimes[activeOrder.id] : undefined;
 
     if (activeOrder) {
-      return { ...table, status: activeOrder.status as 'open' | 'preparing' | 'ready_for_pickup', elapsedTime };
+      return { ...table, status: activeOrder.status as 'open' | 'preparing' | 'ready_for_pickup' | 'served', elapsedTime };
     }
     
     if (dbStatus && ['dirty', 'reserved'].includes(dbStatus)) {
@@ -356,6 +355,7 @@ export default function OrdersPage() {
                             'bg-green-400': status === 'available',
                             'bg-red-400': status === 'open',
                             'bg-purple-400': status === 'preparing',
+                            'bg-blue-400': status === 'served',
                             'bg-cyan-400': status === 'ready_for_pickup',
                             'bg-orange-400': status === 'dirty',
                             'bg-yellow-400': status === 'reserved',
@@ -367,6 +367,7 @@ export default function OrdersPage() {
                             'bg-green-500': status === 'available',
                             'bg-red-500': status === 'open',
                             'bg-purple-500': status === 'preparing',
+                             'bg-blue-500': status === 'served',
                             'bg-cyan-500': status === 'ready_for_pickup',
                             'bg-orange-500': status === 'dirty',
                             'bg-yellow-500': status === 'reserved',
@@ -393,7 +394,7 @@ export default function OrdersPage() {
                             </div>
                         </div>
                     )}
-                    {(status === 'open' || status === 'preparing' || status === 'ready_for_pickup') && 
+                    {(status === 'open' || status === 'preparing' || status === 'ready_for_pickup' || status === 'served') && 
                         <Button size="lg" variant="outline" onClick={() => setView('order_summary')}>{t('View Order')}</Button>
                     }
                     {(status === 'dirty' || status === 'reserved') &&
