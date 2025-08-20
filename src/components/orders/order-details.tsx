@@ -287,24 +287,24 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
             return (
             <AccordionItem value={subAccount.id} key={subAccount.id}>
-              <AccordionTrigger>
-                <div className="flex justify-between items-center w-full pr-4 group">
-                    <span className="flex items-center">{subAccount.name}</span>
-                    <div className="flex items-center gap-2">
-                        <span className="font-mono">${getSubAccountTotal(subAccount.id).toFixed(2)}</span>
-                        {isSubAccountEmpty && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100"
-                            onClick={(e) => { e.stopPropagation(); handleRemoveSubAccount(subAccount.id); }}
-                          >
-                              <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                    </div>
-                </div>
-              </AccordionTrigger>
+              <div className="flex items-center w-full group">
+                <AccordionTrigger className="flex-grow">
+                  <div className="flex justify-between items-center w-full pr-4">
+                      <span className="flex items-center">{subAccount.name}</span>
+                      <span className="font-mono">${getSubAccountTotal(subAccount.id).toFixed(2)}</span>
+                  </div>
+                </AccordionTrigger>
+                {isSubAccountEmpty && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100"
+                    onClick={(e) => { e.stopPropagation(); handleRemoveSubAccount(subAccount.id); }}
+                  >
+                      <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <AccordionContent>
                 <div className="space-y-3 pl-4">
                   {itemsInSubAccount.map(item => (
