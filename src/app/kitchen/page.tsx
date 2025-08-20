@@ -2,25 +2,45 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { KitchenOrderCard, Order } from '@/components/kitchen/order-card';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { getRestaurantIdForCurrentUser } from '@/lib/users';
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [user] = useAuthState(auth);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
   useEffect(() => {
-    // We listen to orders that are sent to the kitchen ('preparing') 
-    // and those that are ready to be picked up.
+    const fetchRestaurantId = async () => {
+      if (user) {
+        const id = await getRestaurantIdForCurrentUser();
+        setRestaurantId(id);
+      }
+    };
+    fetchRestaurantId();
+  }, [user]);
+
+  useEffect(() => {
+    if (!restaurantId) {
+        // If there's no restaurant ID yet, we don't query.
+        // We could even set loading to false if we are sure there will be no ID.
+        if (!user) setIsLoading(false);
+        return;
+    };
+
     const q = query(
       collection(db, 'orders'), 
+      where('restaurantId', '==', restaurantId),
       where('status', 'in', ['preparing', 'ready_for_pickup'])
     );
 
@@ -38,7 +58,7 @@ export default function KitchenPage() {
     });
 
     return () => unsubscribe();
-  }, [t, toast]);
+  }, [restaurantId, t, toast, user]);
 
   const handleItemStatusChange = async (orderId: string, itemId: string, newStatus: 'pending' | 'preparing' | 'ready') => {
     try {
