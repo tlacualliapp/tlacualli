@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { getRestaurantIdForCurrentUser } from '@/lib/users';
 
 interface Employee {
   id: string;
@@ -62,20 +63,12 @@ export default function EmployeesPage() {
 
   useEffect(() => {
     const fetchRestaurantId = async () => {
-      if (user) {
-        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const userData = querySnapshot.docs[0].data();
-          setRestaurantId(userData.restauranteId);
-        } else {
-            setIsLoading(false);
-        }
-      } else {
-        setIsLoading(false);
-      }
+      const id = await getRestaurantIdForCurrentUser();
+      setRestaurantId(id);
     };
-    fetchRestaurantId();
+    if(user) {
+        fetchRestaurantId();
+    }
   }, [user]);
 
   useEffect(() => {
@@ -115,6 +108,10 @@ export default function EmployeesPage() {
   }, [restaurantId, t, toast]);
 
   const handleAddNew = () => {
+    if (!restaurantId) {
+        toast({ variant: 'destructive', title: t('Error'), description: t('Restaurant information is not available yet. Please try again.') });
+        return;
+    }
     setEmployeeToEdit(null);
     setIsFormModalOpen(true);
   };
@@ -148,13 +145,13 @@ export default function EmployeesPage() {
     }
   };
 
-  const getRoleName = (profileId: string) => {
+ const getRoleName = (profileId: string) => {
     const roles: { [key: string]: string } = {
         '1': 'Administrator',
         '2': 'Employee'
     };
     return t(roles[profileId] || 'Unknown');
-  }
+ };
 
   return (
     <AdminLayout>

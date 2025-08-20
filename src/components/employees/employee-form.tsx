@@ -110,7 +110,7 @@ export function EmployeeForm({ restaurantId, onSuccess, employeeToEdit }: Employ
                 // 2. Save user data in Firestore
                 await addDoc(collection(db, "usuarios"), {
                     uid: user.uid,
-                    restauranteId,
+                    restauranteId: restaurantId,
                     nombre,
                     apellidos,
                     telefono,
