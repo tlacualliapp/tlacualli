@@ -21,13 +21,14 @@ export interface Room {
 
 interface MapEditorProps {
   restaurantId: string;
+  view?: 'admin' | 'operational';
 }
 
 export const ItemTypes = {
   TABLE: 'table',
 };
 
-export const MapEditor = ({ restaurantId }: MapEditorProps) => {
+export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tables, setTables] = useState<{ [roomId: string]: Table[] }>({});
   const [activeRoom, setActiveRoom] = useState<string>('');
@@ -64,6 +65,7 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
   }, [restaurantId, activeRoom]);
 
   const moveTable = async (id: string, left: number, top: number) => {
+    if (view !== 'admin') return; // Prevent moving in operational view
     const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`, id);
     await updateDoc(tableRef, { left, top });
   };
@@ -88,11 +90,21 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
     setIsFormOpen(false);
     setTableToEdit(null);
   };
+  
+  const handleTableClick = (table: Table) => {
+    if (view === 'operational') {
+        console.log(`Table ${table.name} clicked for ordering.`);
+        // Here you would typically set the selected table in a global state
+        // to show its details in the right-hand column.
+        toast({ title: t('Table Selected'), description: `${t('Table')} ${table.name} ${t('selected for new order.')}`})
+    }
+  }
 
 
   const [, drop] = useDrop(() => ({
     accept: ItemTypes.TABLE,
     drop(item: Table, monitor) {
+      if (view !== 'admin') return;
       const delta = monitor.getDifferenceFromInitialOffset();
       if (!delta) return;
       const left = Math.round(item.left + delta.x);
@@ -100,7 +112,7 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
       moveTable(item.id, left, top);
       return undefined;
     },
-  }), [moveTable, activeRoom]);
+  }), [moveTable, activeRoom, view]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin h-8 w-8" /></div>;
@@ -108,18 +120,30 @@ export const MapEditor = ({ restaurantId }: MapEditorProps) => {
   
   return (
     <div className="flex flex-col h-full">
-        <Toolbar restaurantId={restaurantId} rooms={rooms} activeRoom={activeRoom} setActiveRoom={setActiveRoom} />
+        {view === 'admin' && <Toolbar restaurantId={restaurantId} rooms={rooms} activeRoom={activeRoom} setActiveRoom={setActiveRoom} />}
         <div className="flex-grow relative" ref={drop}>
             {rooms.map(room => (
                 <div key={room.id} style={{ display: activeRoom === room.id ? 'block' : 'none' }} className="w-full h-full">
                      {(tables[room.id] || []).map(table => (
-                        <TableItem key={table.id} {...table} onDelete={deleteTable} onEdit={handleEditTable} />
+                        <TableItem 
+                            key={table.id} 
+                            {...table} 
+                            onDelete={deleteTable} 
+                            onEdit={handleEditTable}
+                            onClick={() => handleTableClick(table)}
+                            view={view}
+                        />
                     ))}
                 </div>
             ))}
-            {rooms.length === 0 && (
+            {rooms.length === 0 && view === 'admin' && (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                     <p>{t('Create a room to start adding tables.')}</p>
+                </div>
+            )}
+             {rooms.length === 0 && view === 'operational' && (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                    <p>{t('No tables have been configured. Please go to the Digital Map in the admin dashboard.')}</p>
                 </div>
             )}
         </div>
