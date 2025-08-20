@@ -67,7 +67,7 @@ const allNavItems = [
   { key: 'inventory', href: '/dashboard-admin/inventory', label: 'Inventory', icon: Package },
   { key: 'kitchen', href: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { key: 'deliveries', href: '/deliveries', label: 'Deliveries', icon: Truck },
-  { key: 'reports', href: '/reports', label: 'Reports', icon: BarChart },
+  { key: 'reports', href: '/dashboard-admin/reports', label: 'Reports', icon: BarChart },
   { key: 'map', href: '/dashboard-admin/map', label: 'Digital Map', icon: Map },
 ];
 
