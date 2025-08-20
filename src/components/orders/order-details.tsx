@@ -48,6 +48,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   useEffect(() => {
     if (!orderId) {
         setIsLoading(false);
+        setOrder(null);
         return;
     };
     
@@ -189,11 +190,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   if (!order) {
     return (
          <div className="p-6 flex flex-col h-full items-center justify-center text-center">
-             <p className="text-muted-foreground mb-4">{t('No active order for this table.')}</p>
-             <Button onClick={onAddItems}>
-                 <PlusCircle className="mr-2 h-4 w-4"/>
-                 {t('Start New Order')}
-             </Button>
+             <p className="text-muted-foreground mb-4">{t('No active order for this item.')}</p>
          </div>
     )
   }
@@ -254,7 +251,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                 {t('Add More Items')}
             </Button>
             {order.status === 'open' && (
-                 <Button size="lg" className="w-full" onClick={handleSendToKitchen}>
+                 <Button size="lg" className="w-full" onClick={handleSendToKitchen} disabled={!order.items || order.items.length === 0}>
                     <Send className="mr-2 h-4 w-4" />
                     {t('Send to Kitchen')}
                 </Button>
@@ -314,3 +311,5 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     </div>
   );
 };
+
+    

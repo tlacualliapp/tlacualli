@@ -27,7 +27,7 @@ interface Room {
 
 interface Order {
     id: string;
-    tableId: string;
+    tableId?: string;
     status: 'open' | 'preparing' | 'paid';
     type?: 'dine-in' | 'takeout';
     takeoutId?: string;
@@ -51,6 +51,7 @@ export default function OrdersPage() {
   const [takeoutOrders, setTakeoutOrders] = useState<Table[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [view, setView] = useState<'table_map' | 'menu' | 'order_summary'>('table_map');
   const [elapsedTimes, setElapsedTimes] = useState<{ [orderId: string]: string }>({});
 
@@ -92,7 +93,7 @@ export default function OrdersPage() {
         const currentTakeoutOrders = ordersData
           .filter(o => o.type === 'takeout' && o.takeoutId)
           .map(o => ({
-            id: o.id,
+            id: o.id, // The order ID is used as the table ID for takeouts
             name: o.takeoutId!,
             shape: 'square', // Represent takeout as a square
             status: o.status as 'open' | 'preparing',
@@ -164,7 +165,7 @@ export default function OrdersPage() {
     if (table.isTakeout) {
         const activeOrder = activeOrders.find(o => o.id === table.id);
         const elapsedTime = activeOrder ? elapsedTimes[activeOrder.id] : undefined;
-        return { ...table, elapsedTime };
+        return { ...table, status: activeOrder?.status, elapsedTime };
     }
     const activeOrder = activeOrders.find(o => o.tableId === table.id && o.type !== 'takeout');
     const dbStatus = table.status;
@@ -199,9 +200,13 @@ export default function OrdersPage() {
   const handleTableClick = (table: Table) => {
     const tableWithStatus = getTableWithStatus(table);
     setSelectedTable(tableWithStatus);
-    if (tableWithStatus.status === 'open' || tableWithStatus.status === 'preparing') {
+    const activeOrder = activeOrders.find(o => (o.tableId === table.id && !table.isTakeout) || (o.id === table.id && table.isTakeout));
+
+    if (activeOrder) {
+      setActiveOrderId(activeOrder.id);
       setView('order_summary');
     } else {
+      setActiveOrderId(null);
       setView('table_map'); 
     }
   };
@@ -209,7 +214,6 @@ export default function OrdersPage() {
   const handleStartNewOrder = async () => {
     if (!selectedTable || !restaurantId || selectedTable.isTakeout) return;
     
-    // Double check if an order already exists for this table
     const existingOrder = activeOrders.find(o => o.tableId === selectedTable.id);
     if (existingOrder) {
         toast({
@@ -217,6 +221,8 @@ export default function OrdersPage() {
             title: t('Error'),
             description: t('An active order already exists for this table.'),
         });
+        setActiveOrderId(existingOrder.id);
+        setView('menu');
         return;
     }
 
@@ -233,8 +239,7 @@ export default function OrdersPage() {
             createdBy: user?.uid,
         });
 
-        // We need to update the local selectedTable state to include the new order ID.
-        setSelectedTable(prev => prev ? {...prev, id: newOrderRef.id } : null);
+        setActiveOrderId(newOrderRef.id);
         setView('menu');
         toast({
             title: t('Order Started'),
@@ -251,6 +256,7 @@ export default function OrdersPage() {
   
   const handleOrderClosed = () => {
       setSelectedTable(null);
+      setActiveOrderId(null);
       setView('table_map');
   }
 
@@ -283,6 +289,7 @@ export default function OrdersPage() {
         };
         
         setSelectedTable(newTakeoutAsTable);
+        setActiveOrderId(docRef.id);
         setView('menu');
 
         toast({
@@ -311,12 +318,12 @@ export default function OrdersPage() {
         );
     }
     
-    if (view === 'menu' && restaurantId) {
-        return <MenuSelection restaurantId={restaurantId} orderId={selectedTable.id} tableName={selectedTable.name} onBack={() => setView('order_summary')} />;
+    if (view === 'menu' && restaurantId && activeOrderId) {
+        return <MenuSelection restaurantId={restaurantId} orderId={activeOrderId} tableName={selectedTable.name} onBack={() => setView('order_summary')} />;
     }
 
-    if (view === 'order_summary' && restaurantId) {
-        return <OrderDetails restaurantId={restaurantId} orderId={selectedTable.id} tableName={selectedTable.name} onAddItems={() => setView('menu')} onOrderClosed={handleOrderClosed} />;
+    if (view === 'order_summary' && restaurantId && activeOrderId) {
+        return <OrderDetails restaurantId={restaurantId} orderId={activeOrderId} tableName={selectedTable.name} onAddItems={() => setView('menu')} onOrderClosed={handleOrderClosed} />;
     }
 
     // Default view for a selected table
@@ -350,7 +357,7 @@ export default function OrdersPage() {
                     )}></span>
                 </span>
                 <span className="capitalize text-muted-foreground">
-                    {status === 'open' ? t('Occupied') : t(status)}
+                    {status === 'open' ? t('Occupied') : t(status || 'available')}
                 </span>
             </div>
 
@@ -488,5 +495,7 @@ export default function OrdersPage() {
 }
 
 
+
+    
 
     

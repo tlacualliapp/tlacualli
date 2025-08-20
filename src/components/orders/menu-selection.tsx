@@ -73,7 +73,10 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: Menu
   }, [restaurantId]);
 
   const handleAddItemToOrder = async (item: MenuItem) => {
-    if (!restaurantId || !orderId) return;
+    if (!restaurantId || !orderId) {
+        toast({ variant: 'destructive', title: t('Error'), description: t('No active order selected.') });
+        return;
+    }
     
     setClickedItemId(item.id);
     setTimeout(() => setClickedItemId(null), 300);
@@ -84,7 +87,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: Menu
         await runTransaction(db, async (transaction) => {
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) {
-                 throw new Error("Order document does not exist!");
+                 throw new Error(t("Order document does not exist!"));
             }
 
             const orderData = orderDoc.data();
@@ -118,7 +121,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: Menu
 
     } catch (error) {
         console.error("Error adding item to order:", error);
-        toast({ variant: 'destructive', title: t('Error'), description: t('Could not add item to order.') });
+        toast({ variant: 'destructive', title: t('Error'), description: (error as Error).message || t('Could not add item to order.') });
     }
   };
 
@@ -188,3 +191,5 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack }: Menu
     </div>
   );
 };
+
+    
