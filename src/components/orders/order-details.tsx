@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, serverTimestamp, addDoc, runTransaction, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
-import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle, Users, Trash2, BellRing } from 'lucide-react';
+import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle, Users, Trash2, BellRing, Timer, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
@@ -13,6 +13,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { Timestamp } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { Badge } from '../ui/badge';
+import { cn } from '@/lib/utils';
+
 
 interface OrderItem {
   id: string;
@@ -45,6 +48,13 @@ interface OrderDetailsProps {
   onAddItems: (subAccountId: string) => void;
   onOrderClosed: () => void;
 }
+
+const statusInfo = {
+    pending: { icon: Timer, color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
+    preparing: { icon: ChefHat, color: 'bg-purple-100 text-purple-800', label: 'Preparing' },
+    ready: { icon: CheckCircle, color: 'bg-green-100 text-green-800', label: 'Ready' },
+};
+
 
 export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onOrderClosed }: OrderDetailsProps) => {
   const [order, setOrder] = useState<Order | null>(null);
@@ -282,10 +292,22 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
      return order.items.filter(item => item.subAccountId === subAccountId);
   }
 
+  const pendingItemsCount = order.items?.filter(item => item.status === 'pending' || item.status === 'preparing').length || 0;
+
   return (
     <div className="p-4 flex flex-col h-full">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold font-headline">{t('Order Summary')}: {tableName}</h2>
+      <div className="flex justify-between items-start mb-1">
+        <div>
+            <h2 className="text-2xl font-bold font-headline">{t('Order Summary')}: {tableName}</h2>
+            {order.status === 'preparing' || order.status === 'ready_for_pickup' ? (
+                <div className="text-sm text-muted-foreground">
+                    {pendingItemsCount > 0 ? 
+                        t('{{count}} items pending', { count: pendingItemsCount }) :
+                        t('Order Complete')
+                    }
+                </div>
+            ) : null}
+        </div>
          {order.status === 'preparing' && (
             <div className="flex items-center gap-2 text-sm font-semibold bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
                 <ChefHat className="h-4 w-4" />
@@ -328,22 +350,34 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
               </div>
               <AccordionContent>
                 <div className="space-y-3 pl-4">
-                  {itemsInSubAccount.map((item, index) => (
-                    <div key={`${item.id}-${item.subAccountId}-${index}`} className="flex justify-between items-center group">
-                        <div>
-                          <p className="font-semibold">{item.quantity}x {item.name}</p>
-                           {item.notes && <p className="text-xs text-muted-foreground">- {item.notes}</p>}
+                  {itemsInSubAccount.map((item, index) => {
+                    const status = item.status || 'pending';
+                    const StatusIcon = statusInfo[status]?.icon;
+                    return (
+                        <div key={`${item.id}-${item.subAccountId}-${index}`} className="flex justify-between items-center group">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold">{item.quantity}x {item.name}</p>
+                                {order.status !== 'open' && StatusIcon && (
+                                    <Badge variant="outline" className={cn("text-xs py-0.5 px-1.5 h-auto", statusInfo[status].color)}>
+                                        <StatusIcon className="h-3 w-3 mr-1" />
+                                        {t(statusInfo[status].label)}
+                                    </Badge>
+                                )}
+                              </div>
+                               {item.notes && <p className="text-xs text-muted-foreground">- {item.notes}</p>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
+                                {(order.status === 'open' || order.status === 'preparing') && (
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item)}>
+                                    <MinusCircle className="h-4 w-4" />
+                                  </Button>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
-                            {(order.status === 'open' || order.status === 'preparing') && (
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item)}>
-                                <MinusCircle className="h-4 w-4" />
-                              </Button>
-                            )}
-                        </div>
-                      </div>
-                  ))}
+                    );
+                  })}
                   <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => onAddItems(subAccount.id)}>
                       <PlusCircle className="mr-2 h-4 w-4" /> {t('Add Item')}
                   </Button>
