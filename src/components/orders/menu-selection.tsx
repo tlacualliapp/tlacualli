@@ -15,6 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { serverTimestamp } from 'firebase/firestore';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '../ui/textarea';
+import { Label } from '../ui/label';
 
 interface MenuItem {
   id: string;
@@ -61,7 +64,9 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
-  const [clickedItemId, setClickedItemId] = useState<string | null>(null);
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [selectedItemForNotes, setSelectedItemForNotes] = useState<MenuItem | null>(null);
+  const [itemNotes, setItemNotes] = useState('');
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -93,16 +98,20 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
       unsubOrder();
     };
   }, [restaurantId, orderId]);
+  
+  const openNotesModal = (item: MenuItem) => {
+    setSelectedItemForNotes(item);
+    setItemNotes('');
+    setIsNotesModalOpen(true);
+  };
 
-  const handleAddItemToOrder = async (item: MenuItem) => {
-    if (!restaurantId || !orderId) {
-        toast({ variant: 'destructive', title: t('Error'), description: t('No active order selected.') });
+  const handleAddItemToOrder = async () => {
+    if (!selectedItemForNotes || !restaurantId || !orderId) {
+        toast({ variant: 'destructive', title: t('Error'), description: t('No active order or item selected.') });
         return;
     }
     
-    setClickedItemId(item.id);
-    setTimeout(() => setClickedItemId(null), 300);
-
+    setIsNotesModalOpen(false);
     const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
 
     try {
@@ -114,28 +123,18 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
 
             const orderData = orderDoc.data();
             let currentItems: OrderItem[] = orderData.items || [];
-            
-            const existingItemIndex = currentItems.findIndex(i => i.id === item.id && i.subAccountId === selectedSubAccountId && i.status !== 'ready');
             let updatedItems;
 
-            if (existingItemIndex > -1) {
-                // Increment quantity of an existing, non-ready item
-                updatedItems = currentItems.map((orderItem, index) => 
-                    index === existingItemIndex 
-                    ? { ...orderItem, quantity: orderItem.quantity + 1 }
-                    : orderItem
-                );
-            } else {
-                // Add new item
-                updatedItems = [...currentItems, { 
-                    id: item.id, 
-                    name: item.name, 
-                    price: item.price, 
-                    quantity: 1, 
-                    subAccountId: selectedSubAccountId,
-                    status: 'pending' // New items are always pending
-                }];
-            }
+            // Add new item, as each addition with notes should be unique
+            updatedItems = [...currentItems, { 
+                id: selectedItemForNotes.id, 
+                name: selectedItemForNotes.name, 
+                price: selectedItemForNotes.price, 
+                quantity: 1, 
+                subAccountId: selectedSubAccountId,
+                status: 'pending',
+                notes: itemNotes.trim()
+            }];
 
             const newSubtotal = updatedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
             
@@ -156,13 +155,15 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
         
         toast({
             title: `${t('Added')}!`,
-            description: `${item.name} ${t('has been added to the order.')}`
+            description: `${selectedItemForNotes.name} ${t('has been added to the order.')}`
         })
-
 
     } catch (error) {
         console.error("Error adding item to order:", error);
         toast({ variant: 'destructive', title: t('Error'), description: (error as Error).message || t('Could not add item to order.') });
+    } finally {
+        setSelectedItemForNotes(null);
+        setItemNotes('');
     }
   };
 
@@ -179,6 +180,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
   }
 
   return (
+    <>
     <div className="p-4 flex flex-col h-full">
       <div className="flex items-center mb-4">
         <Button variant="ghost" size="icon" onClick={onBack}>
@@ -224,11 +226,8 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
                 {filteredMenuItems.filter(item => item.categoryId === cat.id).map(item => (
                   <Card 
                     key={item.id} 
-                    className={cn(
-                        "cursor-pointer hover:shadow-md hover:border-primary transition-all",
-                        clickedItemId === item.id && "animate-pulse scale-105 bg-primary/10"
-                    )}
-                    onClick={() => handleAddItemToOrder(item)}
+                    className="cursor-pointer hover:shadow-md hover:border-primary transition-all"
+                    onClick={() => openNotesModal(item)}
                   >
                     <CardContent className="p-3">
                       <h3 className="font-semibold text-sm truncate">{item.name}</h3>
@@ -244,5 +243,28 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
         <div className="text-center text-muted-foreground mt-8">{t('No menu categories found.')}</div>
       )}
     </div>
+
+    <Dialog open={isNotesModalOpen} onOpenChange={setIsNotesModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Special Instructions for')}: {selectedItemForNotes?.name}</DialogTitle>
+             <DialogDescription>{t('Add any specific preparation notes for this item.')}</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="item-notes">{t('Notes')}</Label>
+            <Textarea 
+              id="item-notes" 
+              value={itemNotes} 
+              onChange={(e) => setItemNotes(e.target.value)} 
+              placeholder={t('e.g., Sin cebolla, extra picante...')}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNotesModalOpen(false)}>{t('Cancel')}</Button>
+            <Button onClick={handleAddItemToOrder}>{t('Add to Order')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

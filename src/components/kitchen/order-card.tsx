@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card
 import { Timestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
-import { Check, CheckCheck } from 'lucide-react';
+import { Check, CheckCheck, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
@@ -58,10 +58,10 @@ export const KitchenOrderCard = ({ order, onItemStatusChange, onOrderReady }: Ki
   return (
     <Card className={cn(
         "flex flex-col",
-        order.status === 'ready_for_pickup' && 'bg-green-100 border-green-300'
+        order.status === 'ready_for_pickup' ? 'bg-green-100 border-green-300' : 'bg-card'
     )}>
       <CardHeader className="flex flex-row justify-between items-center p-4">
-        <CardTitle className="text-xl font-bold">{order.tableName || order.takeoutId}</CardTitle>
+        <CardTitle className="text-xl font-bold">{order.tableName || `#${order.takeoutId}`}</CardTitle>
         <Badge variant="outline" className="text-sm font-mono">{elapsedTime}</Badge>
       </CardHeader>
       <CardContent className="flex-grow p-4 space-y-3">
@@ -70,9 +70,9 @@ export const KitchenOrderCard = ({ order, onItemStatusChange, onOrderReady }: Ki
           const isPending = item.status === 'pending' || !item.status;
           return (
             <div key={uniqueItemId} className={cn("p-2 rounded-md transition-colors", {
-                'bg-yellow-100/50': item.status === 'preparing',
-                'bg-green-100/50': item.status === 'ready',
-                'bg-orange-100/80 animate-pulse border border-orange-300': isPending,
+                'bg-yellow-100/50 dark:bg-yellow-900/50': item.status === 'preparing',
+                'bg-green-100/50 dark:bg-green-900/50': item.status === 'ready',
+                'bg-orange-100/80 dark:bg-orange-900/50 animate-pulse border border-orange-300': isPending,
             })}>
               <div className="flex justify-between items-start">
                 <p className="font-semibold">{item.quantity}x {item.name}</p>
@@ -89,7 +89,12 @@ export const KitchenOrderCard = ({ order, onItemStatusChange, onOrderReady }: Ki
                    )}
                 </div>
               </div>
-              {item.notes && <p className="text-xs text-muted-foreground pl-1">- {item.notes}</p>}
+              {item.notes && (
+                <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 mt-1 pl-1">
+                    <MessageSquare className="h-3 w-3" />
+                    <p>“{item.notes}”</p>
+                </div>
+              )}
             </div>
           )
         })}
@@ -98,7 +103,7 @@ export const KitchenOrderCard = ({ order, onItemStatusChange, onOrderReady }: Ki
       <CardFooter className="p-2">
          {order.status !== 'ready_for_pickup' ? (
              <Button 
-                className="w-full"
+                className="w-full bg-accent hover:bg-accent/90"
                 onClick={() => onOrderReady(order.id)}
                 disabled={!allItemsReady}
              >
