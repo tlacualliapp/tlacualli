@@ -99,25 +99,41 @@ export default function KitchenPage() {
                 const menuItemRef = doc(db, `restaurantes/${restaurantId}/menuItems`, orderItem.id);
                 const menuItemSnap = await transaction.get(menuItemRef);
 
-                if (menuItemSnap.exists() && menuItemSnap.data().recipeId && menuItemSnap.data().recipeId !== 'none') {
-                    const recipeId = menuItemSnap.data().recipeId;
-                    const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, recipeId);
-                    const recipeSnap = await transaction.get(recipeRef);
+                if (menuItemSnap.exists()) {
+                    const menuItemData = menuItemSnap.data();
+                    // Case 1: Item is made from a recipe
+                    if (menuItemData.recipeId && menuItemData.recipeId !== 'none') {
+                        const recipeId = menuItemData.recipeId;
+                        const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, recipeId);
+                        const recipeSnap = await transaction.get(recipeRef);
 
-                    if (recipeSnap.exists()) {
-                        const recipe = recipeSnap.data() as Recipe;
-                        for (const ingredient of recipe.ingredients) {
-                            const inventoryItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, ingredient.itemId);
-                            const inventoryItemSnap = await transaction.get(inventoryItemRef);
-                            if (inventoryItemSnap.exists()) {
-                                const currentStock = inventoryItemSnap.data().currentStock || 0;
-                                const requiredQuantity = ingredient.quantity * orderItem.quantity;
-                                inventoryUpdates.push({
-                                    ref: inventoryItemRef,
-                                    newStock: currentStock - requiredQuantity,
-                                });
+                        if (recipeSnap.exists()) {
+                            const recipe = recipeSnap.data() as Recipe;
+                            for (const ingredient of recipe.ingredients) {
+                                const inventoryItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, ingredient.itemId);
+                                const inventoryItemSnap = await transaction.get(inventoryItemRef);
+                                if (inventoryItemSnap.exists()) {
+                                    const currentStock = inventoryItemSnap.data().currentStock || 0;
+                                    const requiredQuantity = ingredient.quantity * orderItem.quantity;
+                                    inventoryUpdates.push({
+                                        ref: inventoryItemRef,
+                                        newStock: currentStock - requiredQuantity,
+                                    });
+                                }
                             }
                         }
+                    // Case 2: Item is a direct inventory item
+                    } else if (menuItemData.inventoryItemId) {
+                         const inventoryItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, menuItemData.inventoryItemId);
+                         const inventoryItemSnap = await transaction.get(inventoryItemRef);
+                         if (inventoryItemSnap.exists()) {
+                            const currentStock = inventoryItemSnap.data().currentStock || 0;
+                            const requiredQuantity = orderItem.quantity; // Consumes 1 unit of itself per quantity
+                             inventoryUpdates.push({
+                                ref: inventoryItemRef,
+                                newStock: currentStock - requiredQuantity,
+                            });
+                         }
                     }
                 }
             }
