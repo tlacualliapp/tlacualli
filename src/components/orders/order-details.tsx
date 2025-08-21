@@ -294,11 +294,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     if (!node) return;
 
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-
+    iframe.style.display = 'none';
     document.body.appendChild(iframe);
 
     const pri = iframe.contentWindow;
@@ -311,14 +307,11 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     pri.document.write(node.innerHTML);
     pri.document.close();
 
-    const handleLoad = () => {
-      pri.focus();
-      pri.print();
-      document.body.removeChild(iframe);
-      iframe.removeEventListener('load', handleLoad);
+    iframe.onload = function() {
+        pri.focus();
+        pri.print();
+        document.body.removeChild(iframe);
     };
-
-    iframe.addEventListener('load', handleLoad);
   };
   
   const handleSendWhatsApp = async () => {
