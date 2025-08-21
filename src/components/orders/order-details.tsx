@@ -75,6 +75,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const [elapsedTime, setElapsedTime] = useState('00:00');
   const { toast } = useToast();
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const ticketRef = useRef<HTMLDivElement>(null);
   const [printerType, setPrinterType] = useState<'thermal' | 'conventional'>('thermal');
@@ -290,28 +291,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
   
   const handlePrintTicket = () => {
-    const node = ticketRef.current;
-    if (!node) return;
-
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-
-    const pri = iframe.contentWindow;
-    if (!pri) {
-      document.body.removeChild(iframe);
-      return;
-    }
-
-    pri.document.open();
-    pri.document.write(node.innerHTML);
-    pri.document.close();
-
-    iframe.onload = function() {
-        pri.focus();
-        pri.print();
-        document.body.removeChild(iframe);
-    };
+    window.print();
   };
   
   const handleSendWhatsApp = async () => {
@@ -382,11 +362,9 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
 
   const pendingItemsCount = order.items?.filter(item => item.status !== 'ready').length || 0;
-
-  return (
-    <>
-      <div className="hidden">
-        <div ref={ticketRef}>
+  
+  const TicketContent = () => (
+      <div ref={ticketRef}>
            <div style={{
               width: printerType === 'thermal' ? '80mm' : '210mm',
               padding: printerType === 'thermal' ? '5px' : '20px',
@@ -430,6 +408,12 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
               )}
             </div>
         </div>
+  );
+
+  return (
+    <>
+      <div className="hidden">
+        <TicketContent />
       </div>
 
       <Dialog open={isBillModalOpen} onOpenChange={setIsBillModalOpen}>
@@ -469,12 +453,27 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                         </SelectContent>
                     </Select>
                  </div>
-                <Button variant="outline" className="w-full" onClick={handlePrintTicket}>
+                <Button variant="outline" className="w-full" onClick={() => { setIsBillModalOpen(false); setIsPrintPreviewOpen(true); }}>
                     <Printer className="mr-2 h-4 w-4" />
                     {t('Print Physical Ticket')}
                 </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isPrintPreviewOpen} onOpenChange={setIsPrintPreviewOpen}>
+        <DialogContent className="max-w-3xl">
+           <DialogHeader>
+                <DialogTitle>{t('Print Preview')}</DialogTitle>
+           </DialogHeader>
+            <div className="printable-area p-4 border rounded-md bg-white text-black">
+              <TicketContent />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsPrintPreviewOpen(false)}>{t('Close')}</Button>
+                <Button onClick={handlePrintTicket}><Printer className="mr-2 h-4 w-4"/>{t('Print')}</Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
 
