@@ -18,6 +18,11 @@ interface Recipe {
     ingredients: { itemId: string; quantity: number }[];
 }
 
+interface InventoryUpdate {
+    ref: any; // DocumentReference
+    newStock: number;
+}
+
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,6 +75,7 @@ export default function KitchenPage() {
     
     try {
         await runTransaction(db, async (transaction) => {
+            // --- 1. READS ---
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) {
                 throw new Error("Order document not found.");
@@ -83,22 +89,17 @@ export default function KitchenPage() {
 
             const orderItem = currentOrder.items[itemIndex];
 
-            // If status is not changing or item is already ready, do nothing.
             if (orderItem.status === newStatus || orderItem.status === 'ready') {
-                return;
+                return; // No change needed
             }
 
-            const updatedItems = [...currentOrder.items];
-            updatedItems[itemIndex] = { ...orderItem, status: newStatus };
+            const inventoryUpdates: InventoryUpdate[] = [];
 
-            // Logic to deduct from inventory if item is marked as "ready"
             if (newStatus === 'ready') {
-                // Find recipeId from menuItem
                 const menuItemRef = doc(db, `restaurantes/${restaurantId}/menuItems`, orderItem.id);
                 const menuItemSnap = await transaction.get(menuItemRef);
-                if (!menuItemSnap.exists() || !menuItemSnap.data().recipeId || menuItemSnap.data().recipeId === 'none') {
-                    console.log(`No recipe associated with menu item ${orderItem.name}. No inventory deducted.`);
-                } else {
+
+                if (menuItemSnap.exists() && menuItemSnap.data().recipeId && menuItemSnap.data().recipeId !== 'none') {
                     const recipeId = menuItemSnap.data().recipeId;
                     const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, recipeId);
                     const recipeSnap = await transaction.get(recipeRef);
@@ -111,21 +112,33 @@ export default function KitchenPage() {
                             if (inventoryItemSnap.exists()) {
                                 const currentStock = inventoryItemSnap.data().currentStock || 0;
                                 const requiredQuantity = ingredient.quantity * orderItem.quantity;
-                                const newStock = currentStock - requiredQuantity;
-                                transaction.update(inventoryItemRef, { currentStock: newStock });
+                                inventoryUpdates.push({
+                                    ref: inventoryItemRef,
+                                    newStock: currentStock - requiredQuantity,
+                                });
                             }
                         }
                     }
                 }
             }
-            
+
+            // --- 2. WRITES ---
+            const updatedItems = [...currentOrder.items];
+            updatedItems[itemIndex] = { ...orderItem, status: newStatus };
+
             const allItemsReady = updatedItems.every(item => item.status === 'ready');
-            const updatePayload: { items: OrderItem[], status?: 'ready_for_pickup' } = { items: updatedItems };
+            const updatePayload: any = { items: updatedItems };
 
             if (allItemsReady) {
                 updatePayload.status = 'ready_for_pickup';
             }
+            
+            // Perform inventory updates
+            inventoryUpdates.forEach(update => {
+                transaction.update(update.ref, { currentStock: update.newStock });
+            });
 
+            // Finally, update the order
             transaction.update(orderRef, updatePayload);
         });
         
