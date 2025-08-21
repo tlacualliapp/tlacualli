@@ -363,8 +363,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
   const pendingItemsCount = order.items?.filter(item => item.status !== 'ready').length || 0;
   
-  const TicketContent = () => (
-      <div ref={ticketRef}>
+  const TicketContent = ({isForPrint = false}) => (
+      <div ref={isForPrint ? ticketRef : null} className={isForPrint ? 'printable-area' : ''}>
            <div style={{
               width: printerType === 'thermal' ? '80mm' : '210mm',
               padding: printerType === 'thermal' ? '5px' : '20px',
@@ -412,8 +412,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
   return (
     <>
-      <div className="hidden">
-        <TicketContent />
+      <div className="hidden print:block">
+        <TicketContent isForPrint={true} />
       </div>
 
       <Dialog open={isBillModalOpen} onOpenChange={setIsBillModalOpen}>
@@ -467,7 +467,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
            <DialogHeader>
                 <DialogTitle>{t('Print Preview')}</DialogTitle>
            </DialogHeader>
-            <div className="printable-area p-4 border rounded-md bg-white text-black">
+            <div className="p-4 border rounded-md bg-white text-black">
               <TicketContent />
             </div>
             <DialogFooter>
