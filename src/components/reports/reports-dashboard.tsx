@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { BarChart, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
@@ -60,6 +60,8 @@ interface ProfitabilityData {
   profitMargin: number;
 }
 
+type SortKey = keyof ProfitabilityData;
+
 interface ReportsDashboardProps {
   restaurantId: string;
 }
@@ -97,6 +99,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [orderIdFilter, setOrderIdFilter] = useState('');
   const [tableNameFilter, setTableNameFilter] = useState('');
+  const [profitabilitySearchTerm, setProfitabilitySearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'ascending' | 'descending' } | null>({ key: 'netProfit', direction: 'descending' });
+
 
   // Real-time stats effect
   useEffect(() => {
@@ -263,12 +268,44 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
           }
       });
       
-      setProfitabilityReportData(report.sort((a,b) => b.netProfit - a.netProfit));
+      setProfitabilityReportData(report);
       setIsProfitabilityLoading(false);
     };
 
     calculateProfitability();
   }, [restaurantId, date, activeTab]);
+
+ const requestSort = (key: SortKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const sortedAndFilteredProfitability = useMemo(() => {
+    let sortableItems = [...profitabilityReportData];
+
+    if (profitabilitySearchTerm) {
+        sortableItems = sortableItems.filter(item => 
+            item.name.toLowerCase().includes(profitabilitySearchTerm.toLowerCase())
+        );
+    }
+
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [profitabilityReportData, sortConfig, profitabilitySearchTerm]);
+
 
 
   const filteredSalesReport = salesReportData.filter(order => {
@@ -380,48 +417,45 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     <TabsTrigger value="inventory-value" disabled><Package className="mr-2"/>{t('Valued Inventory')}</TabsTrigger>
                     <TabsTrigger value="consumption" disabled><TrendingDown className="mr-2"/>{t('Consumption Report')}</TabsTrigger>
                 </TabsList>
+                 <div className="flex flex-wrap items-center justify-end gap-2 py-4">
+                     <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
+                     <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
+                     <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={"outline"}
+                            className={"w-[300px] justify-start text-left font-normal"}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {date?.from ? (
+                            date.to ? (
+                                <>
+                                {format(date.from, "LLL dd, y")} -{" "}
+                                {format(date.to, "LLL dd, y")}
+                                </>
+                            ) : (
+                                format(date.from, "LLL dd, y")
+                            )
+                            ) : (
+                            <span>{t('Pick a date')}</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={date?.from}
+                                selected={date}
+                                onSelect={setDate}
+                                numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                 </div>
                 <TabsContent value="sales" className="pt-4 space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                         <h3 className="text-lg font-medium">{t('Filter Sales')}</h3>
-                         <div className="flex flex-wrap items-center gap-2">
-                             <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
-                             <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
-                             <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                <Button
-                                    id="date"
-                                    variant={"outline"}
-                                    className={"w-[300px] justify-start text-left font-normal"}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date?.from ? (
-                                    date.to ? (
-                                        <>
-                                        {format(date.from, "LLL dd, y")} -{" "}
-                                        {format(date.to, "LLL dd, y")}
-                                        </>
-                                    ) : (
-                                        format(date.from, "LLL dd, y")
-                                    )
-                                    ) : (
-                                    <span>{t('Pick a date')}</span>
-                                    )}
-                                </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="end">
-                                    <Calendar
-                                        initialFocus
-                                        mode="range"
-                                        defaultMonth={date?.from}
-                                        selected={date}
-                                        onSelect={setDate}
-                                        numberOfMonths={2}
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                         </div>
-                    </div>
                      <div className="flex gap-4">
                         <Input 
                             placeholder={t('Filter by Order ID...')} 
@@ -482,23 +516,49 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     </Card>
                 </TabsContent>
                 <TabsContent value="profitability" className="pt-4 space-y-4">
+                     <Input 
+                        placeholder={t('Filter by dish name...')} 
+                        value={profitabilitySearchTerm} 
+                        onChange={(e) => setProfitabilitySearchTerm(e.target.value)}
+                        className="max-w-sm"
+                    />
                      <div className="rounded-md border h-[500px] overflow-y-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>{t('Dish')}</TableHead>
-                                    <TableHead className="text-right">{t('Quantity Sold')}</TableHead>
-                                    <TableHead className="text-right">{t('Total Revenue')}</TableHead>
-                                    <TableHead className="text-right">{t('Total Cost')}</TableHead>
-                                    <TableHead className="text-right">{t('Net Profit')}</TableHead>
-                                    <TableHead className="text-right">{t('Profit Margin')}</TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSort('quantitySold')}>
+                                      <div className="flex items-center justify-end gap-1">
+                                        {t('Quantity Sold')} <ArrowUpDown className="h-3 w-3" />
+                                      </div>
+                                    </TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSort('totalRevenue')}>
+                                      <div className="flex items-center justify-end gap-1">
+                                        {t('Total Revenue')} <ArrowUpDown className="h-3 w-3" />
+                                      </div>
+                                    </TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSort('totalCost')}>
+                                      <div className="flex items-center justify-end gap-1">
+                                        {t('Total Cost')} <ArrowUpDown className="h-3 w-3" />
+                                      </div>
+                                    </TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSort('netProfit')}>
+                                      <div className="flex items-center justify-end gap-1">
+                                        {t('Net Profit')} <ArrowUpDown className="h-3 w-3" />
+                                      </div>
+                                    </TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSort('profitMargin')}>
+                                      <div className="flex items-center justify-end gap-1">
+                                        {t('Profit Margin')} <ArrowUpDown className="h-3 w-3" />
+                                      </div>
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isProfitabilityLoading ? (
                                     <TableRow><TableCell colSpan={6} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                                ) : profitabilityReportData.length > 0 ? (
-                                    profitabilityReportData.map(item => (
+                                ) : sortedAndFilteredProfitability.length > 0 ? (
+                                    sortedAndFilteredProfitability.map(item => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-medium">{item.name}</TableCell>
                                             <TableCell className="text-right font-mono">{item.quantitySold}</TableCell>
@@ -568,3 +628,4 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     </div>
   );
 }
+
