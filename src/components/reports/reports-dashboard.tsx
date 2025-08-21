@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { addDays, format } from 'date-fns';
+import { addDays, format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Order {
@@ -22,6 +22,8 @@ interface Order {
   subtotal: number;
   items: { categoryId: string, price: number, quantity: number, name: string }[];
   createdAt: Timestamp;
+  tableName?: string;
+  takeoutId?: string;
 }
 
 interface ReportsDashboardProps {
@@ -139,6 +141,19 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
   const totalSalesInRange = salesReportData.reduce((acc, order) => acc + order.subtotal, 0);
 
+  const setDatePreset = (preset: 'thisMonth' | 'lastMonth' | 'thisYear') => {
+    const now = new Date();
+    if (preset === 'thisMonth') {
+      setDate({ from: startOfMonth(now), to: endOfMonth(now) });
+    } else if (preset === 'lastMonth') {
+      const lastMonth = subMonths(now, 1);
+      setDate({ from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) });
+    } else if (preset === 'thisYear') {
+      setDate({ from: startOfYear(now), to: endOfYear(now) });
+    }
+  };
+
+
   return (
     <div className="space-y-6">
       <Card className="bg-card/65 backdrop-blur-lg">
@@ -222,41 +237,46 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     <TabsTrigger value="consumption" disabled><TrendingDown className="mr-2"/>{t('Consumption Report')}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="sales" className="pt-4 space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
                          <h3 className="text-lg font-medium">{t('Filter Sales by Date')}</h3>
-                         <Popover>
-                            <PopoverTrigger asChild>
-                            <Button
-                                id="date"
-                                variant={"outline"}
-                                className={"w-[300px] justify-start text-left font-normal"}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date?.from ? (
-                                date.to ? (
-                                    <>
-                                    {format(date.from, "LLL dd, y")} -{" "}
-                                    {format(date.to, "LLL dd, y")}
-                                    </>
-                                ) : (
-                                    format(date.from, "LLL dd, y")
-                                )
-                                ) : (
-                                <span>{t('Pick a date')}</span>
-                                )}
-                            </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    defaultMonth={date?.from}
-                                    selected={date}
-                                    onSelect={setDate}
-                                    numberOfMonths={2}
-                                />
-                            </PopoverContent>
-                        </Popover>
+                         <div className="flex flex-wrap items-center gap-2">
+                             <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
+                             <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
+                             <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={"w-[300px] justify-start text-left font-normal"}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date?.from ? (
+                                    date.to ? (
+                                        <>
+                                        {format(date.from, "LLL dd, y")} -{" "}
+                                        {format(date.to, "LLL dd, y")}
+                                        </>
+                                    ) : (
+                                        format(date.from, "LLL dd, y")
+                                    )
+                                    ) : (
+                                    <span>{t('Pick a date')}</span>
+                                    )}
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="end">
+                                    <Calendar
+                                        initialFocus
+                                        mode="range"
+                                        defaultMonth={date?.from}
+                                        selected={date}
+                                        onSelect={setDate}
+                                        numberOfMonths={2}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                         </div>
                     </div>
                     <Card>
                         <CardHeader>
@@ -273,22 +293,24 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                                     <TableRow>
                                         <TableHead>{t('Order ID')}</TableHead>
                                         <TableHead>{t('Date')}</TableHead>
+                                        <TableHead>{t('Table')}</TableHead>
                                         <TableHead className="text-right">{t('Total')}</TableHead>
                                     </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                     {isSalesLoading ? (
-                                        <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={4} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
                                     ) : salesReportData.length > 0 ? (
                                         salesReportData.map(order => (
                                         <TableRow key={order.id}>
                                             <TableCell className="font-mono text-xs">{order.id}</TableCell>
                                             <TableCell>{order.createdAt.toDate().toLocaleString()}</TableCell>
+                                            <TableCell>{order.tableName || order.takeoutId || 'N/A'}</TableCell>
                                             <TableCell className="text-right font-mono">${order.subtotal.toFixed(2)}</TableCell>
                                         </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No sales in the selected period.')}</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={4} className="text-center h-24">{t('No sales in the selected period.')}</TableCell></TableRow>
                                     )}
                                     </TableBody>
                                 </Table>
