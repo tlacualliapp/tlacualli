@@ -334,7 +334,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
   const handlePrintTicket = () => {
     if (!order) return;
-    
+
     const ticketHTML = `
       <html>
         <head>
@@ -389,16 +389,22 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         </body>
       </html>
     `;
-
+    
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write(ticketHTML);
-      printWindow.document.close();
-      printWindow.focus(); // Focus on the new window
-      printWindow.print();
-      // printWindow.close(); // Optional: close the window after printing
+        printWindow.document.write(ticketHTML);
+        printWindow.document.close();
+        printWindow.onload = function() {
+            printWindow.focus();
+            printWindow.print();
+            // printWindow.close(); // You might want to close it after printing
+        };
     } else {
-      toast({ variant: 'destructive', title: t('Error'), description: t('Could not open print window. Please allow pop-ups for this site.') });
+        toast({
+            variant: 'destructive',
+            title: t('Error'),
+            description: t('Could not open print window. Please disable your pop-up blocker.'),
+        });
     }
   };
 
@@ -531,7 +537,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                 <DialogTitle>{t('Register Payment')}</DialogTitle>
                 <DialogDescription>{t('Confirm the payment details to close the order.')}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
                 <div className="space-y-2">
                     <Label htmlFor="paidAmount">{t('Paid Amount')}</Label>
                     <Input id="paidAmount" type="number" value={(paymentData.paidAmount || 0).toFixed(2)} readOnly />
