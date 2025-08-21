@@ -540,6 +540,22 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const totalIvaInRange = totalSubtotalInRange * 0.16;
   const totalSalesInRange = totalSubtotalInRange + totalIvaInRange;
 
+  const totalProfitability = useMemo(() => {
+    return sortedAndFilteredProfitability.reduce(
+        (acc, item) => {
+            acc.totalRevenue += item.totalRevenue;
+            acc.totalCost += item.totalCost;
+            acc.netProfit += item.netProfit;
+            return acc;
+        },
+        { totalRevenue: 0, totalCost: 0, netProfit: 0 }
+    );
+  }, [sortedAndFilteredProfitability]);
+
+  const totalConsumptionCost = useMemo(() => {
+      return sortedAndFilteredConsumption.reduce((acc, item) => acc + item.totalCost, 0);
+  }, [sortedAndFilteredConsumption]);
+
   const setDatePreset = (preset: 'thisMonth' | 'lastMonth' | 'thisYear') => {
     const now = new Date();
     if (preset === 'thisMonth') {
@@ -759,58 +775,72 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                         onChange={(e) => setProfitabilitySearchTerm(e.target.value)}
                         className="max-w-sm"
                     />
-                     <div className="rounded-md border h-[500px] overflow-y-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>{t('Dish')}</TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('quantitySold')}>
-                                      <div className="flex items-center justify-end gap-1">
-                                        {t('Quantity Sold')} <ArrowUpDown className="h-3 w-3" />
-                                      </div>
-                                    </TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('totalRevenue')}>
-                                      <div className="flex items-center justify-end gap-1">
-                                        {t('Total Revenue')} <ArrowUpDown className="h-3 w-3" />
-                                      </div>
-                                    </TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('totalCost')}>
-                                      <div className="flex items-center justify-end gap-1">
-                                        {t('Total Cost')} <ArrowUpDown className="h-3 w-3" />
-                                      </div>
-                                    </TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('netProfit')}>
-                                      <div className="flex items-center justify-end gap-1">
-                                        {t('Net Profit')} <ArrowUpDown className="h-3 w-3" />
-                                      </div>
-                                    </TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('profitMargin')}>
-                                      <div className="flex items-center justify-end gap-1">
-                                        {t('Profit Margin')} <ArrowUpDown className="h-3 w-3" />
-                                      </div>
-                                    </TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {isProfitabilityLoading ? (
-                                    <TableRow><TableCell colSpan={6} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                                ) : sortedAndFilteredProfitability.length > 0 ? (
-                                    sortedAndFilteredProfitability.map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell className="font-medium">{item.name}</TableCell>
-                                            <TableCell className="text-right font-mono">{item.quantitySold}</TableCell>
-                                            <TableCell className="text-right font-mono text-green-600">${item.totalRevenue.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right font-mono text-red-600">${item.totalCost.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right font-mono font-bold">${item.netProfit.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right font-mono font-bold">{item.profitMargin.toFixed(1)}%</TableCell>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>{t('Profitability Summary')}</CardTitle>
+                            <CardDescription>
+                                <div className="flex flex-wrap gap-x-6 gap-y-1">
+                                    <span>{t('Total Revenue')}: <span className="font-bold text-green-600 ml-1">${totalProfitability.totalRevenue.toFixed(2)}</span></span>
+                                    <span>{t('Total Cost')}: <span className="font-bold text-red-600 ml-1">${totalProfitability.totalCost.toFixed(2)}</span></span>
+                                    <span>{t('Net Profit')}: <span className="font-bold text-primary ml-1">${totalProfitability.netProfit.toFixed(2)}</span></span>
+                                </div>
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="rounded-md border h-[500px] overflow-y-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>{t('Dish')}</TableHead>
+                                            <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('quantitySold')}>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {t('Quantity Sold')} <ArrowUpDown className="h-3 w-3" />
+                                            </div>
+                                            </TableHead>
+                                            <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('totalRevenue')}>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {t('Total Revenue')} <ArrowUpDown className="h-3 w-3" />
+                                            </div>
+                                            </TableHead>
+                                            <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('totalCost')}>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {t('Total Cost')} <ArrowUpDown className="h-3 w-3" />
+                                            </div>
+                                            </TableHead>
+                                            <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('netProfit')}>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {t('Net Profit')} <ArrowUpDown className="h-3 w-3" />
+                                            </div>
+                                            </TableHead>
+                                            <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('profitMargin')}>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {t('Profit Margin')} <ArrowUpDown className="h-3 w-3" />
+                                            </div>
+                                            </TableHead>
                                         </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow><TableCell colSpan={6} className="text-center h-24">{t('No profitability data for the selected period.')}</TableCell></TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {isProfitabilityLoading ? (
+                                            <TableRow><TableCell colSpan={6} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                        ) : sortedAndFilteredProfitability.length > 0 ? (
+                                            sortedAndFilteredProfitability.map(item => (
+                                                <TableRow key={item.id}>
+                                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                                    <TableCell className="text-right font-mono">{item.quantitySold}</TableCell>
+                                                    <TableCell className="text-right font-mono text-green-600">${item.totalRevenue.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right font-mono text-red-600">${item.totalCost.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right font-mono font-bold">${item.netProfit.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right font-mono font-bold">{item.profitMargin.toFixed(1)}%</TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={6} className="text-center h-24">{t('No profitability data for the selected period.')}</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
                 <TabsContent value="inventory-value" className="pt-4 space-y-4">
                     <div className="flex justify-between items-center">
@@ -863,12 +893,18 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     </div>
                 </TabsContent>
                  <TabsContent value="consumption" className="pt-4 space-y-4">
-                    <Input 
-                        placeholder={t('Filter by ingredient or category...')} 
-                        value={consumptionSearchTerm} 
-                        onChange={(e) => setConsumptionSearchTerm(e.target.value)}
-                        className="max-w-sm"
-                    />
+                    <div className="flex justify-between items-center">
+                        <Input 
+                            placeholder={t('Filter by ingredient or category...')} 
+                            value={consumptionSearchTerm} 
+                            onChange={(e) => setConsumptionSearchTerm(e.target.value)}
+                            className="max-w-sm"
+                        />
+                        <Card className="p-4">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{t('Total Consumption Cost')}</CardTitle>
+                            <p className="text-2xl font-bold text-primary">${totalConsumptionCost.toFixed(2)}</p>
+                        </Card>
+                    </div>
                     <div className="rounded-md border h-[500px] overflow-y-auto">
                         <Table>
                             <TableHeader>
