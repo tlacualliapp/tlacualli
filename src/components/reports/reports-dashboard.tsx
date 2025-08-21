@@ -140,7 +140,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tableNameFilter, setTableNameFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [profitabilitySearchTerm, setProfitabilitySearchTerm] = useState('');
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
   const [consumptionSearchTerm, setConsumptionSearchTerm] = useState('');
@@ -531,7 +531,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
   const filteredSalesReport = salesReportData.filter(order => {
     const orderName = (order.tableName || order.takeoutId || '').toLowerCase();
-    const statusMatch = statusFilter ? order.status === statusFilter : true;
+    const statusMatch = statusFilter === 'all' ? true : order.status === statusFilter;
     const nameMatch = orderName.includes(tableNameFilter.toLowerCase());
     return statusMatch && nameMatch;
   });
@@ -699,7 +699,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                                 <SelectValue placeholder={t('Filter by status...')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">{t('All Statuses')}</SelectItem>
+                                <SelectItem value="all">{t('All Statuses')}</SelectItem>
                                 <SelectItem value="paid">{t('Paid')}</SelectItem>
                                 <SelectItem value="served">{t('Served')}</SelectItem>
                                 <SelectItem value="cancelled">{t('Cancelled')}</SelectItem>
