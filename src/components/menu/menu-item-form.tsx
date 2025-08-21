@@ -28,6 +28,7 @@ interface MenuItem {
   availability?: string;
   imageUrl?: string;
   preparationResponsible?: string;
+  preparationTime?: number;
 }
 
 interface Recipe {
@@ -80,6 +81,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     categoryId: menuItemToEdit?.categoryId || '',
     imageUrl: menuItemToEdit?.imageUrl || '',
     preparationResponsible: menuItemToEdit?.preparationResponsible || '',
+    preparationTime: menuItemToEdit?.preparationTime || 0,
   });
 
   useEffect(() => {
@@ -127,13 +129,14 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         categoryId: menuItemToEdit.categoryId || '',
         imageUrl: menuItemToEdit.imageUrl || '',
         preparationResponsible: menuItemToEdit.preparationResponsible || '',
+        preparationTime: menuItemToEdit.preparationTime || 0,
       });
     }
   }, [menuItemToEdit]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    const isNumber = ['price'].includes(name);
+    const isNumber = ['price', 'preparationTime'].includes(name);
     setFormData(prev => ({ ...prev, [name]: isNumber ? Number(value) : value }));
   };
   
@@ -229,6 +232,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         categoryId: '',
         imageUrl: '',
         preparationResponsible: '',
+        preparationTime: 0,
       })
     } catch (error) {
       console.error("Error saving menu item:", error);
@@ -330,20 +334,26 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
             </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="preparationResponsible">{t('Responsable de preparación')}</Label>
-          <Select name="preparationResponsible" value={formData.preparationResponsible} onValueChange={(value) => handleSelectChange('preparationResponsible', value)}>
-              <SelectTrigger><SelectValue placeholder={t('Select a responsible')} /></SelectTrigger>
-              <SelectContent>
-                  {responsibles.map(resp => <SelectItem key={resp.id} value={resp.id}>{resp.name}</SelectItem>)}
-                  <SelectItem value="add_new" className="text-primary focus:text-primary-foreground">
-                    <div className="flex items-center">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      {t('Add new')}
-                    </div>
-                  </SelectItem>
-              </SelectContent>
-          </Select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="preparationResponsible">{t('Responsable de preparación')}</Label>
+              <Select name="preparationResponsible" value={formData.preparationResponsible} onValueChange={(value) => handleSelectChange('preparationResponsible', value)}>
+                  <SelectTrigger><SelectValue placeholder={t('Select a responsible')} /></SelectTrigger>
+                  <SelectContent>
+                      {responsibles.map(resp => <SelectItem key={resp.id} value={resp.id}>{resp.name}</SelectItem>)}
+                      <SelectItem value="add_new" className="text-primary focus:text-primary-foreground">
+                        <div className="flex items-center">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          {t('Add new')}
+                        </div>
+                      </SelectItem>
+                  </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="preparationTime">{t('Estimated preparation time (mins)')}</Label>
+                <Input id="preparationTime" name="preparationTime" type="number" value={formData.preparationTime} onChange={handleInputChange} required />
+            </div>
         </div>
         
         <div className="space-y-2">

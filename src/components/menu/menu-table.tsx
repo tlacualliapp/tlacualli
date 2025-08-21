@@ -26,6 +26,7 @@ interface MenuItem {
   categoryName?: string;
   preparationResponsible?: string;
   preparationResponsibleName?: string;
+  preparationTime?: number;
 }
 
 interface MenuTableProps {
@@ -131,9 +132,9 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>{t('DISH')}</TableHead>
-              <TableHead>{t('DESCRIPTION')}</TableHead>
               <TableHead>{t('CATEGORY')}</TableHead>
               <TableHead>{t('RESPONSIBLE')}</TableHead>
+              <TableHead className="text-right">{t('PREP. TIME')}</TableHead>
               <TableHead className="text-right">{t('PRICE')}</TableHead>
               <TableHead className="w-[50px]">{t('Actions')}</TableHead>
             </TableRow>
@@ -145,9 +146,9 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
                 items.map(item => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground truncate max-w-[200px]">{item.description}</TableCell>
                     <TableCell><Badge variant="outline">{item.categoryName}</Badge></TableCell>
                     <TableCell><Badge variant="secondary">{item.preparationResponsibleName}</Badge></TableCell>
+                    <TableCell className="text-right font-mono">{item.preparationTime ? `${item.preparationTime} min` : '-'}</TableCell>
                     <TableCell className="text-right font-mono">${item.price.toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                       <AlertDialog>
