@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, serverTimestamp, addDoc, runTransaction, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +18,9 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
-
+import { WhatsappIcon } from '../icons/whatsapp';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface OrderItem {
   id: string;
@@ -68,6 +70,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const { toast } = useToast();
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('');
+  const ticketRef = useRef<HTMLDivElement>(null);
 
 
   useEffect(() => {
@@ -283,19 +286,48 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     window.print();
   }
   
-  const handleSendWhatsApp = () => {
-     if (!whatsappNumber) {
+  const handleSendWhatsApp = async () => {
+    if (!whatsappNumber) {
       toast({ variant: 'destructive', title: t('Error'), description: t('Please enter a phone number.') });
       return;
     }
-    // Placeholder for actual WhatsApp integration
-    console.log(`Sending bill to ${whatsappNumber}...`);
-    toast({
-      title: t('Sending Bill'),
-      description: t('The bill is being sent to {{number}} via WhatsApp.', { number: whatsappNumber }),
-    });
-    setIsBillModalOpen(false);
-    setWhatsappNumber('');
+    if (!ticketRef.current || !order) {
+        toast({ variant: 'destructive', title: t('Error'), description: t('Could not generate the bill content.') });
+        return;
+    }
+    
+    try {
+        const canvas = await html2canvas(ticketRef.current, { scale: 2 });
+        const pdf = new jsPDF('p', 'mm', [80, 297]); // 80mm width ticket
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, imgHeight);
+
+        const billText = `Hola! Aquí está tu cuenta para la Mesa ${tableName}. Total: $${(order.subtotal * 1.16).toFixed(2)}. Gracias por tu visita!`;
+        
+        // This opens a new tab. It does not send the PDF directly, as WhatsApp Web API doesn't support that for un-saved contacts easily.
+        // It pre-fills the text message. The user then has to attach the downloaded PDF.
+        const whatsappUrl = `https://api.whatsapp.com/send/?phone=${whatsappNumber}&text=${encodeURIComponent(billText)}&type=phone_number&app_absent=0`;
+        window.open(whatsappUrl, '_blank');
+
+        pdf.save(`cuenta-mesa-${tableName}.pdf`);
+        
+        toast({
+        title: t('WhatsApp Ready'),
+        description: t('Your PDF bill is downloading. Please attach it to the WhatsApp chat that has opened.'),
+        });
+
+        setIsBillModalOpen(false);
+        setWhatsappNumber('');
+
+    } catch (error) {
+         toast({
+            variant: 'destructive',
+            title: t('PDF Error'),
+            description: t('Could not generate the PDF for the bill.'),
+        });
+    }
   }
 
 
@@ -325,6 +357,44 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
   return (
     <>
+      <div style={{ position: 'fixed', left: '-9999px', top: 0 }}>
+        <div ref={ticketRef} style={{ width: '302px', padding: '16px', fontFamily: 'monospace', fontSize: '12px', backgroundColor: 'white', color: 'black' }}>
+          {order && (
+            <>
+              <h2 style={{ textAlign: 'center', fontSize: '16px', margin: '0 0 10px 0' }}>Tlacualli Restaurant</h2>
+              <p style={{ textAlign: 'center', margin: '0' }}>Mesa: {tableName}</p>
+              <p style={{ textAlign: 'center', margin: '0 0 10px 0' }}>Fecha: {new Date().toLocaleString()}</p>
+              <hr style={{ borderTop: '1px dashed black', margin: '10px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                <span>Cant. Descripción</span>
+                <span>Importe</span>
+              </div>
+              <hr style={{ borderTop: '1px dashed black', margin: '5px 0' }} />
+              {order.items.map((item, index) => (
+                <div key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{item.quantity}x {item.name}</span>
+                  <span>${(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              ))}
+              <hr style={{ borderTop: '1px dashed black', margin: '10px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Subtotal:</span>
+                <span>${order.subtotal.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>IVA (16%):</span>
+                <span>${(order.subtotal * 0.16).toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '14px', marginTop: '5px' }}>
+                <span>TOTAL:</span>
+                <span>${(order.subtotal * 1.16).toFixed(2)}</span>
+              </div>
+              <p style={{ textAlign: 'center', marginTop: '15px' }}>¡Gracias por su visita!</p>
+            </>
+          )}
+        </div>
+      </div>
+
       <Dialog open={isBillModalOpen} onOpenChange={setIsBillModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -333,7 +403,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="space-y-4">
-              <h3 className="font-semibold">{t('Send via WhatsApp')}</h3>
+              <h3 className="font-semibold flex items-center gap-2"><WhatsappIcon className="h-5 w-5" /> {t('Send via WhatsApp')}</h3>
               <div className="flex items-center gap-2">
                 <Label htmlFor="whatsapp" className="sr-only">{t('Phone Number')}</Label>
                 <Input
@@ -345,7 +415,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                 />
                 <Button onClick={handleSendWhatsApp}>{t('Send')}</Button>
               </div>
-              <p className="text-xs text-muted-foreground">{t('This will send a PDF of the bill to the customer.')}</p>
+              <p className="text-xs text-muted-foreground">{t('This will open WhatsApp and prompt you to send the generated PDF.')}</p>
             </div>
             <Separator />
             <div className="space-y-4">
@@ -493,7 +563,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                       {t('Acknowledge Pickup')}
                   </Button>
               )}
-              <Button size="lg" variant="outline" className="w-full" onClick={() => setIsBillModalOpen(true)}>
+               <Button size="lg" variant="outline" className="w-full" onClick={() => setIsBillModalOpen(true)}>
                   <Printer className="mr-2 h-4 w-4" />
                   {t('Print Pre-ticket')}
               </Button>
@@ -549,5 +619,3 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     </>
   );
 };
-
-    
