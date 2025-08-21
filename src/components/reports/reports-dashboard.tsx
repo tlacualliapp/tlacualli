@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown } from 'lucide-react';
+import { BarChart, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,8 @@ import { DateRange } from 'react-day-picker';
 import { addDays, format, startOfMonth, endOfMonth, startOfYear, subMonths, endOfYear } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Badge } from '../ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface OrderItem {
   id: string;
@@ -105,10 +107,20 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   );
 };
 
+const statusColors: { [key: string]: string } = {
+  paid: 'bg-green-100 text-green-800',
+  served: 'bg-blue-100 text-blue-800',
+  cancelled: 'bg-red-100 text-red-800',
+  open: 'bg-yellow-100 text-yellow-800',
+  preparing: 'bg-purple-100 text-purple-800',
+};
+
+
 export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const { t } = useTranslation();
   const [dailySales, setDailySales] = useState(0);
   const [activeOrders, setActiveOrders] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [salesByCategory, setSalesByCategory] = useState<{ name: string, value: number }[]>([]);
   const [salesReportData, setSalesReportData] = useState<Order[]>([]);
   const [profitabilityReportData, setProfitabilityReportData] = useState<ProfitabilityData[]>([]);
@@ -127,8 +139,8 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   });
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [orderIdFilter, setOrderIdFilter] = useState('');
   const [tableNameFilter, setTableNameFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [profitabilitySearchTerm, setProfitabilitySearchTerm] = useState('');
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
   const [consumptionSearchTerm, setConsumptionSearchTerm] = useState('');
@@ -157,6 +169,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       const categorySales: { [key: string]: number } = {};
       
       const categoriesCache = new Map<string, string>();
+      setTotalOrders(snapshot.docs.length);
 
       const getCategoryName = async (categoryId: string) => {
         if (categoriesCache.has(categoryId)) {
@@ -180,7 +193,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         if (order.status === 'paid' || order.status === 'served') { // Count only completed sales
              totalSales += order.subtotal || 0;
         }
-        if (order.status === 'open' || order.status === 'preparing' || order.status === 'ready_for_pickup') {
+        if (order.status !== 'paid' && order.status !== 'cancelled') {
           activeCount++;
         }
         
@@ -226,8 +239,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
     const unsubscribe = onSnapshot(salesQuery, (snapshot) => {
       const salesData = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as Order))
-        .filter(order => order.status === 'paid' || order.status === 'served');
+        .map(doc => ({ id: doc.id, ...doc.data() } as Order));
       setSalesReportData(salesData);
       setIsSalesLoading(false);
     }, (error) => {
@@ -519,8 +531,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
   const filteredSalesReport = salesReportData.filter(order => {
     const orderName = (order.tableName || order.takeoutId || '').toLowerCase();
-    return order.id.toLowerCase().includes(orderIdFilter.toLowerCase()) &&
-           orderName.includes(tableNameFilter.toLowerCase());
+    const statusMatch = statusFilter ? order.status === statusFilter : true;
+    const nameMatch = orderName.includes(tableNameFilter.toLowerCase());
+    return statusMatch && nameMatch;
   });
 
   const totalSubtotalInRange = filteredSalesReport.reduce((acc, order) => acc + order.subtotal, 0);
@@ -577,10 +590,20 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{activeOrders}</div>
-                <p className="text-xs text-muted-foreground">{t('Number of orders currently in progress')}</p>
+                <p className="text-xs text-muted-foreground">{t('Orders not paid or cancelled')}</p>
               </CardContent>
             </Card>
-            <Card className="md:col-span-2">
+             <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('Total Orders Today')}</CardTitle>
+                <ListChecks className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalOrders}</div>
+                <p className="text-xs text-muted-foreground">{t('All orders created today')}</p>
+              </CardContent>
+            </Card>
+            <Card className="md:col-span-2 lg:col-span-1">
                <CardHeader>
                  <CardTitle className="text-sm font-medium">{t('Today\'s Sales by Category')}</CardTitle>
               </CardHeader>
@@ -667,15 +690,22 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                 <TabsContent value="sales" className="pt-4 space-y-4">
                      <div className="flex gap-4">
                         <Input 
-                            placeholder={t('Filter by Order ID...')} 
-                            value={orderIdFilter} 
-                            onChange={(e) => setOrderIdFilter(e.target.value)}
-                        />
-                        <Input 
                             placeholder={t('Filter by Table/Takeout...')}
                             value={tableNameFilter}
                             onChange={(e) => setTableNameFilter(e.target.value)}
                         />
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('Filter by status...')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">{t('All Statuses')}</SelectItem>
+                                <SelectItem value="paid">{t('Paid')}</SelectItem>
+                                <SelectItem value="served">{t('Served')}</SelectItem>
+                                <SelectItem value="cancelled">{t('Cancelled')}</SelectItem>
+                                <SelectItem value="open">{t('Open')}</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <Card>
                         <CardHeader>
@@ -693,9 +723,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                                 <Table>
                                     <TableHeader>
                                     <TableRow>
-                                        <TableHead>{t('Order ID')}</TableHead>
                                         <TableHead>{t('Date')}</TableHead>
-                                        <TableHead>{t('Table')}</TableHead>
+                                        <TableHead>{t('Table/Takeout')}</TableHead>
+                                        <TableHead>{t('Status')}</TableHead>
                                         <TableHead className="text-right">{t('Subtotal')}</TableHead>
                                         <TableHead className="text-right">{t('IVA (16%)')}</TableHead>
                                         <TableHead className="text-right">{t('Total')}</TableHead>
@@ -707,9 +737,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                                     ) : filteredSalesReport.length > 0 ? (
                                         filteredSalesReport.map(order => (
                                         <TableRow key={order.id} onClick={() => handleRowClick(order)} className="cursor-pointer">
-                                            <TableCell className="font-mono text-xs">{order.id}</TableCell>
                                             <TableCell>{order.createdAt.toDate().toLocaleString()}</TableCell>
                                             <TableCell>{order.tableName || order.takeoutId || 'N/A'}</TableCell>
+                                            <TableCell><Badge className={statusColors[order.status]}>{t(order.status)}</Badge></TableCell>
                                             <TableCell className="text-right font-mono">${order.subtotal.toFixed(2)}</TableCell>
                                             <TableCell className="text-right font-mono">${(order.subtotal * 0.16).toFixed(2)}</TableCell>
                                             <TableCell className="text-right font-mono font-bold">${(order.subtotal * 1.16).toFixed(2)}</TableCell>
@@ -921,6 +951,3 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     </div>
   );
 }
-
-
-
