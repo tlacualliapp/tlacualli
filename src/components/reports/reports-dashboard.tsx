@@ -60,7 +60,18 @@ interface ProfitabilityData {
   profitMargin: number;
 }
 
-type SortKey = keyof ProfitabilityData;
+interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  currentStock: number;
+  averageCost: number;
+  totalValue: number;
+}
+
+type SortKeyProfitability = keyof ProfitabilityData;
+type SortKeyInventory = keyof InventoryItem;
+
 
 interface ReportsDashboardProps {
   restaurantId: string;
@@ -87,21 +98,25 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [salesByCategory, setSalesByCategory] = useState<{ name: string, value: number }[]>([]);
   const [salesReportData, setSalesReportData] = useState<Order[]>([]);
   const [profitabilityReportData, setProfitabilityReportData] = useState<ProfitabilityData[]>([]);
+  const [valuedInventoryData, setValuedInventoryData] = useState<InventoryItem[]>([]);
   const [isSalesLoading, setIsSalesLoading] = useState(false);
   const [isProfitabilityLoading, setIsProfitabilityLoading] = useState(false);
+  const [isInventoryLoading, setIsInventoryLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('sales');
 
   const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(),
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
   });
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [orderIdFilter, setOrderIdFilter] = useState('');
   const [tableNameFilter, setTableNameFilter] = useState('');
   const [profitabilitySearchTerm, setProfitabilitySearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'ascending' | 'descending' } | null>({ key: 'netProfit', direction: 'descending' });
+  const [inventorySearchTerm, setInventorySearchTerm] = useState('');
 
+  const [profitabilitySortConfig, setProfitabilitySortConfig] = useState<{ key: SortKeyProfitability; direction: 'ascending' | 'descending' } | null>({ key: 'netProfit', direction: 'descending' });
+  const [inventorySortConfig, setInventorySortConfig] = useState<{ key: SortKeyInventory; direction: 'ascending' | 'descending' } | null>({ key: 'totalValue', direction: 'descending' });
 
   // Real-time stats effect
   useEffect(() => {
@@ -190,7 +205,8 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     );
 
     const unsubscribe = onSnapshot(salesQuery, (snapshot) => {
-      const salesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order))
+      const salesData = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Order))
         .filter(order => order.status === 'paid' || order.status === 'served');
       setSalesReportData(salesData);
       setIsSalesLoading(false);
@@ -275,12 +291,42 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     calculateProfitability();
   }, [restaurantId, date, activeTab]);
 
- const requestSort = (key: SortKey) => {
+  // Valued inventory effect
+  useEffect(() => {
+    if (!restaurantId || activeTab !== 'inventory-value') return;
+
+    setIsInventoryLoading(true);
+    const itemsQuery = query(collection(db, `restaurantes/${restaurantId}/inventoryItems`));
+
+    const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
+      const inventoryData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name,
+          category: data.category,
+          currentStock: data.currentStock,
+          averageCost: data.averageCost,
+          totalValue: data.currentStock * data.averageCost
+        } as InventoryItem;
+      });
+      setValuedInventoryData(inventoryData);
+      setIsInventoryLoading(false);
+    }, (error) => {
+      console.error("Error fetching inventory items:", error);
+      setIsInventoryLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [restaurantId, activeTab]);
+
+
+ const requestSortProfitability = (key: SortKeyProfitability) => {
     let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+    if (profitabilitySortConfig && profitabilitySortConfig.key === key && profitabilitySortConfig.direction === 'ascending') {
       direction = 'descending';
     }
-    setSortConfig({ key, direction });
+    setProfitabilitySortConfig({ key, direction });
   };
   
   const sortedAndFilteredProfitability = useMemo(() => {
@@ -292,20 +338,54 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         );
     }
 
-    if (sortConfig !== null) {
+    if (profitabilitySortConfig !== null) {
       sortableItems.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (a[profitabilitySortConfig.key] < b[profitabilitySortConfig.key]) {
+          return profitabilitySortConfig.direction === 'ascending' ? -1 : 1;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
+        if (a[profitabilitySortConfig.key] > b[profitabilitySortConfig.key]) {
+          return profitabilitySortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;
       });
     }
     return sortableItems;
-  }, [profitabilityReportData, sortConfig, profitabilitySearchTerm]);
+  }, [profitabilityReportData, profitabilitySortConfig, profitabilitySearchTerm]);
 
+  const requestSortInventory = (key: SortKeyInventory) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (inventorySortConfig && inventorySortConfig.key === key && inventorySortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setInventorySortConfig({ key, direction });
+  };
+  
+  const sortedAndFilteredInventory = useMemo(() => {
+    let sortableItems = [...valuedInventoryData];
+    if (inventorySearchTerm) {
+        sortableItems = sortableItems.filter(item => 
+            item.name.toLowerCase().includes(inventorySearchTerm.toLowerCase()) ||
+            item.category.toLowerCase().includes(inventorySearchTerm.toLowerCase())
+        );
+    }
+
+    if (inventorySortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[inventorySortConfig.key] < b[inventorySortConfig.key]) {
+          return inventorySortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[inventorySortConfig.key] > b[inventorySortConfig.key]) {
+          return inventorySortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [valuedInventoryData, inventorySortConfig, inventorySearchTerm]);
+  
+  const totalInventoryValue = useMemo(() => {
+    return valuedInventoryData.reduce((acc, item) => acc + item.totalValue, 0);
+  }, [valuedInventoryData]);
 
 
   const filteredSalesReport = salesReportData.filter(order => {
@@ -414,7 +494,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                 <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="sales"><TrendingUp className="mr-2"/>{t('Sales Report')}</TabsTrigger>
                     <TabsTrigger value="profitability"><DollarSign className="mr-2"/>{t('Profitability Report')}</TabsTrigger>
-                    <TabsTrigger value="inventory-value" disabled><Package className="mr-2"/>{t('Valued Inventory')}</TabsTrigger>
+                    <TabsTrigger value="inventory-value"><Package className="mr-2"/>{t('Valued Inventory')}</TabsTrigger>
                     <TabsTrigger value="consumption" disabled><TrendingDown className="mr-2"/>{t('Consumption Report')}</TabsTrigger>
                 </TabsList>
                  <div className="flex flex-wrap items-center justify-end gap-2 py-4">
@@ -527,27 +607,27 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>{t('Dish')}</TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSort('quantitySold')}>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('quantitySold')}>
                                       <div className="flex items-center justify-end gap-1">
                                         {t('Quantity Sold')} <ArrowUpDown className="h-3 w-3" />
                                       </div>
                                     </TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSort('totalRevenue')}>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('totalRevenue')}>
                                       <div className="flex items-center justify-end gap-1">
                                         {t('Total Revenue')} <ArrowUpDown className="h-3 w-3" />
                                       </div>
                                     </TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSort('totalCost')}>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('totalCost')}>
                                       <div className="flex items-center justify-end gap-1">
                                         {t('Total Cost')} <ArrowUpDown className="h-3 w-3" />
                                       </div>
                                     </TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSort('netProfit')}>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('netProfit')}>
                                       <div className="flex items-center justify-end gap-1">
                                         {t('Net Profit')} <ArrowUpDown className="h-3 w-3" />
                                       </div>
                                     </TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSort('profitMargin')}>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortProfitability('profitMargin')}>
                                       <div className="flex items-center justify-end gap-1">
                                         {t('Profit Margin')} <ArrowUpDown className="h-3 w-3" />
                                       </div>
@@ -575,8 +655,55 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                         </Table>
                     </div>
                 </TabsContent>
-                <TabsContent value="inventory-value" className="pt-4">
-                     <p className="text-muted-foreground">{t('Total value of current inventory. Coming soon!')}</p>
+                <TabsContent value="inventory-value" className="pt-4 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <Input 
+                            placeholder={t('Filter by item or category...')} 
+                            value={inventorySearchTerm} 
+                            onChange={(e) => setInventorySearchTerm(e.target.value)}
+                            className="max-w-sm"
+                        />
+                        <Card className="p-4">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{t('Total Inventory Value')}</CardTitle>
+                            <p className="text-2xl font-bold text-primary">${totalInventoryValue.toFixed(2)}</p>
+                        </Card>
+                    </div>
+                    <div className="rounded-md border h-[500px] overflow-y-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t('Item')}</TableHead>
+                                    <TableHead>{t('Category')}</TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortInventory('currentStock')}>
+                                        <div className="flex items-center justify-end gap-1">{t('Stock')} <ArrowUpDown className="h-3 w-3" /></div>
+                                    </TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortInventory('averageCost')}>
+                                        <div className="flex items-center justify-end gap-1">{t('Unit Cost')} <ArrowUpDown className="h-3 w-3" /></div>
+                                    </TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortInventory('totalValue')}>
+                                        <div className="flex items-center justify-end gap-1">{t('Total Value')} <ArrowUpDown className="h-3 w-3" /></div>
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isInventoryLoading ? (
+                                    <TableRow><TableCell colSpan={5} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : sortedAndFilteredInventory.length > 0 ? (
+                                    sortedAndFilteredInventory.map(item => (
+                                        <TableRow key={item.id}>
+                                            <TableCell className="font-medium">{item.name}</TableCell>
+                                            <TableCell>{item.category}</TableCell>
+                                            <TableCell className="text-right font-mono">{item.currentStock}</TableCell>
+                                            <TableCell className="text-right font-mono">${item.averageCost.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right font-mono font-bold">${item.totalValue.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={5} className="text-center h-24">{t('No inventory items found.')}</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </TabsContent>
                  <TabsContent value="consumption" className="pt-4">
                      <p className="text-muted-foreground">{t('Most used supplies in a period. Coming soon!')}</p>
@@ -628,4 +755,5 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     </div>
   );
 }
+
 
