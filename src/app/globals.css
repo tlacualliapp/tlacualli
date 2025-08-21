@@ -82,21 +82,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #printable-ticket, #printable-ticket * {
-    visibility: visible;
-  }
-  #printable-ticket {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
-  .non-printable {
-    display: none;
-  }
-}

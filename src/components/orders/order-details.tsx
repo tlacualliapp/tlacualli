@@ -22,6 +22,7 @@ import { Input } from '../ui/input';
 import { WhatsappIcon } from '../icons/whatsapp';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface OrderItem {
   id: string;
@@ -76,6 +77,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const ticketRef = useRef<HTMLDivElement>(null);
+  const [printerType, setPrinterType] = useState<'thermal' | 'conventional'>('thermal');
 
 
   useEffect(() => {
@@ -288,15 +290,29 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
   
   const handlePrintTicket = () => {
-    const printContents = ticketRef.current?.innerHTML;
-    if (printContents) {
-      const originalContents = document.body.innerHTML;
-      document.body.innerHTML = printContents;
-      window.print();
-      document.body.innerHTML = originalContents;
-      // We might need to re-initialize the component state or reload the page after this.
-      // For simplicity, we just restore the content.
-       window.location.reload();
+    const ticketContent = ticketRef.current;
+    if (ticketContent) {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+            doc.open();
+            doc.write('<html><head><title>Print</title></head><body>');
+            doc.write(ticketContent.innerHTML);
+            doc.write('</body></html>');
+            doc.close();
+            
+            // Wait for content to load before printing
+            setTimeout(() => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                document.body.removeChild(iframe);
+            }, 500);
+        } else {
+             document.body.removeChild(iframe);
+        }
     }
   };
   
@@ -371,41 +387,50 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
   return (
     <>
-      <div id="printable-ticket" className="hidden">
-        <div ref={ticketRef} style={{ width: '302px', padding: '16px', fontFamily: 'monospace', fontSize: '12px', backgroundColor: 'white', color: 'black' }}>
-          {order && (
-            <>
-              <h2 style={{ textAlign: 'center', fontSize: '16px', margin: '0 0 10px 0' }}>Tlacualli Restaurant</h2>
-              <p style={{ textAlign: 'center', margin: '0' }}>Mesa: {tableName}</p>
-              <p style={{ textAlign: 'center', margin: '0 0 10px 0' }}>Fecha: {new Date().toLocaleString()}</p>
-              <hr style={{ borderTop: '1px dashed black', margin: '10px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                <span>Cant. Descripción</span>
-                <span>Importe</span>
-              </div>
-              <hr style={{ borderTop: '1px dashed black', margin: '5px 0' }} />
-              {order.items.map((item, index) => (
-                <div key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{item.quantity}x {item.name}</span>
-                  <span>${(item.price * item.quantity).toFixed(2)}</span>
-                </div>
-              ))}
-              <hr style={{ borderTop: '1px dashed black', margin: '10px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Subtotal:</span>
-                <span>${order.subtotal.toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>IVA (16%):</span>
-                <span>${(order.subtotal * 0.16).toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '14px', marginTop: '5px' }}>
-                <span>TOTAL:</span>
-                <span>${(order.subtotal * 1.16).toFixed(2)}</span>
-              </div>
-              <p style={{ textAlign: 'center', marginTop: '15px' }}>¡Gracias por su visita!</p>
-            </>
-          )}
+      <div className="hidden">
+        <div ref={ticketRef}>
+           <div style={{
+              width: printerType === 'thermal' ? '80mm' : '210mm',
+              padding: printerType === 'thermal' ? '5px' : '20px',
+              fontFamily: 'monospace',
+              fontSize: printerType === 'thermal' ? '12px' : '14px',
+              backgroundColor: 'white',
+              color: 'black'
+            }}>
+              {order && (
+                <>
+                  <h2 style={{ textAlign: 'center', fontSize: printerType === 'thermal' ? '16px' : '20px', margin: '0 0 10px 0' }}>Tlacualli Restaurant</h2>
+                  <p style={{ textAlign: 'center', margin: '0' }}>{t('Table')}: {tableName}</p>
+                  <p style={{ textAlign: 'center', margin: '0 0 10px 0' }}>{t('Date')}: {new Date().toLocaleString()}</p>
+                  <hr style={{ borderTop: '1px dashed black', margin: '10px 0' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                    <span>{t('Qty. Description')}</span>
+                    <span>{t('Amount')}</span>
+                  </div>
+                  <hr style={{ borderTop: '1px dashed black', margin: '5px 0' }} />
+                  {order.items.map((item, index) => (
+                    <div key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ maxWidth: '70%', wordBreak: 'break-word' }}>{item.quantity}x {item.name}</span>
+                      <span>${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <hr style={{ borderTop: '1px dashed black', margin: '10px 0' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{t('Subtotal')}:</span>
+                    <span>${order.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{t('IVA (16%)')}:</span>
+                    <span>${(order.subtotal * 0.16).toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: printerType === 'thermal' ? '14px' : '16px', marginTop: '5px' }}>
+                    <span>TOTAL:</span>
+                    <span>${(order.subtotal * 1.16).toFixed(2)}</span>
+                  </div>
+                  <p style={{ textAlign: 'center', marginTop: '15px' }}>{t('Thank you for your visit!')}</p>
+                </>
+              )}
+            </div>
         </div>
       </div>
 
@@ -434,6 +459,18 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
             <Separator />
             <div className="space-y-4">
                 <h3 className="font-semibold">{t('Print Ticket')}</h3>
+                 <div className="space-y-2">
+                    <Label htmlFor="printer-type">{t('Printer Type')}</Label>
+                     <Select value={printerType} onValueChange={(value: 'thermal' | 'conventional') => setPrinterType(value)}>
+                        <SelectTrigger id="printer-type">
+                            <SelectValue placeholder={t('Select printer type')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="thermal">{t('Thermal Printer (80mm)')}</SelectItem>
+                            <SelectItem value="conventional">{t('Conventional (A4)')}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
                 <Button variant="outline" className="w-full" onClick={handlePrintTicket}>
                     <Printer className="mr-2 h-4 w-4" />
                     {t('Print Physical Ticket')}
