@@ -22,6 +22,8 @@ import { Input } from '../ui/input';
 import { WhatsappIcon } from '../icons/whatsapp';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 
 interface OrderItem {
@@ -338,26 +340,29 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         <head>
           <title>Print Ticket</title>
           <style>
-            body { font-family: ${printerType === 'thermal' ? 'monospace' : 'sans-serif'}; margin: 0; padding: 10px; background-color: #fff; color: #000; }
+            body { font-family: ${printerType === 'thermal' ? "'Courier New', Courier, monospace" : "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"}; margin: 0; padding: 10px; background-color: #fff; color: #000; }
             .ticket { width: ${printerType === 'thermal' ? '80mm' : '100%'}; margin: 0 auto; }
             table { width: 100%; border-collapse: collapse; font-size: ${printerType === 'thermal' ? '12px' : '14px'}; }
             hr { border: none; border-top: 1px dashed #000; }
             h2 { font-size: ${printerType === 'thermal' ? '16px' : '20px'}; }
             th, td { padding: 2px; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .font-bold { font-weight: bold; }
           </style>
         </head>
         <body>
           <div class="ticket">
-            <h2 style="text-align: center; margin: 0 0 10px 0;">Tlacualli Restaurant</h2>
-            <p style="text-align: center; margin: 0;">${t('Table')}: ${tableName}</p>
-            <p style="text-align: center; margin: 0 0 10px 0;">${t('Date')}: ${new Date().toLocaleString()}</p>
+            <h2 class="text-center" style="margin: 0 0 10px 0;">Tlacualli Restaurant</h2>
+            <p class="text-center" style="margin: 0;">${t('Table')}: ${tableName}</p>
+            <p class="text-center" style="margin: 0 0 10px 0;">${t('Date')}: ${new Date().toLocaleString()}</p>
             <hr />
             <table>
               <thead>
                 <tr>
                   <th style="text-align: left;">${t('Qty')}</th>
                   <th style="text-align: left;">${t('Description')}</th>
-                  <th style="text-align: right;">${t('Amount')}</th>
+                  <th class="text-right">${t('Amount')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -365,37 +370,33 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                   <tr>
                     <td style="vertical-align: top;">${item.quantity}x</td>
                     <td style="word-break: break-all;">${item.name}</td>
-                    <td style="vertical-align: top; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+                    <td class="text-right" style="vertical-align: top;">$${(item.price * item.quantity).toFixed(2)}</td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
             <hr />
             <table>
-              <tr><td>${t('Subtotal')}:</td><td style="text-align: right;">$${order.subtotal.toFixed(2)}</td></tr>
-              <tr><td>${t('IVA (16%)')}:</td><td style="text-align: right;">$${(order.subtotal * 0.16).toFixed(2)}</td></tr>
+              <tr><td>${t('Subtotal')}:</td><td class="text-right">$${order.subtotal.toFixed(2)}</td></tr>
+              <tr><td>${t('IVA (16%)')}:</td><td class="text-right">$${(order.subtotal * 0.16).toFixed(2)}</td></tr>
             </table>
             <hr />
-            <table style="font-size: ${printerType === 'thermal' ? '16px' : '20px'}; font-weight: bold;">
-              <tr><td>TOTAL:</td><td style="text-align: right;">$${(order.subtotal * 1.16).toFixed(2)}</td></tr>
+            <table style="font-size: ${printerType === 'thermal' ? '16px' : '20px'};" class="font-bold">
+              <tr><td>TOTAL:</td><td class="text-right">$${(order.subtotal * 1.16).toFixed(2)}</td></tr>
             </table>
-            <p style="text-align: center; margin-top: 15px;">${t('Thank you for your visit!')}</p>
+            <p class="text-center" style="margin-top: 15px;">${t('Thank you for your visit!')}</p>
           </div>
-          <script>
-            window.onload = function() {
-              window.focus();
-              window.print();
-              window.onafterprint = function() { window.close(); }
-            }
-          </script>
         </body>
       </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'height=600,width=800');
+    const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(ticketHTML);
       printWindow.document.close();
+      printWindow.focus(); // Focus on the new window
+      printWindow.print();
+      // printWindow.close(); // Optional: close the window after printing
     } else {
       toast({ variant: 'destructive', title: t('Error'), description: t('Could not open print window. Please allow pop-ups for this site.') });
     }
@@ -411,14 +412,43 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not generate the bill content.') });
         return;
     }
+
+    const billContentEl = document.createElement('div');
+    billContentEl.innerHTML = `
+        <div id="bill-to-pdf" style="padding: 20px; font-family: sans-serif; color: #000; background: #fff;">
+            <h2>${t('Bill for')} ${t('Table')} ${tableName}</h2>
+            <hr />
+            ${order.items.map(item => `<p>${item.quantity}x ${item.name} - <b>$${(item.price * item.quantity).toFixed(2)}</b></p>`).join('')}
+            <hr />
+            <p>${t('Subtotal')}: $${order.subtotal.toFixed(2)}</p>
+            <p>${t('IVA (16%)')}: $${(order.subtotal * 0.16).toFixed(2)}</p>
+            <h3>Total: $${(order.subtotal * 1.16).toFixed(2)}</h3>
+            <hr />
+            <p>${t('Thank you for your visit!')}</p>
+        </div>
+    `;
+    document.body.appendChild(billContentEl);
     
-    const billText = order.items.map(item => `${item.quantity}x ${item.name} - $${(item.price * item.quantity).toFixed(2)}`).join('\n');
+    const canvas = await html2canvas(billContentEl.querySelector('#bill-to-pdf') as HTMLElement);
+    document.body.removeChild(billContentEl);
+
+    const pdf = new jsPDF();
+    const imgData = canvas.toDataURL('image/png');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    
+    // Instead of sending, we'll open WhatsApp with a pre-filled message.
+    // The user can then attach the downloaded PDF.
+    const billText = order.items.map(item => `${item.quantity}x ${item.name} - $${(item.price * item.quantity).toFixed(2)}`).join('\\n');
     const total = (order.subtotal * 1.16).toFixed(2);
-    const fullMessage = `${t('Hello! Here is your bill for')} ${t('Table')} ${tableName}:\n\n${billText}\n\nSubtotal: $${order.subtotal.toFixed(2)}\nIVA (16%): $${(order.subtotal * 0.16).toFixed(2)}\n*Total: $${total}*\n\n${t('Thank you for your visit!')}`;
+    const fullMessage = `${t('Hello! Here is your bill for')} ${t('Table')} ${tableName}:\\n\\n${billText}\\n\\nSubtotal: $${order.subtotal.toFixed(2)}\\nIVA (16%): $${(order.subtotal * 0.16).toFixed(2)}\\n*Total: $${total}*\\n\\n${t('Thank you for your visit!')}`;
     
     const whatsappUrl = `https://api.whatsapp.com/send/?phone=${whatsappNumber}&text=${encodeURIComponent(fullMessage)}&type=phone_number&app_absent=0`;
     window.open(whatsappUrl, '_blank');
     
+    pdf.save(`bill-${tableName}-${order.id.substring(0,5)}.pdf`);
+
     setIsBillModalOpen(false);
     setWhatsappNumber('');
   }
@@ -504,7 +534,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
             <div className="space-y-4 py-4">
                 <div className="space-y-2">
                     <Label htmlFor="paidAmount">{t('Paid Amount')}</Label>
-                    <Input id="paidAmount" type="number" value={paymentData.paidAmount} onChange={(e) => setPaymentData({...paymentData, paidAmount: Number(e.target.value)})} />
+                    <Input id="paidAmount" type="number" value={(paymentData.paidAmount || 0).toFixed(2)} readOnly />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="tip">{t('Tip')}</Label>
