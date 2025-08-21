@@ -38,6 +38,28 @@ interface Order {
   takeoutId?: string;
 }
 
+interface Recipe {
+  id: string;
+  cost: number;
+}
+
+interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  recipeId?: string;
+}
+
+interface ProfitabilityData {
+  id: string;
+  name: string;
+  quantitySold: number;
+  totalRevenue: number;
+  totalCost: number;
+  netProfit: number;
+  profitMargin: number;
+}
+
 interface ReportsDashboardProps {
   restaurantId: string;
 }
@@ -62,7 +84,11 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [activeOrders, setActiveOrders] = useState(0);
   const [salesByCategory, setSalesByCategory] = useState<{ name: string, value: number }[]>([]);
   const [salesReportData, setSalesReportData] = useState<Order[]>([]);
+  const [profitabilityReportData, setProfitabilityReportData] = useState<ProfitabilityData[]>([]);
   const [isSalesLoading, setIsSalesLoading] = useState(false);
+  const [isProfitabilityLoading, setIsProfitabilityLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('sales');
+
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date(),
@@ -109,8 +135,8 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       };
 
 
-      for (const doc of snapshot.docs) {
-        const order = doc.data() as Order;
+      for (const docSnap of snapshot.docs) {
+        const order = docSnap.data() as Order;
         if (order.status === 'paid' || order.status === 'served') { // Count only completed sales
              totalSales += order.subtotal || 0;
         }
@@ -143,7 +169,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
   // Sales report effect
   useEffect(() => {
-    if (!restaurantId || !date?.from) return;
+    if (!restaurantId || !date?.from || activeTab !== 'sales') return;
 
     setIsSalesLoading(true);
     const startDate = new Date(date.from);
@@ -170,7 +196,76 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
     return () => unsubscribe();
 
-  }, [restaurantId, date]);
+  }, [restaurantId, date, activeTab]);
+  
+   // Profitability report effect
+  useEffect(() => {
+    if (!restaurantId || !date?.from || activeTab !== 'profitability') return;
+
+    const calculateProfitability = async () => {
+      setIsProfitabilityLoading(true);
+
+      const startDate = new Date(date.from!);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = date.to ? new Date(date.to) : new Date(date.from!);
+      endDate.setHours(23, 59, 59, 999);
+
+      // 1. Fetch all menu items and recipes
+      const menuItemsQuery = getDocs(collection(db, `restaurantes/${restaurantId}/menuItems`));
+      const recipesQuery = getDocs(collection(db, `restaurantes/${restaurantId}/recipes`));
+      const [menuItemsSnap, recipesSnap] = await Promise.all([menuItemsQuery, recipesQuery]);
+
+      const menuItemsMap = new Map<string, MenuItem>(menuItemsSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as MenuItem]));
+      const recipesMap = new Map<string, Recipe>(recipesSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as Recipe]));
+      
+      // 2. Fetch all orders in range
+      const ordersQuery = query(
+        collection(db, `restaurantes/${restaurantId}/orders`),
+        where('createdAt', '>=', Timestamp.fromDate(startDate)),
+        where('createdAt', '<=', Timestamp.fromDate(endDate)),
+        where('status', 'in', ['paid', 'served'])
+      );
+      const ordersSnap = await getDocs(ordersQuery);
+
+      // 3. Process data
+      const profitabilityMap = new Map<string, { name: string; quantitySold: number; totalRevenue: number; totalCost: number }>();
+
+      ordersSnap.docs.forEach(orderDoc => {
+        const order = orderDoc.data() as Order;
+        order.items.forEach(item => {
+          const existing = profitabilityMap.get(item.id) || { name: item.name, quantitySold: 0, totalRevenue: 0, totalCost: 0 };
+          const menuItem = menuItemsMap.get(item.id);
+          const recipe = menuItem?.recipeId ? recipesMap.get(menuItem.recipeId) : undefined;
+          
+          existing.quantitySold += item.quantity;
+          existing.totalRevenue += item.price * item.quantity;
+          existing.totalCost += (recipe?.cost || 0) * item.quantity;
+
+          profitabilityMap.set(item.id, existing);
+        });
+      });
+      
+      const report: ProfitabilityData[] = Array.from(profitabilityMap.entries()).map(([id, data]) => {
+          const netProfit = data.totalRevenue - data.totalCost;
+          const profitMargin = data.totalRevenue > 0 ? (netProfit / data.totalRevenue) * 100 : 0;
+          return {
+              id,
+              name: data.name,
+              quantitySold: data.quantitySold,
+              totalRevenue: data.totalRevenue,
+              totalCost: data.totalCost,
+              netProfit,
+              profitMargin
+          }
+      });
+      
+      setProfitabilityReportData(report.sort((a,b) => b.netProfit - a.netProfit));
+      setIsProfitabilityLoading(false);
+    };
+
+    calculateProfitability();
+  }, [restaurantId, date, activeTab]);
+
 
   const filteredSalesReport = salesReportData.filter(order => {
     const orderName = (order.tableName || order.takeoutId || '').toLowerCase();
@@ -274,10 +369,10 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             <CardTitle>{t('Detailed Reports')}</CardTitle>
         </CardHeader>
         <CardContent>
-            <Tabs defaultValue="sales">
+            <Tabs defaultValue="sales" onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="sales"><TrendingUp className="mr-2"/>{t('Sales Report')}</TabsTrigger>
-                    <TabsTrigger value="profitability" disabled><DollarSign className="mr-2"/>{t('Profitability Report')}</TabsTrigger>
+                    <TabsTrigger value="profitability"><DollarSign className="mr-2"/>{t('Profitability Report')}</TabsTrigger>
                     <TabsTrigger value="inventory-value" disabled><Package className="mr-2"/>{t('Valued Inventory')}</TabsTrigger>
                     <TabsTrigger value="consumption" disabled><TrendingDown className="mr-2"/>{t('Consumption Report')}</TabsTrigger>
                 </TabsList>
@@ -382,8 +477,39 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="profitability" className="pt-4">
-                     <p className="text-muted-foreground">{t('Profitability analysis per dish. Coming soon!')}</p>
+                <TabsContent value="profitability" className="pt-4 space-y-4">
+                     <div className="rounded-md border h-[500px] overflow-y-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t('Dish')}</TableHead>
+                                    <TableHead className="text-right">{t('Quantity Sold')}</TableHead>
+                                    <TableHead className="text-right">{t('Total Revenue')}</TableHead>
+                                    <TableHead className="text-right">{t('Total Cost')}</TableHead>
+                                    <TableHead className="text-right">{t('Net Profit')}</TableHead>
+                                    <TableHead className="text-right">{t('Profit Margin')}</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isProfitabilityLoading ? (
+                                    <TableRow><TableCell colSpan={6} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : profitabilityReportData.length > 0 ? (
+                                    profitabilityReportData.map(item => (
+                                        <TableRow key={item.id}>
+                                            <TableCell className="font-medium">{item.name}</TableCell>
+                                            <TableCell className="text-right font-mono">{item.quantitySold}</TableCell>
+                                            <TableCell className="text-right font-mono text-green-600">${item.totalRevenue.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right font-mono text-red-600">${item.totalCost.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right font-mono font-bold">${item.netProfit.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right font-mono font-bold">{item.profitMargin.toFixed(1)}%</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={6} className="text-center h-24">{t('No profitability data for the selected period.')}</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </TabsContent>
                 <TabsContent value="inventory-value" className="pt-4">
                      <p className="text-muted-foreground">{t('Total value of current inventory. Coming soon!')}</p>
