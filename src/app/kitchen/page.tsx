@@ -3,15 +3,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, runTransaction, getDoc, getDocs, DocumentData, collectionGroup, limit } from 'firebase/firestore';
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { ChefHat, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { KitchenOrderCard, Order } from '@/components/kitchen/order-card';
+import { KitchenOrderCard, Order, OrderItem } from '@/components/kitchen/order-card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { getRestaurantIdForCurrentUser } from '@/lib/users';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+interface Recipe {
+    id: string;
+    ingredients: { itemId: string; quantity: number }[];
+}
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -61,33 +66,81 @@ export default function KitchenPage() {
   const handleItemStatusChange = async (orderId: string, itemId: string, newStatus: 'pending' | 'preparing' | 'ready') => {
     if (!restaurantId) return;
 
+    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
+    
     try {
-      const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
-      const currentOrder = orders.find(o => o.id === orderId);
-      if (!currentOrder) return;
-      
-      const updatedItems = currentOrder.items.map((item, index) => 
-        `${item.id}-${index}` === itemId ? { ...item, status: newStatus } : item
-      );
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) {
+                throw new Error("Order document not found.");
+            }
 
-      const allItemsReady = updatedItems.every(item => item.status === 'ready');
-      
-      const updatePayload: { items: typeof updatedItems, status?: 'ready_for_pickup'} = { items: updatedItems };
+            const currentOrder = { id: orderDoc.id, ...orderDoc.data() } as Order;
+            const itemIndex = currentOrder.items.findIndex((item, index) => `${item.id}-${index}` === itemId);
+            if (itemIndex === -1) {
+                throw new Error("Item not found in order.");
+            }
 
-      if (allItemsReady) {
-        updatePayload.status = 'ready_for_pickup';
-      }
+            const orderItem = currentOrder.items[itemIndex];
 
-      await updateDoc(orderRef, updatePayload);
-      
-      if(allItemsReady) {
-         toast({ title: t('Order Ready'), description: t('The order is now ready for pickup.') });
-      }
+            // If status is not changing or item is already ready, do nothing.
+            if (orderItem.status === newStatus || orderItem.status === 'ready') {
+                return;
+            }
+
+            const updatedItems = [...currentOrder.items];
+            updatedItems[itemIndex] = { ...orderItem, status: newStatus };
+
+            // Logic to deduct from inventory if item is marked as "ready"
+            if (newStatus === 'ready') {
+                // Find recipeId from menuItem
+                const menuItemRef = doc(db, `restaurantes/${restaurantId}/menuItems`, orderItem.id);
+                const menuItemSnap = await transaction.get(menuItemRef);
+                if (!menuItemSnap.exists() || !menuItemSnap.data().recipeId || menuItemSnap.data().recipeId === 'none') {
+                    console.log(`No recipe associated with menu item ${orderItem.name}. No inventory deducted.`);
+                } else {
+                    const recipeId = menuItemSnap.data().recipeId;
+                    const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, recipeId);
+                    const recipeSnap = await transaction.get(recipeRef);
+
+                    if (recipeSnap.exists()) {
+                        const recipe = recipeSnap.data() as Recipe;
+                        for (const ingredient of recipe.ingredients) {
+                            const inventoryItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, ingredient.itemId);
+                            const inventoryItemSnap = await transaction.get(inventoryItemRef);
+                            if (inventoryItemSnap.exists()) {
+                                const currentStock = inventoryItemSnap.data().currentStock || 0;
+                                const requiredQuantity = ingredient.quantity * orderItem.quantity;
+                                const newStock = currentStock - requiredQuantity;
+                                transaction.update(inventoryItemRef, { currentStock: newStock });
+                            }
+                        }
+                    }
+                }
+            }
+            
+            const allItemsReady = updatedItems.every(item => item.status === 'ready');
+            const updatePayload: { items: OrderItem[], status?: 'ready_for_pickup' } = { items: updatedItems };
+
+            if (allItemsReady) {
+                updatePayload.status = 'ready_for_pickup';
+            }
+
+            transaction.update(orderRef, updatePayload);
+        });
+        
+        // This toast is outside the transaction
+        if(newStatus === 'ready') {
+            const item = orders.find(o => o.id === orderId)?.items.find((item, index) => `${item.id}-${index}` === itemId);
+            toast({ title: t('Item Ready'), description: t('{{itemName}} is ready and inventory has been updated.', { itemName: item?.name }) });
+        }
 
     } catch (error) {
-       toast({ variant: 'destructive', title: t('Error'), description: t('Could not update item status.') });
+       console.error("Error updating item status:", error);
+       toast({ variant: 'destructive', title: t('Error'), description: t('Could not update item status. Reason: {{message}}', { message: (error as Error).message }) });
     }
   };
+
 
   const handleOrderReady = async (orderId: string) => {
     if (!restaurantId) return;
