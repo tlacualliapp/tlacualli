@@ -23,6 +23,7 @@ interface MenuItem {
   categoryId?: string;
   availability?: string;
   imageUrl?: string;
+  preparationResponsible?: string;
 }
 
 interface Recipe {
@@ -31,6 +32,11 @@ interface Recipe {
 }
 
 interface Category {
+  id: string;
+  name: string;
+}
+
+interface Responsible {
   id: string;
   name: string;
 }
@@ -47,8 +53,11 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   const [isLoading, setIsLoading] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [responsibles, setResponsibles] = useState<Responsible[]>([]);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [isAddResponsibleOpen, setIsAddResponsibleOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newResponsibleName, setNewResponsibleName] = useState('');
   const isEditMode = !!menuItemToEdit;
 
   const [formData, setFormData] = useState({
@@ -58,6 +67,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     recipeId: menuItemToEdit?.recipeId || '',
     categoryId: menuItemToEdit?.categoryId || '',
     imageUrl: menuItemToEdit?.imageUrl || '',
+    preparationResponsible: menuItemToEdit?.preparationResponsible || '',
   });
 
   useEffect(() => {
@@ -65,6 +75,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
 
     const recipesQuery = collection(db, `restaurantes/${restaurantId}/recipes`);
     const categoriesQuery = collection(db, `restaurantes/${restaurantId}/menuCategories`);
+    const responsiblesQuery = collection(db, `restaurantes/${restaurantId}/preparationResponsibles`);
 
     const unsubRecipes = onSnapshot(recipesQuery, (snapshot) => {
       const recipesList = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
@@ -75,10 +86,23 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       const categoriesList = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
       setCategories(categoriesList);
     });
+    
+    const unsubResponsibles = onSnapshot(responsiblesQuery, (snapshot) => {
+      const responsiblesList = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
+      if (responsiblesList.length === 0) {
+        // Seed initial data if empty
+        const initialResponsibles = [{ name: 'Cocina' }, { name: 'Mesero' }];
+        initialResponsibles.forEach(async (resp) => {
+            await addDoc(collection(db, `restaurantes/${restaurantId}/preparationResponsibles`), resp);
+        });
+      }
+      setResponsibles(responsiblesList);
+    });
 
     return () => {
       unsubRecipes();
       unsubCategories();
+      unsubResponsibles();
     };
   }, [restaurantId]);
   
@@ -91,6 +115,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         recipeId: menuItemToEdit.recipeId || '',
         categoryId: menuItemToEdit.categoryId || '',
         imageUrl: menuItemToEdit.imageUrl || '',
+        preparationResponsible: menuItemToEdit.preparationResponsible || '',
       });
     }
   }, [menuItemToEdit]);
@@ -104,6 +129,8 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   const handleSelectChange = (name: string, value: string) => {
      if (name === 'categoryId' && value === 'add_new') {
       setIsAddCategoryOpen(true);
+    } else if (name === 'preparationResponsible' && value === 'add_new') {
+        setIsAddResponsibleOpen(true);
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -123,6 +150,23 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     } catch (error) {
       console.error("Error adding category:", error);
       toast({ variant: 'destructive', title: t('Error'), description: t('Could not add the category.') });
+    }
+  };
+  
+   const handleAddResponsible = async () => {
+    if (!newResponsibleName.trim()) {
+      toast({ variant: 'destructive', title: t('Error'), description: t('Responsible name cannot be empty.') });
+      return;
+    }
+    try {
+      const collectionRef = collection(db, `restaurantes/${restaurantId}/preparationResponsibles`);
+      await addDoc(collectionRef, { name: newResponsibleName });
+      toast({ title: t('Responsible Added'), description: t('The new responsible has been added.') });
+      setNewResponsibleName('');
+      setIsAddResponsibleOpen(false);
+    } catch (error) {
+      console.error("Error adding responsible:", error);
+      toast({ variant: 'destructive', title: t('Error'), description: t('Could not add the responsible.') });
     }
   };
 
@@ -154,6 +198,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         recipeId: '',
         categoryId: '',
         imageUrl: '',
+        preparationResponsible: '',
       })
     } catch (error) {
       console.error("Error saving menu item:", error);
@@ -209,6 +254,21 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
                 </SelectContent>
               </Select>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="preparationResponsible">{t('Responsable de preparación')}</Label>
+            <Select name="preparationResponsible" value={formData.preparationResponsible} onValueChange={(value) => handleSelectChange('preparationResponsible', value)}>
+                <SelectTrigger><SelectValue placeholder={t('Select a responsible')} /></SelectTrigger>
+                <SelectContent>
+                    {responsibles.map(resp => <SelectItem key={resp.id} value={resp.id}>{resp.name}</SelectItem>)}
+                    <SelectItem value="add_new" className="text-primary focus:text-primary-foreground">
+                      <div className="flex items-center">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        {t('Add new')}
+                      </div>
+                    </SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
         </div>
         
         <div className="space-y-2">
@@ -242,6 +302,28 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddCategoryOpen(false)}>{t('Cancel')}</Button>
             <Button onClick={handleAddCategory}>{t('Save Category')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+       <Dialog open={isAddResponsibleOpen} onOpenChange={setIsAddResponsibleOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Add New Responsible')}</DialogTitle>
+            <DialogDescription>{t('Create a new responsible for preparation.')}</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="new-responsible-name">{t('Responsible Name')}</Label>
+            <Input 
+              id="new-responsible-name" 
+              value={newResponsibleName} 
+              onChange={(e) => setNewResponsibleName(e.target.value)} 
+              placeholder={t('e.g., Barista')}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddResponsibleOpen(false)}>{t('Cancel')}</Button>
+            <Button onClick={handleAddResponsible}>{t('Save Responsible')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

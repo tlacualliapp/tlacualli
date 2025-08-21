@@ -24,6 +24,8 @@ interface MenuItem {
   recipeName?: string; 
   categoryId: string;
   categoryName?: string;
+  preparationResponsible?: string;
+  preparationResponsibleName?: string;
 }
 
 interface MenuTableProps {
@@ -68,7 +70,18 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
           } catch (e) { console.error("Error fetching category", e)}
         }
 
-        return { id: docSnapshot.id, ...data, recipeName, categoryName } as MenuItem;
+        let preparationResponsibleName = t('Not specified');
+        if (data.preparationResponsible) {
+          try {
+            const responsibleRef = doc(db, `restaurantes/${restaurantId}/preparationResponsibles`, data.preparationResponsible);
+            const responsibleSnap = await getDoc(responsibleRef);
+            if(responsibleSnap.exists()){
+              preparationResponsibleName = responsibleSnap.data().name;
+            }
+          } catch(e) { console.error("Error fetching responsible", e) }
+        }
+
+        return { id: docSnapshot.id, ...data, recipeName, categoryName, preparationResponsibleName } as MenuItem;
       });
 
       const itemsData = await Promise.all(itemsDataPromises);
@@ -120,19 +133,21 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
               <TableHead>{t('DISH')}</TableHead>
               <TableHead>{t('DESCRIPTION')}</TableHead>
               <TableHead>{t('CATEGORY')}</TableHead>
+              <TableHead>{t('RESPONSIBLE')}</TableHead>
               <TableHead className="text-right">{t('PRICE')}</TableHead>
               <TableHead className="w-[50px]">{t('Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
               ) : items.length > 0 ? (
                 items.map(item => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="text-xs text-muted-foreground truncate max-w-[200px]">{item.description}</TableCell>
                     <TableCell><Badge variant="outline">{item.categoryName}</Badge></TableCell>
+                    <TableCell><Badge variant="secondary">{item.preparationResponsibleName}</Badge></TableCell>
                     <TableCell className="text-right font-mono">${item.price.toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                       <AlertDialog>
@@ -160,7 +175,7 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
                   </TableRow>
                 ))
               ) : (
-                <TableRow><TableCell colSpan={5} className="text-center h-24">{t('No menu items found.')}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center h-24">{t('No menu items found.')}</TableCell></TableRow>
               )}
           </TableBody>
         </Table>
