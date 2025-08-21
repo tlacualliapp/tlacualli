@@ -41,6 +41,11 @@ interface Order {
 interface Recipe {
   id: string;
   cost: number;
+  ingredients: {
+      itemId: string;
+      itemName: string;
+      quantity: number;
+  }[];
 }
 
 interface MenuItem {
@@ -69,8 +74,17 @@ interface InventoryItem {
   totalValue: number;
 }
 
+interface ConsumptionData {
+    id: string;
+    name: string;
+    category: string;
+    quantityConsumed: number;
+    totalCost: number;
+}
+
 type SortKeyProfitability = keyof ProfitabilityData;
 type SortKeyInventory = keyof InventoryItem;
+type SortKeyConsumption = keyof ConsumptionData;
 
 
 interface ReportsDashboardProps {
@@ -99,9 +113,12 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [salesReportData, setSalesReportData] = useState<Order[]>([]);
   const [profitabilityReportData, setProfitabilityReportData] = useState<ProfitabilityData[]>([]);
   const [valuedInventoryData, setValuedInventoryData] = useState<InventoryItem[]>([]);
+  const [consumptionReportData, setConsumptionReportData] = useState<ConsumptionData[]>([]);
+
   const [isSalesLoading, setIsSalesLoading] = useState(false);
   const [isProfitabilityLoading, setIsProfitabilityLoading] = useState(false);
   const [isInventoryLoading, setIsInventoryLoading] = useState(false);
+  const [isConsumptionLoading, setIsConsumptionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('sales');
 
   const [date, setDate] = useState<DateRange | undefined>({
@@ -114,9 +131,12 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [tableNameFilter, setTableNameFilter] = useState('');
   const [profitabilitySearchTerm, setProfitabilitySearchTerm] = useState('');
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
+  const [consumptionSearchTerm, setConsumptionSearchTerm] = useState('');
 
   const [profitabilitySortConfig, setProfitabilitySortConfig] = useState<{ key: SortKeyProfitability; direction: 'ascending' | 'descending' } | null>({ key: 'netProfit', direction: 'descending' });
   const [inventorySortConfig, setInventorySortConfig] = useState<{ key: SortKeyInventory; direction: 'ascending' | 'descending' } | null>({ key: 'totalValue', direction: 'descending' });
+  const [consumptionSortConfig, setConsumptionSortConfig] = useState<{ key: SortKeyConsumption; direction: 'ascending' | 'descending' } | null>({ key: 'totalCost', direction: 'descending' });
+
 
   // Real-time stats effect
   useEffect(() => {
@@ -320,6 +340,85 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     return () => unsubscribe();
   }, [restaurantId, activeTab]);
 
+  // Consumption report effect
+  useEffect(() => {
+    if (!restaurantId || !date?.from || activeTab !== 'consumption') return;
+
+    const calculateConsumption = async () => {
+      setIsConsumptionLoading(true);
+      
+      const startDate = new Date(date.from!);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = date.to ? new Date(date.to) : new Date(date.from!);
+      endDate.setHours(23, 59, 59, 999);
+
+      // 1. Fetch all needed data
+      const menuItemsQuery = getDocs(collection(db, `restaurantes/${restaurantId}/menuItems`));
+      const recipesQuery = getDocs(collection(db, `restaurantes/${restaurantId}/recipes`));
+      const inventoryQuery = getDocs(collection(db, `restaurantes/${restaurantId}/inventoryItems`));
+      const [menuItemsSnap, recipesSnap, inventorySnap] = await Promise.all([menuItemsQuery, recipesQuery, inventoryQuery]);
+
+      const menuItemsMap = new Map<string, MenuItem>(menuItemsSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as MenuItem]));
+      const recipesMap = new Map<string, Recipe>(recipesSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as Recipe]));
+      const inventoryItemsMap = new Map<string, InventoryItem>(inventorySnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as InventoryItem]));
+
+      // 2. Fetch orders in range
+      const ordersQuery = query(
+        collection(db, `restaurantes/${restaurantId}/orders`),
+        where('createdAt', '>=', Timestamp.fromDate(startDate)),
+        where('createdAt', '<=', Timestamp.fromDate(endDate))
+      );
+      const ordersSnap = await getDocs(ordersQuery);
+
+      // 3. Process data
+      const consumptionMap = new Map<string, { quantityConsumed: number; totalCost: number }>();
+      
+      ordersSnap.docs.forEach(orderDoc => {
+        const order = orderDoc.data() as Order;
+        if (order.status !== 'paid' && order.status !== 'served') return;
+
+        order.items.forEach(item => {
+          const menuItem = menuItemsMap.get(item.id);
+          const recipe = menuItem?.recipeId ? recipesMap.get(menuItem.recipeId) : undefined;
+          
+          if (recipe?.ingredients) {
+            recipe.ingredients.forEach(ingredient => {
+              const consumedQuantity = ingredient.quantity * item.quantity;
+              const inventoryItem = inventoryItemsMap.get(ingredient.itemId);
+              
+              if(inventoryItem) {
+                const consumedCost = consumedQuantity * inventoryItem.averageCost;
+                const existing = consumptionMap.get(ingredient.itemId) || { quantityConsumed: 0, totalCost: 0 };
+                
+                existing.quantityConsumed += consumedQuantity;
+                existing.totalCost += consumedCost;
+
+                consumptionMap.set(ingredient.itemId, existing);
+              }
+            });
+          }
+        });
+      });
+
+      const report: ConsumptionData[] = Array.from(consumptionMap.entries()).map(([id, data]) => {
+          const inventoryItem = inventoryItemsMap.get(id);
+          return {
+              id,
+              name: inventoryItem?.name || t('Unknown Item'),
+              category: inventoryItem?.category || t('Unknown Category'),
+              quantityConsumed: data.quantityConsumed,
+              totalCost: data.totalCost
+          }
+      });
+      
+      setConsumptionReportData(report);
+      setIsConsumptionLoading(false);
+    };
+
+    calculateConsumption();
+
+  }, [restaurantId, date, activeTab, t]);
+
 
  const requestSortProfitability = (key: SortKeyProfitability) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -386,6 +485,36 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const totalInventoryValue = useMemo(() => {
     return valuedInventoryData.reduce((acc, item) => acc + item.totalValue, 0);
   }, [valuedInventoryData]);
+
+  const requestSortConsumption = (key: SortKeyConsumption) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (consumptionSortConfig && consumptionSortConfig.key === key && consumptionSortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setConsumptionSortConfig({ key, direction });
+  };
+
+  const sortedAndFilteredConsumption = useMemo(() => {
+    let sortableItems = [...consumptionReportData];
+    if (consumptionSearchTerm) {
+        sortableItems = sortableItems.filter(item => 
+            item.name.toLowerCase().includes(consumptionSearchTerm.toLowerCase()) ||
+            item.category.toLowerCase().includes(consumptionSearchTerm.toLowerCase())
+        );
+    }
+    if (consumptionSortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[consumptionSortConfig.key] < b[consumptionSortConfig.key]) {
+          return consumptionSortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[consumptionSortConfig.key] > b[consumptionSortConfig.key]) {
+          return consumptionSortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [consumptionReportData, consumptionSortConfig, consumptionSearchTerm]);
 
 
   const filteredSalesReport = salesReportData.filter(order => {
@@ -495,7 +624,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     <TabsTrigger value="sales"><TrendingUp className="mr-2"/>{t('Sales Report')}</TabsTrigger>
                     <TabsTrigger value="profitability"><DollarSign className="mr-2"/>{t('Profitability Report')}</TabsTrigger>
                     <TabsTrigger value="inventory-value"><Package className="mr-2"/>{t('Valued Inventory')}</TabsTrigger>
-                    <TabsTrigger value="consumption" disabled><TrendingDown className="mr-2"/>{t('Consumption Report')}</TabsTrigger>
+                    <TabsTrigger value="consumption"><TrendingDown className="mr-2"/>{t('Consumption Report')}</TabsTrigger>
                 </TabsList>
                  <div className="flex flex-wrap items-center justify-end gap-2 py-4">
                      <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
@@ -705,8 +834,45 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                         </Table>
                     </div>
                 </TabsContent>
-                 <TabsContent value="consumption" className="pt-4">
-                     <p className="text-muted-foreground">{t('Most used supplies in a period. Coming soon!')}</p>
+                 <TabsContent value="consumption" className="pt-4 space-y-4">
+                    <Input 
+                        placeholder={t('Filter by ingredient or category...')} 
+                        value={consumptionSearchTerm} 
+                        onChange={(e) => setConsumptionSearchTerm(e.target.value)}
+                        className="max-w-sm"
+                    />
+                    <div className="rounded-md border h-[500px] overflow-y-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t('Ingredient')}</TableHead>
+                                    <TableHead>{t('Category')}</TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortConsumption('quantityConsumed')}>
+                                        <div className="flex items-center justify-end gap-1">{t('Quantity Consumed')} <ArrowUpDown className="h-3 w-3" /></div>
+                                    </TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortConsumption('totalCost')}>
+                                        <div className="flex items-center justify-end gap-1">{t('Cost of Consumption')} <ArrowUpDown className="h-3 w-3" /></div>
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                             <TableBody>
+                                {isConsumptionLoading ? (
+                                    <TableRow><TableCell colSpan={4} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : sortedAndFilteredConsumption.length > 0 ? (
+                                    sortedAndFilteredConsumption.map(item => (
+                                        <TableRow key={item.id}>
+                                            <TableCell className="font-medium">{item.name}</TableCell>
+                                            <TableCell>{t(item.category)}</TableCell>
+                                            <TableCell className="text-right font-mono">{item.quantityConsumed.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right font-mono font-bold">${item.totalCost.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={4} className="text-center h-24">{t('No consumption data for the selected period.')}</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </TabsContent>
             </Tabs>
         </CardContent>
@@ -755,5 +921,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     </div>
   );
 }
+
 
 
