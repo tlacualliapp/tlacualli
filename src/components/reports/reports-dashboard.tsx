@@ -222,8 +222,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       const ordersQuery = query(
         collection(db, `restaurantes/${restaurantId}/orders`),
         where('createdAt', '>=', Timestamp.fromDate(startDate)),
-        where('createdAt', '<=', Timestamp.fromDate(endDate)),
-        where('status', 'in', ['paid', 'served'])
+        where('createdAt', '<=', Timestamp.fromDate(endDate))
       );
       const ordersSnap = await getDocs(ordersQuery);
 
@@ -232,6 +231,11 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
       ordersSnap.docs.forEach(orderDoc => {
         const order = orderDoc.data() as Order;
+        // Client-side filtering for status
+        if (order.status !== 'paid' && order.status !== 'served') {
+            return;
+        }
+
         order.items.forEach(item => {
           const existing = profitabilityMap.get(item.id) || { name: item.name, quantitySold: 0, totalRevenue: 0, totalCost: 0 };
           const menuItem = menuItemsMap.get(item.id);
