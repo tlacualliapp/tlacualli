@@ -591,33 +591,27 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('Today\'s Sales')}</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("Today's Sales")}</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">${dailySales.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground">{t('Total completed sales for today')}</p>
+                <p className="text-xs text-muted-foreground pt-1 mt-1 border-t">
+                  ${(dailySales * 1.16).toFixed(2)} ({t('IVA included')})
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('Active Orders')}</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('Orders Volume')}</CardTitle>
                 <ClipboardList className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{activeOrders}</div>
+                <div className="text-2xl font-bold">{activeOrders} <span className="text-sm font-normal text-muted-foreground">/ {totalOrders} {t('Total')}</span></div>
               </CardContent>
             </Card>
-             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('Total Orders Today')}</CardTitle>
-                <ListChecks className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalOrders}</div>
-              </CardContent>
-            </Card>
-            <Card className="md:col-span-2 lg:col-span-1">
+             
+            <Card className="md:col-span-2">
                <CardHeader>
                  <CardTitle className="text-sm font-medium">{t('Today\'s Sales by Category')}</CardTitle>
               </CardHeader>
