@@ -48,7 +48,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TacoIcon } from '@/components/icons/logo';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '@/lib/firebase';
