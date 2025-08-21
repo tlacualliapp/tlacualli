@@ -15,6 +15,9 @@ import { Timestamp } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
 
 
 interface OrderItem {
@@ -63,6 +66,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const { t } = useTranslation();
   const [elapsedTime, setElapsedTime] = useState('00:00');
   const { toast } = useToast();
+  const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState('');
 
 
   useEffect(() => {
@@ -273,6 +278,26 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
          toast({ variant: 'destructive', title: t('Error'), description: t('Could not update order status.') });
     }
   }
+  
+  const handlePrintTicket = () => {
+    window.print();
+  }
+  
+  const handleSendWhatsApp = () => {
+     if (!whatsappNumber) {
+      toast({ variant: 'destructive', title: t('Error'), description: t('Please enter a phone number.') });
+      return;
+    }
+    // Placeholder for actual WhatsApp integration
+    console.log(`Sending bill to ${whatsappNumber}...`);
+    toast({
+      title: t('Sending Bill'),
+      description: t('The bill is being sent to {{number}} via WhatsApp.', { number: whatsappNumber }),
+    });
+    setIsBillModalOpen(false);
+    setWhatsappNumber('');
+  }
+
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -299,192 +324,230 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const pendingItemsCount = order.items?.filter(item => item.status !== 'ready').length || 0;
 
   return (
-    <div className="p-4 flex flex-col h-full">
-      <div className="flex justify-between items-start mb-1">
-        <div>
-            <h2 className="text-2xl font-bold font-headline">{t('Order Summary')}: {tableName}</h2>
-            {order.status === 'preparing' || order.status === 'ready_for_pickup' || order.status === 'served' ? (
-                <div className="text-sm text-muted-foreground">
-                    {order.status === 'served' ? t('Order Complete') : 
-                        (pendingItemsCount > 0 ? t('{{count}} items pending', { count: pendingItemsCount }) : t('All items ready'))
-                    }
-                </div>
-            ) : null}
-        </div>
-         {order.status === 'preparing' && !order.pickupAcknowledgedAt && (
-            <div className="flex items-center gap-2 text-sm font-semibold bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
-                <ChefHat className="h-4 w-4" />
-                <span>{elapsedTime}</span>
-            </div>
-        )}
-         {order.status === 'ready_for_pickup' && (
-             <div className="flex items-center gap-2 text-sm font-semibold bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full animate-pulse">
-                <BellRing className="h-4 w-4" />
-                <span>{t('Ready for pickup')}</span>
-            </div>
-         )}
-         {order.status === 'served' && (
-             <div className="flex items-center gap-2 text-sm font-semibold bg-green-100 text-green-700 px-3 py-1 rounded-full">
-                <CheckCircle className="h-4 w-4" />
-                <span>{t('Table Served')}</span>
-            </div>
-         )}
-      </div>
-      
-      <ScrollArea className="flex-grow pr-4 -mr-4 mb-4">
-        <Accordion type="multiple" defaultValue={order.subaccounts.map(sa => sa.id)} className="w-full">
-          {order.subaccounts.map(subAccount => {
-            const itemsInSubAccount = getItemsForSubAccount(subAccount.id);
-            const isSubAccountEmpty = itemsInSubAccount.length === 0;
-
-            return (
-            <AccordionItem value={subAccount.id} key={subAccount.id}>
-              <div className="flex items-center w-full group">
-                 <AccordionTrigger className="flex-grow p-2">
-                    <div className="flex justify-between items-center w-full">
-                        <span className="flex items-center">{subAccount.name}</span>
-                        <span className="font-mono pr-2">${getSubAccountTotal(subAccount.id).toFixed(2)}</span>
-                    </div>
-                </AccordionTrigger>
-                {isSubAccountEmpty && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100"
-                    onClick={(e) => { e.stopPropagation(); handleRemoveSubAccount(subAccount.id); }}
-                  >
-                      <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
+    <>
+      <Dialog open={isBillModalOpen} onOpenChange={setIsBillModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('Request Bill')}</DialogTitle>
+            <DialogDescription>{t('Choose how to deliver the bill to the customer.')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-4">
+              <h3 className="font-semibold">{t('Send via WhatsApp')}</h3>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="whatsapp" className="sr-only">{t('Phone Number')}</Label>
+                <Input
+                  id="whatsapp"
+                  type="tel"
+                  placeholder={t('Enter phone number')}
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                />
+                <Button onClick={handleSendWhatsApp}>{t('Send')}</Button>
               </div>
-              <AccordionContent>
-                <div className="space-y-3 pl-4">
-                  {itemsInSubAccount.map((item, index) => {
-                    const status = item.status || 'pending';
-                    const StatusIcon = statusInfo[status]?.icon;
-                    return (
-                        <div key={`${item.id}-${item.subAccountId}-${index}`} className="flex justify-between items-center group">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold">{item.quantity}x {item.name}</p>
-                                {order.status !== 'open' && StatusIcon && (
-                                    <Badge variant="outline" className={cn("text-xs py-0.5 px-1.5 h-auto", statusInfo[status].color)}>
-                                        <StatusIcon className="h-3 w-3 mr-1" />
-                                        {t(statusInfo[status].label)}
-                                    </Badge>
-                                )}
-                              </div>
-                               {item.notes && <p className="text-xs text-muted-foreground">- {item.notes}</p>}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
-                                {(order.status === 'open' || order.status === 'preparing') && (
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item)}>
-                                    <MinusCircle className="h-4 w-4" />
-                                  </Button>
-                                )}
-                            </div>
-                        </div>
-                    );
-                  })}
-                  <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => onAddItems(subAccount.id)}>
-                      <PlusCircle className="mr-2 h-4 w-4" /> {t('Add Item')}
-                  </Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          )})}
-        </Accordion>
-      </ScrollArea>
-      
-      <div className="flex items-center justify-center my-2">
-          <Button variant="outline" onClick={handleAddSubAccount}>
-              <Users className="mr-2 h-4 w-4" /> {t('Split Account')}
-          </Button>
-      </div>
-
-      <Separator className="my-4" />
-
-      <div className="space-y-2 text-lg">
-        <div className="flex justify-between">
-            <span className="text-muted-foreground">{t('Subtotal')}</span>
-            <span className="font-bold font-mono">${order.subtotal.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between">
-            <span className="text-muted-foreground">{t('Taxes (16%)')}</span>
-            <span className="font-bold font-mono">${(order.subtotal * 0.16).toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between font-bold text-xl">
-            <span>{t('Total')}</span>
-            <span className="font-mono">${(order.subtotal * 1.16).toFixed(2)}</span>
-        </div>
-      </div>
-
-       <div className="mt-6 space-y-2">
-            {order.status === 'open' && (
-                 <Button size="lg" className="w-full" onClick={handleSendToKitchen} disabled={!order.items || order.items.length === 0}>
-                    <Send className="mr-2 h-4 w-4" />
-                    {t('Send to Kitchen')}
-                </Button>
-            )}
-             {order.status === 'ready_for_pickup' && (
-                <Button size="lg" className="w-full" onClick={handleAcknowledgePickup}>
-                    <BellRing className="mr-2 h-4 w-4" />
-                    {t('Acknowledge Pickup')}
-                </Button>
-            )}
-            <Button size="lg" variant="outline" className="w-full">
-                <CircleDollarSign className="mr-2 h-4 w-4" />
-                {t('Go to Payment')}
-            </Button>
-            <Button size="lg" variant="outline" className="w-full">
-                <Printer className="mr-2 h-4 w-4" />
-                {t('Print Pre-ticket')}
-            </Button>
-            
-            <div className="grid grid-cols-2 gap-2">
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                         <Button size="lg" variant="destructive" className="w-full">
-                            <XCircle className="mr-2 h-4 w-4" />
-                            {t('Cancel Order')}
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {t('This action will permanently delete the current order. This cannot be undone.')}
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>{t('Go Back')}</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive hover:bg-destructive/90">{t('Yes, cancel order')}</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button size="lg" variant="secondary" className="w-full">
-                            {t('Close Order')}
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>{t('Finalize and Close Order')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {t('This will mark the order as paid and update the table status. This action cannot be undone.')}
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCloseOrder}>{t('Yes, close order')}</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+              <p className="text-xs text-muted-foreground">{t('This will send a PDF of the bill to the customer.')}</p>
             </div>
-      </div>
+            <Separator />
+            <div className="space-y-4">
+                <h3 className="font-semibold">{t('Print Ticket')}</h3>
+                <Button variant="outline" className="w-full" onClick={handlePrintTicket}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    {t('Print Physical Ticket')}
+                </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-    </div>
+      <div className="p-4 flex flex-col h-full">
+        <div className="flex justify-between items-start mb-1">
+          <div>
+              <h2 className="text-2xl font-bold font-headline">{t('Order Summary')}: {tableName}</h2>
+              {order.status === 'preparing' || order.status === 'ready_for_pickup' || order.status === 'served' ? (
+                  <div className="text-sm text-muted-foreground">
+                      {order.status === 'served' ? t('Order Complete') : 
+                          (pendingItemsCount > 0 ? t('{{count}} items pending', { count: pendingItemsCount }) : t('All items ready'))
+                      }
+                  </div>
+              ) : null}
+          </div>
+           {order.status === 'preparing' && !order.pickupAcknowledgedAt && (
+              <div className="flex items-center gap-2 text-sm font-semibold bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
+                  <ChefHat className="h-4 w-4" />
+                  <span>{elapsedTime}</span>
+              </div>
+          )}
+           {order.status === 'ready_for_pickup' && (
+               <div className="flex items-center gap-2 text-sm font-semibold bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full animate-pulse">
+                  <BellRing className="h-4 w-4" />
+                  <span>{t('Ready for pickup')}</span>
+              </div>
+           )}
+           {order.status === 'served' && (
+               <div className="flex items-center gap-2 text-sm font-semibold bg-green-100 text-green-700 px-3 py-1 rounded-full">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>{t('Table Served')}</span>
+              </div>
+           )}
+        </div>
+        
+        <ScrollArea className="flex-grow pr-4 -mr-4 mb-4">
+          <Accordion type="multiple" defaultValue={order.subaccounts.map(sa => sa.id)} className="w-full">
+            {order.subaccounts.map(subAccount => {
+              const itemsInSubAccount = getItemsForSubAccount(subAccount.id);
+              const isSubAccountEmpty = itemsInSubAccount.length === 0;
+
+              return (
+              <AccordionItem value={subAccount.id} key={subAccount.id}>
+                <div className="flex items-center w-full group">
+                   <AccordionTrigger className="flex-grow p-2">
+                      <div className="flex justify-between items-center w-full">
+                          <span className="flex items-center">{subAccount.name}</span>
+                          <span className="font-mono pr-2">${getSubAccountTotal(subAccount.id).toFixed(2)}</span>
+                      </div>
+                  </AccordionTrigger>
+                  {isSubAccountEmpty && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100"
+                      onClick={(e) => { e.stopPropagation(); handleRemoveSubAccount(subAccount.id); }}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <AccordionContent>
+                  <div className="space-y-3 pl-4">
+                    {itemsInSubAccount.map((item, index) => {
+                      const status = item.status || 'pending';
+                      const StatusIcon = statusInfo[status]?.icon;
+                      return (
+                          <div key={`${item.id}-${item.subAccountId}-${index}`} className="flex justify-between items-center group">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold">{item.quantity}x {item.name}</p>
+                                  {order.status !== 'open' && StatusIcon && (
+                                      <Badge variant="outline" className={cn("text-xs py-0.5 px-1.5 h-auto", statusInfo[status].color)}>
+                                          <StatusIcon className="h-3 w-3 mr-1" />
+                                          {t(statusInfo[status].label)}
+                                      </Badge>
+                                  )}
+                                </div>
+                                 {item.notes && <p className="text-xs text-muted-foreground">- {item.notes}</p>}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                  <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
+                                  {(order.status === 'open' || order.status === 'preparing') && (
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item)}>
+                                      <MinusCircle className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                              </div>
+                          </div>
+                      );
+                    })}
+                    <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => onAddItems(subAccount.id)}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> {t('Add Item')}
+                    </Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            )})}
+          </Accordion>
+        </ScrollArea>
+        
+        <div className="flex items-center justify-center my-2">
+            <Button variant="outline" onClick={handleAddSubAccount}>
+                <Users className="mr-2 h-4 w-4" /> {t('Split Account')}
+            </Button>
+        </div>
+
+        <Separator className="my-4" />
+
+        <div className="space-y-2 text-lg">
+          <div className="flex justify-between">
+              <span className="text-muted-foreground">{t('Subtotal')}</span>
+              <span className="font-bold font-mono">${order.subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+              <span className="text-muted-foreground">{t('Taxes (16%)')}</span>
+              <span className="font-bold font-mono">${(order.subtotal * 0.16).toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between font-bold text-xl">
+              <span>{t('Total')}</span>
+              <span className="font-mono">${(order.subtotal * 1.16).toFixed(2)}</span>
+          </div>
+        </div>
+
+         <div className="mt-6 space-y-2">
+              {order.status === 'open' && (
+                   <Button size="lg" className="w-full" onClick={handleSendToKitchen} disabled={!order.items || order.items.length === 0}>
+                      <Send className="mr-2 h-4 w-4" />
+                      {t('Send to Kitchen')}
+                  </Button>
+              )}
+               {order.status === 'ready_for_pickup' && (
+                  <Button size="lg" className="w-full" onClick={handleAcknowledgePickup}>
+                      <BellRing className="mr-2 h-4 w-4" />
+                      {t('Acknowledge Pickup')}
+                  </Button>
+              )}
+              <Button size="lg" variant="outline" className="w-full" onClick={() => setIsBillModalOpen(true)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  {t('Print Pre-ticket')}
+              </Button>
+              <Button size="lg" variant="outline" className="w-full">
+                  <CircleDollarSign className="mr-2 h-4 w-4" />
+                  {t('Go to Payment')}
+              </Button>
+              
+              <div className="grid grid-cols-2 gap-2">
+                   <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                           <Button size="lg" variant="destructive" className="w-full">
+                              <XCircle className="mr-2 h-4 w-4" />
+                              {t('Cancel Order')}
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                          <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              {t('This action will permanently delete the current order. This cannot be undone.')}
+                          </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                          <AlertDialogCancel>{t('Go Back')}</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive hover:bg-destructive/90">{t('Yes, cancel order')}</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                          <Button size="lg" variant="secondary" className="w-full">
+                              {t('Close Order')}
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                          <AlertDialogTitle>{t('Finalize and Close Order')}</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              {t('This will mark the order as paid and update the table status. This action cannot be undone.')}
+                          </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                          <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleCloseOrder}>{t('Yes, close order')}</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+              </div>
+        </div>
+
+      </div>
+    </>
   );
 };
+
+    
