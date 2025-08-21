@@ -7,12 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, PlusCircle } from 'lucide-react';
+import { Loader2, Save, PlusCircle, ChevronsUpDown, Check } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs, onSnapshot } from 'firebase/firestore';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { useTranslation } from 'react-i18next';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 interface MenuItem {
   id?: string;
@@ -20,6 +23,7 @@ interface MenuItem {
   description?: string;
   price?: number;
   recipeId?: string;
+  inventoryItemId?: string;
   categoryId?: string;
   availability?: string;
   imageUrl?: string;
@@ -29,6 +33,11 @@ interface MenuItem {
 interface Recipe {
   id: string;
   name: string;
+}
+
+interface InventoryItem {
+    id: string;
+    name: string;
 }
 
 interface Category {
@@ -52,12 +61,14 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [responsibles, setResponsibles] = useState<Responsible[]>([]);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [isAddResponsibleOpen, setIsAddResponsibleOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newResponsibleName, setNewResponsibleName] = useState('');
+  const [isComboboxOpen, setIsComboboxOpen] = useState(false);
   const isEditMode = !!menuItemToEdit;
 
   const [formData, setFormData] = useState({
@@ -65,6 +76,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     description: menuItemToEdit?.description || '',
     price: menuItemToEdit?.price || 0,
     recipeId: menuItemToEdit?.recipeId || '',
+    inventoryItemId: menuItemToEdit?.inventoryItemId || '',
     categoryId: menuItemToEdit?.categoryId || '',
     imageUrl: menuItemToEdit?.imageUrl || '',
     preparationResponsible: menuItemToEdit?.preparationResponsible || '',
@@ -73,24 +85,21 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   useEffect(() => {
     if (!restaurantId) return;
 
-    const recipesQuery = collection(db, `restaurantes/${restaurantId}/recipes`);
-    const categoriesQuery = collection(db, `restaurantes/${restaurantId}/menuCategories`);
-    const responsiblesQuery = collection(db, `restaurantes/${restaurantId}/preparationResponsibles`);
-
-    const unsubRecipes = onSnapshot(recipesQuery, (snapshot) => {
-      const recipesList = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
-      setRecipes(recipesList);
+    const unsubRecipes = onSnapshot(collection(db, `restaurantes/${restaurantId}/recipes`), (snapshot) => {
+      setRecipes(snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string })));
     });
 
-    const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
-      const categoriesList = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
-      setCategories(categoriesList);
+    const unsubInventory = onSnapshot(collection(db, `restaurantes/${restaurantId}/inventoryItems`), (snapshot) => {
+      setInventoryItems(snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string })));
     });
     
-    const unsubResponsibles = onSnapshot(responsiblesQuery, (snapshot) => {
+    const unsubCategories = onSnapshot(collection(db, `restaurantes/${restaurantId}/menuCategories`), (snapshot) => {
+      setCategories(snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string })));
+    });
+    
+    const unsubResponsibles = onSnapshot(collection(db, `restaurantes/${restaurantId}/preparationResponsibles`), (snapshot) => {
       const responsiblesList = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
       if (responsiblesList.length === 0) {
-        // Seed initial data if empty
         const initialResponsibles = [{ name: 'Cocina' }, { name: 'Mesero' }];
         initialResponsibles.forEach(async (resp) => {
             await addDoc(collection(db, `restaurantes/${restaurantId}/preparationResponsibles`), resp);
@@ -101,6 +110,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
 
     return () => {
       unsubRecipes();
+      unsubInventory();
       unsubCategories();
       unsubResponsibles();
     };
@@ -113,6 +123,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         description: menuItemToEdit.description || '',
         price: menuItemToEdit.price || 0,
         recipeId: menuItemToEdit.recipeId || '',
+        inventoryItemId: menuItemToEdit.inventoryItemId || '',
         categoryId: menuItemToEdit.categoryId || '',
         imageUrl: menuItemToEdit.imageUrl || '',
         preparationResponsible: menuItemToEdit.preparationResponsible || '',
@@ -136,12 +147,23 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         setFormData(prev => ({
             ...prev,
             recipeId: value,
+            inventoryItemId: '', // Reset inventory item if recipe is chosen
             name: selectedRecipe && value !== 'none' ? selectedRecipe.name : prev.name,
         }));
     } else {
         setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
+
+  const handleInventoryItemSelect = (value: string) => {
+    const selectedItem = inventoryItems.find(item => item.id === value);
+    setFormData(prev => ({
+      ...prev,
+      inventoryItemId: value,
+      name: selectedItem ? selectedItem.name : prev.name
+    }));
+    setIsComboboxOpen(false);
+  }
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
@@ -203,6 +225,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         description: '',
         price: 0,
         recipeId: '',
+        inventoryItemId: '',
         categoryId: '',
         imageUrl: '',
         preparationResponsible: '',
@@ -223,11 +246,57 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
             <Select name="recipeId" value={formData.recipeId} onValueChange={(value) => handleSelectChange('recipeId', value)}>
               <SelectTrigger><SelectValue placeholder={t('Select a recipe (optional)')} /></SelectTrigger>
               <SelectContent>
-                  <SelectItem value="none">{t('None (custom dish)')}</SelectItem>
+                  <SelectItem value="none">{t('None (direct from inventory)')}</SelectItem>
                 {recipes.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
               </SelectContent>
             </Select>
         </div>
+
+        {formData.recipeId === 'none' && (
+          <div className="space-y-2">
+            <Label>{t('Select Inventory Item')}</Label>
+            <Popover open={isComboboxOpen} onOpenChange={setIsComboboxOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={isComboboxOpen}
+                  className="w-full justify-between"
+                >
+                  {formData.inventoryItemId
+                    ? inventoryItems.find((item) => item.id === formData.inventoryItemId)?.name
+                    : t('Select an item...')}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder={t('Search item...')} />
+                  <CommandEmpty>{t('No item found.')}</CommandEmpty>
+                  <CommandList>
+                    <CommandGroup>
+                      {inventoryItems.map((item) => (
+                        <CommandItem
+                          key={item.id}
+                          value={item.name}
+                          onSelect={() => handleInventoryItemSelect(item.id)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.inventoryItemId === item.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {item.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       
         <div className="space-y-2">
           <Label htmlFor="name">{t('Dish Name')}</Label>
