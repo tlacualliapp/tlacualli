@@ -25,6 +25,8 @@ interface MenuItem {
   description?: string;
   price: number;
   categoryId: string;
+  recipeId?: string;
+  inventoryItemId?: string;
 }
 
 interface OrderItem {
@@ -35,6 +37,8 @@ interface OrderItem {
   notes?: string;
   subAccountId: string;
   status?: 'pending' | 'preparing' | 'ready';
+  recipeId?: string;
+  inventoryItemId?: string;
 }
 
 interface SubAccount {
@@ -133,7 +137,9 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
                 quantity: 1, 
                 subAccountId: selectedSubAccountId,
                 status: 'pending',
-                notes: itemNotes.trim()
+                notes: itemNotes.trim(),
+                recipeId: selectedItemForNotes.recipeId,
+                inventoryItemId: selectedItemForNotes.inventoryItemId
             }];
 
             const newSubtotal = updatedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);

@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, serverTimestamp, addDoc, runTransaction, getDocs } from 'firebase/firestore';
+import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, serverTimestamp, addDoc, runTransaction, getDocs, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { Loader2, PlusCircle, Printer, CircleDollarSign, Send, ChefHat, XCircle, MinusCircle, Users, Trash2, BellRing, Timer, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,12 +20,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { WhatsappIcon } from '../icons/whatsapp';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface OrderItem {
-  id: string;
+  id: string; // This is the menuItemId
   name: string;
   quantity: number;
   price: number;
@@ -33,6 +31,8 @@ interface OrderItem {
   subAccountId: string;
   status?: 'pending' | 'preparing' | 'ready';
   categoryId?: string;
+  recipeId?: string;
+  inventoryItemId?: string;
 }
 
 interface SubAccount {
@@ -166,8 +166,18 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     }
   }
 
-  const handleRemoveItem = async (itemToRemove: OrderItem) => {
+  const handleRemoveItem = async (itemToRemove: OrderItem, itemIndex: number) => {
     if (!order || !restaurantId) return;
+
+    if (itemToRemove.status === 'ready' && itemToRemove.recipeId) {
+        toast({
+            variant: "destructive",
+            title: t("Cannot Remove"),
+            description: t("This item is already prepared and cannot be removed."),
+        });
+        return;
+    }
+
     const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
 
     try {
@@ -178,39 +188,34 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
             }
 
             let currentItems: OrderItem[] = orderDoc.data().items || [];
-            let updatedItems = [...currentItems];
-
-            const itemIndex = updatedItems.findIndex(i => i.id === itemToRemove.id && i.subAccountId === itemToRemove.subAccountId);
-            if (itemIndex > -1) {
-                if (updatedItems[itemIndex].quantity > 1) {
-                    updatedItems[itemIndex].quantity -= 1;
-                } else {
-                    updatedItems.splice(itemIndex, 1);
+            
+            // If it's a direct inventory item, we need to update its stock
+            if (!itemToRemove.recipeId && itemToRemove.inventoryItemId) {
+                const inventoryItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, itemToRemove.inventoryItemId);
+                const inventoryItemDoc = await transaction.get(inventoryItemRef);
+                if (inventoryItemDoc.exists()) {
+                    const newStock = (inventoryItemDoc.data().currentStock || 0) + 1; // Add one back
+                    transaction.update(inventoryItemRef, { currentStock: newStock });
                 }
             }
 
-            const newSubtotal = updatedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-            transaction.update(orderRef, { items: updatedItems, subtotal: newSubtotal });
+            // Remove item from order
+            currentItems.splice(itemIndex, 1);
+            const newSubtotal = currentItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+            transaction.update(orderRef, { items: currentItems, subtotal: newSubtotal });
         });
 
         toast({
             title: t('Item Removed'),
-            description: t('The item has been updated in the order.'),
+            description: t('The item has been removed from the order.'),
         });
-
-        if (order.status === 'preparing') {
-             toast({
-                variant: 'destructive',
-                title: t('Kitchen Notified'),
-                description: t('Item removed from order in preparation: {{itemName}}', { itemName: itemToRemove.name }),
-            });
-        }
 
     } catch (error) {
         console.error("Error removing item:", error);
         toast({ variant: "destructive", title: t("Error"), description: t("Could not remove the item.") });
     }
   };
+
 
   const handleCancelOrder = async () => {
     if(!order || !restaurantId) return;
@@ -349,17 +354,18 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
   const handlePrintTicket = () => {
     const ticketHTML = getTicketHTML();
-    const printWindow = window.open('', '_blank', 'height=600,width=800');
+    const printWindow = window.open('', '_blank');
+
     if (printWindow) {
-      printWindow.document.write(ticketHTML);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => { // Timeout to ensure content is loaded
-        printWindow.print();
-        printWindow.close();
-      }, 250);
+        printWindow.document.write(ticketHTML);
+        printWindow.document.close();
+        printWindow.onload = () => {
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        };
     } else {
-      toast({ variant: 'destructive', title: t('Error'), description: t('Could not open print window. Please allow pop-ups for this site.') });
+        toast({ variant: 'destructive', title: t('Error'), description: t('Could not open print window. Please allow pop-ups for this site.') });
     }
   };
 
@@ -373,45 +379,15 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         return;
     }
     
-    // Create a temporary div to render the ticket for canvas conversion
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.innerHTML = getTicketHTML();
-    document.body.appendChild(tempDiv);
+    const billText = order.items.map(item => `${item.quantity}x ${item.name} - $${(item.price * item.quantity).toFixed(2)}`).join('\n');
+    const total = (order.subtotal * 1.16).toFixed(2);
+    const fullMessage = `${t('Hello! Here is your bill for')} ${t('Table')} ${tableName}:\n\n${billText}\n\nSubtotal: $${order.subtotal.toFixed(2)}\nIVA (16%): $${(order.subtotal * 0.16).toFixed(2)}\n*Total: $${total}*\n\n${t('Thank you for your visit!')}`;
     
-    const ticketElement = tempDiv.querySelector('.ticket') as HTMLElement;
-
-    try {
-        const canvas = await html2canvas(ticketElement, { scale: 2 });
-        const pdf = new jsPDF('p', 'mm', [printerType === 'thermal' ? 80 : 210, 297]);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, imgHeight);
-
-        const billText = `${t('Hello! Here is your bill for')} ${t('Table')} ${tableName}. ${t('Total')}: $${(order.subtotal * 1.16).toFixed(2)}. ${t('Thank you for your visit!')}`;
-        const whatsappUrl = `https://api.whatsapp.com/send/?phone=${whatsappNumber}&text=${encodeURIComponent(billText)}&type=phone_number&app_absent=0`;
-        window.open(whatsappUrl, '_blank');
-        pdf.save(`${t('bill-table')}-${tableName}.pdf`);
-        
-        toast({
-            title: t('WhatsApp Ready'),
-            description: t('Your PDF bill is downloading. Please attach it to the WhatsApp chat that has opened.'),
-        });
-
-        setIsBillModalOpen(false);
-        setWhatsappNumber('');
-
-    } catch (error) {
-         toast({
-            variant: 'destructive',
-            title: t('PDF Error'),
-            description: t('Could not generate the PDF for the bill.'),
-        });
-    } finally {
-        document.body.removeChild(tempDiv);
-    }
+    const whatsappUrl = `https://api.whatsapp.com/send/?phone=${whatsappNumber}&text=${encodeURIComponent(fullMessage)}&type=phone_number&app_absent=0`;
+    window.open(whatsappUrl, '_blank');
+    
+    setIsBillModalOpen(false);
+    setWhatsappNumber('');
   }
 
 
@@ -461,7 +437,6 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                 />
                 <Button onClick={handleSendWhatsApp}>{t('Send')}</Button>
               </div>
-              <p className="text-xs text-muted-foreground">{t('This will open WhatsApp and prompt you to send the generated PDF.')}</p>
             </div>
             <Separator />
             <div className="space-y-4">
@@ -550,6 +525,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                     {itemsInSubAccount.map((item, index) => {
                       const status = item.status || 'pending';
                       const StatusIcon = statusInfo[status]?.icon;
+                      const canBeRemoved = !item.recipeId || item.status !== 'ready';
+                      
                       return (
                           <div key={`${item.id}-${item.subAccountId}-${index}`} className="flex justify-between items-center group">
                               <div>
@@ -566,8 +543,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                               </div>
                               <div className="flex items-center gap-2">
                                   <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
-                                  {(order.status === 'open' || order.status === 'preparing') && (
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item)}>
+                                  {canBeRemoved && (
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item, index)}>
                                       <MinusCircle className="h-4 w-4" />
                                     </Button>
                                   )}
@@ -633,7 +610,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
               <div className="grid grid-cols-2 gap-2">
                    <AlertDialog>
                       <AlertDialogTrigger asChild>
-                           <Button size="lg" variant="destructive" className="w-full">
+                           <Button size="lg" variant="destructive" className="w-full" disabled={order.status === 'served'}>
                               <XCircle className="mr-2 h-4 w-4" />
                               {t('Cancel Order')}
                           </Button>
