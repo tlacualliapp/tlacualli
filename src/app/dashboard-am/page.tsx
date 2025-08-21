@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RestaurantsTable } from '@/components/dashboard/restaurants-table';
 import { MasterUsersTable } from '@/components/dashboard/master-users-table';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getCountFromServer, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getCountFromServer, onSnapshot, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 
 export default function AdminMasterDashboard() {
@@ -24,50 +24,45 @@ export default function AdminMasterDashboard() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    const fetchCounts = async () => {
-      try {
-        const restaurantsQuery = query(collection(db, "restaurantes"), where("status", "==", "1"));
-        
-        // Simplified queries to avoid composite indexes
-        const allUsersQuery = query(collection(db, "usuarios"), where("status", "==", "1"));
+    const fetchInitialCounts = async () => {
+        try {
+            const restaurantsQuery = query(collection(db, "restaurantes"), where("status", "==", "1"));
+            const usersQuery = query(collection(db, "usuarios"), where("status", "==", "1"));
+            
+            const [restaurantsSnapshot, usersSnapshot] = await Promise.all([
+                getDocs(restaurantsQuery),
+                getDocs(usersQuery)
+            ]);
 
-        const [
-          restaurantsSnapshot,
-          usersSnapshot
-        ] = await Promise.all([
-          getCountFromServer(restaurantsQuery),
-          getCountFromServer(allUsersQuery)
-        ]);
+            let adminMasters = 0, admins = 0, collaborators = 0;
+            usersSnapshot.forEach(doc => {
+                const user = doc.data();
+                if (user.perfil === 'AM') adminMasters++;
+                else if (user.perfil === '1') admins++;
+                else if (user.perfil === '2') collaborators++;
+            });
 
-        // Client-side filtering
-        const usersDocs = (await getDocsFromServer(allUsersQuery)).docs;
-        const adminMasters = usersDocs.filter(doc => doc.data().perfil === 'AM').length;
-        const admins = usersDocs.filter(doc => doc.data().perfil === '1').length;
-        const collaborators = usersDocs.filter(doc => doc.data().perfil === '2').length;
-        
-        setStats({
-          restaurants: restaurantsSnapshot.data().count,
-          adminMasters,
-          admins,
-          collaborators,
-        });
-
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      } finally {
-        setIsLoading(false);
-      }
+            setStats({
+                restaurants: restaurantsSnapshot.size,
+                adminMasters,
+                admins,
+                collaborators,
+            });
+        } catch (error) {
+            console.error("Error fetching initial stats:", error);
+        } finally {
+            setIsLoading(false);
+        }
     };
     
-    // Initial fetch, getDocsFromServer is not a public API, so we will keep the original logic
-    // and just change the onSnapshot part.
-    // fetchCounts(); // This function is not ideal, we rely on onSnapshot
+    fetchInitialCounts();
 
     // Listener for real-time updates
-    const unsubRestaurants = onSnapshot(query(collection(db, "restaurantes"), where("status", "==", "1")), (snap) => setStats(s => ({...s, restaurants: snap.size})));
+    const unsubRestaurants = onSnapshot(query(collection(db, "restaurantes"), where("status", "==", "1")), (snap) => {
+        setStats(s => ({...s, restaurants: snap.size}));
+    });
     
-    const usersQuery = query(collection(db, "usuarios"), where("status", "==", "1"));
-    const unsubUsers = onSnapshot(usersQuery, (snap) => {
+    const unsubUsers = onSnapshot(query(collection(db, "usuarios"), where("status", "==", "1")), (snap) => {
         let adminMasters = 0, admins = 0, collaborators = 0;
         snap.forEach(doc => {
             const user = doc.data();
@@ -76,19 +71,13 @@ export default function AdminMasterDashboard() {
             else if (user.perfil === '2') collaborators++;
         });
         setStats(s => ({ ...s, adminMasters, admins, collaborators }));
-        if(isLoading) setIsLoading(false);
-    }, (error) => {
-        console.error("Error fetching users:", error);
-        if(isLoading) setIsLoading(false);
     });
-
 
     return () => {
       unsubRestaurants();
       unsubUsers();
     }
-
-  }, [isLoading]);
+  }, []);
 
 
   return (

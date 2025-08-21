@@ -46,11 +46,11 @@ export default function LoginPage() {
     }
 
     try {
-      // 1. Autenticar con Firebase Auth
+      // 1. Authenticate with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Consultar Firestore para verificar el perfil y estado
+      // 2. Query Firestore to check profile and status
       const q = query(
         collection(db, "usuarios"), 
         where("email", "==", user.email),
@@ -74,7 +74,7 @@ export default function LoginPage() {
         }
       }
 
-      // 3. Registrar en Monitor
+      // 3. Log to Monitor
        await addDoc(collection(db, "monitor"), {
             accion: "Inicio de sesion",
             usuarioNombre: `${userData.nombre} ${userData.apellidos}`,
@@ -89,7 +89,7 @@ export default function LoginPage() {
         description: t("Welcome back, {{name}}!", { name: userData.nombre }),
       });
 
-      // 4. Redirigir según el perfil
+      // 4. Redirect based on profile
       if (userData.perfil === 'AM') {
         router.push('/dashboard-am');
       } else if (userData.perfil === 1 || userData.perfil === '1') {
