@@ -590,7 +590,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{activeOrders}</div>
-                <p className="text-xs text-muted-foreground">{t('Orders not paid or cancelled')}</p>
               </CardContent>
             </Card>
              <Card>
@@ -600,7 +599,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalOrders}</div>
-                <p className="text-xs text-muted-foreground">{t('All orders created today')}</p>
               </CardContent>
             </Card>
             <Card className="md:col-span-2 lg:col-span-1">
@@ -951,3 +949,5 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     </div>
   );
 }
+
+    
