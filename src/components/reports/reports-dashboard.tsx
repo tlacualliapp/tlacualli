@@ -123,12 +123,12 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       collection(db, `restaurantes/${restaurantId}/orders`),
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
-      where('status', 'in', ['paid', 'served']),
       orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(salesQuery, (snapshot) => {
-      const salesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+      const salesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order))
+        .filter(order => order.status === 'paid' || order.status === 'served');
       setSalesReportData(salesData);
       setIsSalesLoading(false);
     });
