@@ -241,7 +241,7 @@ export default function OrdersPage() {
             type: 'dine-in',
             items: [],
             subtotal: 0,
-            subaccounts: [{ id: 'main', name: 'General' }],
+            subaccounts: [{ id: 'main', name: t('General') }],
             createdAt: serverTimestamp(),
             createdBy: user?.uid,
         });

@@ -92,7 +92,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
     const unsubOrder = onSnapshot(orderRef, (doc) => {
       if (doc.exists()) {
         const orderData = doc.data();
-        setSubAccounts(orderData.subaccounts || [{ id: 'main', name: 'General' }]);
+        setSubAccounts(orderData.subaccounts || [{ id: 'main', name: t('General') }]);
       }
     });
 
@@ -101,7 +101,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
       unsubItems();
       unsubOrder();
     };
-  }, [restaurantId, orderId]);
+  }, [restaurantId, orderId, t]);
   
   const openNotesModal = (item: MenuItem) => {
     setSelectedItemForNotes(item);
