@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, Timestamp, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -89,7 +89,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       let totalSales = 0;
       let activeCount = 0;
       const categorySales: { [key: string]: number } = {};
-      const categoryNames: { [key: string]: string } = {};
       
       const categoriesCache = new Map<string, string>();
 
