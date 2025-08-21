@@ -290,30 +290,35 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
   
   const handlePrintTicket = () => {
-    const ticketContent = ticketRef.current;
-    if (ticketContent) {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-        
-        const doc = iframe.contentWindow?.document;
-        if (doc) {
-            doc.open();
-            doc.write('<html><head><title>Print</title></head><body>');
-            doc.write(ticketContent.innerHTML);
-            doc.write('</body></html>');
-            doc.close();
-            
-            // Wait for content to load before printing
-            setTimeout(() => {
-                iframe.contentWindow?.focus();
-                iframe.contentWindow?.print();
-                document.body.removeChild(iframe);
-            }, 500);
-        } else {
-             document.body.removeChild(iframe);
-        }
+    const node = ticketRef.current;
+    if (!node) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+
+    document.body.appendChild(iframe);
+
+    const pri = iframe.contentWindow;
+    if (!pri) {
+      document.body.removeChild(iframe);
+      return;
     }
+
+    pri.document.open();
+    pri.document.write(node.innerHTML);
+    pri.document.close();
+
+    const handleLoad = () => {
+      pri.focus();
+      pri.print();
+      document.body.removeChild(iframe);
+      iframe.removeEventListener('load', handleLoad);
+    };
+
+    iframe.addEventListener('load', handleLoad);
   };
   
   const handleSendWhatsApp = async () => {
@@ -480,7 +485,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         </DialogContent>
       </Dialog>
 
-      <div className="p-4 flex flex-col h-full non-printable">
+      <div className="p-4 flex flex-col h-full">
         <div className="flex justify-between items-start mb-1">
           <div>
               <h2 className="text-2xl font-bold font-headline">{t('Order Summary')}: {tableName}</h2>
