@@ -17,7 +17,7 @@ import {
 
 const modules = [
   { href: '/orders', icon: ClipboardList, label: 'Orders', color: 'bg-yellow-500' },
-  { href: '/dashboard-admin/menu', icon: Utensils, label: 'Menu y recetas', color: 'bg-red-500' },
+  { href: '/dashboard-admin/menu', icon: Utensils, label: 'Menu & Recipes', color: 'bg-red-500' },
   { href: '/dashboard-admin/employees', icon: Users, label: 'Staff', color: 'bg-teal-500' },
   { href: '/dashboard-admin/inventory', icon: Package, label: 'Inventory', color: 'bg-orange-500' },
   { href: '/kitchen', icon: ChefHat, label: 'Kitchen', color: 'bg-gray-500' },
