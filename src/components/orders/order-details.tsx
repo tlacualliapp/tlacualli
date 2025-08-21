@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -30,6 +31,7 @@ interface OrderItem {
   notes?: string;
   subAccountId: string;
   status?: 'pending' | 'preparing' | 'ready';
+  categoryId?: string;
 }
 
 interface SubAccount {
@@ -45,6 +47,9 @@ interface Order {
   sentToKitchenAt?: Timestamp;
   pickupAcknowledgedAt?: Timestamp;
   subaccounts: SubAccount[];
+  tableName?: string;
+  takeoutId?: string;
+  createdAt: Timestamp;
 }
 
 interface OrderDetailsProps {
@@ -283,8 +288,17 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
   
   const handlePrintTicket = () => {
-    window.print();
-  }
+    const printContents = ticketRef.current?.innerHTML;
+    if (printContents) {
+      const originalContents = document.body.innerHTML;
+      document.body.innerHTML = printContents;
+      window.print();
+      document.body.innerHTML = originalContents;
+      // We might need to re-initialize the component state or reload the page after this.
+      // For simplicity, we just restore the content.
+       window.location.reload();
+    }
+  };
   
   const handleSendWhatsApp = async () => {
     if (!whatsappNumber) {
@@ -357,7 +371,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
   return (
     <>
-      <div style={{ position: 'fixed', left: '-9999px', top: 0 }}>
+      <div id="printable-ticket" className="hidden">
         <div ref={ticketRef} style={{ width: '302px', padding: '16px', fontFamily: 'monospace', fontSize: '12px', backgroundColor: 'white', color: 'black' }}>
           {order && (
             <>
@@ -429,7 +443,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         </DialogContent>
       </Dialog>
 
-      <div className="p-4 flex flex-col h-full">
+      <div className="p-4 flex flex-col h-full non-printable">
         <div className="flex justify-between items-start mb-1">
           <div>
               <h2 className="text-2xl font-bold font-headline">{t('Order Summary')}: {tableName}</h2>
@@ -563,11 +577,11 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                       {t('Acknowledge Pickup')}
                   </Button>
               )}
-               <Button size="lg" variant="outline" className="w-full" onClick={() => setIsBillModalOpen(true)}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  {t('Print Pre-ticket')}
+              <Button size="lg" variant="outline" className="w-full" onClick={() => setIsBillModalOpen(true)}>
+                <Printer className="mr-2 h-4 w-4" />
+                {t('Request Bill')}
               </Button>
-              <Button size="lg" variant="outline" className="w-full">
+               <Button size="lg" variant="outline" className="w-full">
                   <CircleDollarSign className="mr-2 h-4 w-4" />
                   {t('Go to Payment')}
               </Button>
