@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { addDays, format, startOfMonth, endOfMonth, startOfYear, subMonths } from 'date-fns';
+import { addDays, format, startOfMonth, endOfMonth, startOfYear, subMonths, endOfYear } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
@@ -25,6 +25,7 @@ interface OrderItem {
   price: number;
   notes?: string;
   subAccountId: string;
+  categoryId?: string;
 }
 
 interface Order {
@@ -89,13 +90,27 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       let activeCount = 0;
       const categorySales: { [key: string]: number } = {};
       const categoryNames: { [key: string]: string } = {};
+      
+      const categoriesCache = new Map<string, string>();
 
-      const categoriesSnapshot = await getDocs(collection(db, `restaurantes/${restaurantId}/menuCategories`));
-      categoriesSnapshot.forEach(doc => {
-        categoryNames[doc.id] = doc.data().name;
-      });
+      const getCategoryName = async (categoryId: string) => {
+        if (categoriesCache.has(categoryId)) {
+          return categoriesCache.get(categoryId);
+        }
+        try {
+          const categoryRef = doc(db, `restaurantes/${restaurantId}/menuCategories`, categoryId);
+          const categorySnap = await getDoc(categoryRef);
+          if (categorySnap.exists()) {
+            const name = categorySnap.data().name;
+            categoriesCache.set(categoryId, name);
+            return name;
+          }
+        } catch (e) { console.error("Error fetching category", e) }
+        return t('Uncategorized');
+      };
 
-      snapshot.docs.forEach(doc => {
+
+      for (const doc of snapshot.docs) {
         const order = doc.data() as Order;
         if (order.status === 'paid' || order.status === 'served') { // Count only completed sales
              totalSales += order.subtotal || 0;
@@ -105,18 +120,19 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         }
         
         if ((order.status === 'paid' || order.status === 'served') && order.items) {
-            order.items.forEach(item => {
-                const categoryId = (item as any).categoryId || 'uncategorized';
-                const categoryName = categoryNames[categoryId] || t('Uncategorized');
+            for (const item of order.items) {
+                const categoryId = item.categoryId || 'uncategorized';
+                const categoryName = await getCategoryName(categoryId);
                 const itemTotal = item.price * item.quantity;
+
                 if (categorySales[categoryName]) {
                     categorySales[categoryName] += itemTotal;
                 } else {
                     categorySales[categoryName] = itemTotal;
                 }
-            });
+            }
         }
-      });
+      }
 
       setDailySales(totalSales);
       setActiveOrders(activeCount);
@@ -131,7 +147,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     if (!restaurantId || !date?.from) return;
 
     setIsSalesLoading(true);
-    const startDate = date.from;
+    const startDate = new Date(date.from);
     startDate.setHours(0, 0, 0, 0);
     const endDate = date.to ? new Date(date.to) : new Date(date.from);
     endDate.setHours(23, 59, 59, 999);
@@ -148,6 +164,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         .filter(order => order.status === 'paid' || order.status === 'served');
       setSalesReportData(salesData);
       setIsSalesLoading(false);
+    }, (error) => {
+        console.error("Error fetching sales reports:", error)
+        setIsSalesLoading(false);
     });
 
     return () => unsubscribe();
@@ -160,7 +179,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
            orderName.includes(tableNameFilter.toLowerCase());
   });
 
-  const totalSalesInRange = filteredSalesReport.reduce((acc, order) => acc + order.subtotal, 0);
+  const totalSubtotalInRange = filteredSalesReport.reduce((acc, order) => acc + order.subtotal, 0);
+  const totalIvaInRange = totalSubtotalInRange * 0.16;
+  const totalSalesInRange = totalSubtotalInRange + totalIvaInRange;
 
   const setDatePreset = (preset: 'thisMonth' | 'lastMonth' | 'thisYear') => {
     const now = new Date();
@@ -319,8 +340,11 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                         <CardHeader>
                             <CardTitle>{t('Sales Summary')}</CardTitle>
                              <CardDescription>
-                                {t('Total sales for the selected period')}: 
-                                <span className="font-bold text-primary ml-2">${totalSalesInRange.toFixed(2)}</span>
+                                <div className="flex flex-wrap gap-x-6 gap-y-1">
+                                    <span>{t('Subtotal')}: <span className="font-bold text-primary ml-1">${totalSubtotalInRange.toFixed(2)}</span></span>
+                                    <span>{t('IVA (16%)')}: <span className="font-bold text-primary ml-1">${totalIvaInRange.toFixed(2)}</span></span>
+                                    <span>{t('Total')}: <span className="font-bold text-primary ml-1">${totalSalesInRange.toFixed(2)}</span></span>
+                                </div>
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -331,12 +355,14 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                                         <TableHead>{t('Order ID')}</TableHead>
                                         <TableHead>{t('Date')}</TableHead>
                                         <TableHead>{t('Table')}</TableHead>
+                                        <TableHead className="text-right">{t('Subtotal')}</TableHead>
+                                        <TableHead className="text-right">{t('IVA (16%)')}</TableHead>
                                         <TableHead className="text-right">{t('Total')}</TableHead>
                                     </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                     {isSalesLoading ? (
-                                        <TableRow><TableCell colSpan={4} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={6} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
                                     ) : filteredSalesReport.length > 0 ? (
                                         filteredSalesReport.map(order => (
                                         <TableRow key={order.id} onClick={() => handleRowClick(order)} className="cursor-pointer">
@@ -344,10 +370,12 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                                             <TableCell>{order.createdAt.toDate().toLocaleString()}</TableCell>
                                             <TableCell>{order.tableName || order.takeoutId || 'N/A'}</TableCell>
                                             <TableCell className="text-right font-mono">${order.subtotal.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right font-mono">${(order.subtotal * 0.16).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right font-mono font-bold">${(order.subtotal * 1.16).toFixed(2)}</TableCell>
                                         </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow><TableCell colSpan={4} className="text-center h-24">{t('No sales in the selected period.')}</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={6} className="text-center h-24">{t('No sales in the selected period.')}</TableCell></TableRow>
                                     )}
                                     </TableBody>
                                 </Table>
@@ -375,7 +403,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                 <DialogHeader>
                     <DialogTitle>{t('Order Detail')}: {selectedOrder.id.substring(0, 8)}...</DialogTitle>
                     <DialogDescription>
-                        {t('Table')}: {selectedOrder.tableName || selectedOrder.takeoutId} - {selectedOrder.createdAt.toDate().toLocaleString()}
+                         {t('Table')}: {selectedOrder.tableName || selectedOrder.takeoutId} - {selectedOrder.createdAt.toDate().toLocaleString()}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="max-h-96 overflow-y-auto pr-4 -mr-4">
@@ -411,5 +439,3 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     </div>
   );
 }
-
-    
