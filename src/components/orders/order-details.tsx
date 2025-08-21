@@ -75,7 +75,6 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const [elapsedTime, setElapsedTime] = useState('00:00');
   const { toast } = useToast();
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
-  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const ticketRef = useRef<HTMLDivElement>(null);
   const [printerType, setPrinterType] = useState<'thermal' | 'conventional'>('thermal');
@@ -289,41 +288,116 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
          toast({ variant: 'destructive', title: t('Error'), description: t('Could not update order status.') });
     }
   }
-  
-  const handlePrintTicket = () => {
-    window.print();
+
+  const getTicketHTML = () => {
+      if (!order) return '';
+
+      const width = printerType === 'thermal' ? '80mm' : '210mm';
+      const fontSize = printerType === 'thermal' ? '12px' : '14px';
+      const titleSize = printerType === 'thermal' ? '16px' : '20px';
+
+      const itemsHTML = order.items.map(item => `
+          <tr style="font-size: ${fontSize};">
+              <td style="vertical-align: top;">${item.quantity}x</td>
+              <td style="word-break: break-all;">${item.name}</td>
+              <td style="vertical-align: top; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+          </tr>
+      `).join('');
+
+      return `
+          <html>
+              <head>
+                  <title>Print Ticket</title>
+                  <style>
+                      body { font-family: monospace; margin: 0; padding: 10px; background-color: #fff; }
+                      .ticket { width: ${width}; margin: 0 auto; color: #000; }
+                      table { width: 100%; border-collapse: collapse; }
+                      hr { border-top: 1px dashed #000; }
+                  </style>
+              </head>
+              <body>
+                  <div class="ticket">
+                      <h2 style="text-align: center; font-size: ${titleSize}; margin: 0 0 10px 0;">Tlacualli Restaurant</h2>
+                      <p style="text-align: center; margin: 0;">${t('Table')}: ${tableName}</p>
+                      <p style="text-align: center; margin: 0 0 10px 0;">${t('Date')}: ${new Date().toLocaleString()}</p>
+                      <hr />
+                      <table>
+                          <thead>
+                              <tr>
+                                  <th style="text-align: left;">${t('Qty')}</th>
+                                  <th style="text-align: left;">${t('Description')}</th>
+                                  <th style="text-align: right;">${t('Amount')}</th>
+                              </tr>
+                          </thead>
+                          <tbody>${itemsHTML}</tbody>
+                      </table>
+                      <hr />
+                      <table style="font-size: ${fontSize};">
+                          <tr><td>${t('Subtotal')}:</td><td style="text-align: right;">$${order.subtotal.toFixed(2)}</td></tr>
+                          <tr><td>${t('IVA (16%)')}:</td><td style="text-align: right;">$${(order.subtotal * 0.16).toFixed(2)}</td></tr>
+                      </table>
+                      <hr />
+                      <table style="font-size: ${titleSize}; font-weight: bold;">
+                           <tr><td>TOTAL:</td><td style="text-align: right;">$${(order.subtotal * 1.16).toFixed(2)}</td></tr>
+                      </table>
+                      <p style="text-align: center; margin-top: 15px;">${t('Thank you for your visit!')}</p>
+                  </div>
+              </body>
+          </html>
+      `;
   };
-  
+
+  const handlePrintTicket = () => {
+    const ticketHTML = getTicketHTML();
+    const printWindow = window.open('', '_blank', 'height=600,width=800');
+    if (printWindow) {
+      printWindow.document.write(ticketHTML);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => { // Timeout to ensure content is loaded
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    } else {
+      toast({ variant: 'destructive', title: t('Error'), description: t('Could not open print window. Please allow pop-ups for this site.') });
+    }
+  };
+
   const handleSendWhatsApp = async () => {
     if (!whatsappNumber) {
       toast({ variant: 'destructive', title: t('Error'), description: t('Please enter a phone number.') });
       return;
     }
-    if (!ticketRef.current || !order) {
+    if (!order) {
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not generate the bill content.') });
         return;
     }
     
+    // Create a temporary div to render the ticket for canvas conversion
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.innerHTML = getTicketHTML();
+    document.body.appendChild(tempDiv);
+    
+    const ticketElement = tempDiv.querySelector('.ticket') as HTMLElement;
+
     try {
-        const canvas = await html2canvas(ticketRef.current, { scale: 2 });
-        const pdf = new jsPDF('p', 'mm', [80, 297]); // 80mm width ticket
+        const canvas = await html2canvas(ticketElement, { scale: 2 });
+        const pdf = new jsPDF('p', 'mm', [printerType === 'thermal' ? 80 : 210, 297]);
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const imgHeight = (canvas.height * pdfWidth) / canvas.width;
         
         pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, imgHeight);
 
-        const billText = `Hola! Aquí está tu cuenta para la Mesa ${tableName}. Total: $${(order.subtotal * 1.16).toFixed(2)}. Gracias por tu visita!`;
-        
-        // This opens a new tab. It does not send the PDF directly, as WhatsApp Web API doesn't support that for un-saved contacts easily.
-        // It pre-fills the text message. The user then has to attach the downloaded PDF.
+        const billText = `${t('Hello! Here is your bill for')} ${t('Table')} ${tableName}. ${t('Total')}: $${(order.subtotal * 1.16).toFixed(2)}. ${t('Thank you for your visit!')}`;
         const whatsappUrl = `https://api.whatsapp.com/send/?phone=${whatsappNumber}&text=${encodeURIComponent(billText)}&type=phone_number&app_absent=0`;
         window.open(whatsappUrl, '_blank');
-
-        pdf.save(`cuenta-mesa-${tableName}.pdf`);
+        pdf.save(`${t('bill-table')}-${tableName}.pdf`);
         
         toast({
-        title: t('WhatsApp Ready'),
-        description: t('Your PDF bill is downloading. Please attach it to the WhatsApp chat that has opened.'),
+            title: t('WhatsApp Ready'),
+            description: t('Your PDF bill is downloading. Please attach it to the WhatsApp chat that has opened.'),
         });
 
         setIsBillModalOpen(false);
@@ -335,6 +409,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
             title: t('PDF Error'),
             description: t('Could not generate the PDF for the bill.'),
         });
+    } finally {
+        document.body.removeChild(tempDiv);
     }
   }
 
@@ -363,59 +439,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
   const pendingItemsCount = order.items?.filter(item => item.status !== 'ready').length || 0;
   
-  const TicketContent = ({isForPrint = false}) => (
-      <div ref={isForPrint ? ticketRef : null} className={isForPrint ? 'printable-area' : ''}>
-           <div style={{
-              width: printerType === 'thermal' ? '80mm' : '210mm',
-              padding: printerType === 'thermal' ? '5px' : '20px',
-              fontFamily: 'monospace',
-              fontSize: printerType === 'thermal' ? '12px' : '14px',
-              backgroundColor: 'white',
-              color: 'black'
-            }}>
-              {order && (
-                <>
-                  <h2 style={{ textAlign: 'center', fontSize: printerType === 'thermal' ? '16px' : '20px', margin: '0 0 10px 0' }}>Tlacualli Restaurant</h2>
-                  <p style={{ textAlign: 'center', margin: '0' }}>{t('Table')}: {tableName}</p>
-                  <p style={{ textAlign: 'center', margin: '0 0 10px 0' }}>{t('Date')}: {new Date().toLocaleString()}</p>
-                  <hr style={{ borderTop: '1px dashed black', margin: '10px 0' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                    <span>{t('Qty. Description')}</span>
-                    <span>{t('Amount')}</span>
-                  </div>
-                  <hr style={{ borderTop: '1px dashed black', margin: '5px 0' }} />
-                  {order.items.map((item, index) => (
-                    <div key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ maxWidth: '70%', wordBreak: 'break-word' }}>{item.quantity}x {item.name}</span>
-                      <span>${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
-                  <hr style={{ borderTop: '1px dashed black', margin: '10px 0' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{t('Subtotal')}:</span>
-                    <span>${order.subtotal.toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{t('IVA (16%)')}:</span>
-                    <span>${(order.subtotal * 0.16).toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: printerType === 'thermal' ? '14px' : '16px', marginTop: '5px' }}>
-                    <span>TOTAL:</span>
-                    <span>${(order.subtotal * 1.16).toFixed(2)}</span>
-                  </div>
-                  <p style={{ textAlign: 'center', marginTop: '15px' }}>{t('Thank you for your visit!')}</p>
-                </>
-              )}
-            </div>
-        </div>
-  );
-
   return (
     <>
-      <div className="hidden print:block">
-        <TicketContent isForPrint={true} />
-      </div>
-
       <Dialog open={isBillModalOpen} onOpenChange={setIsBillModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -453,7 +478,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                         </SelectContent>
                     </Select>
                  </div>
-                <Button variant="outline" className="w-full" onClick={() => { setIsBillModalOpen(false); setIsPrintPreviewOpen(true); }}>
+                <Button variant="outline" className="w-full" onClick={handlePrintTicket}>
                     <Printer className="mr-2 h-4 w-4" />
                     {t('Print Physical Ticket')}
                 </Button>
@@ -462,21 +487,6 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         </DialogContent>
       </Dialog>
       
-      <Dialog open={isPrintPreviewOpen} onOpenChange={setIsPrintPreviewOpen}>
-        <DialogContent className="max-w-3xl">
-           <DialogHeader>
-                <DialogTitle>{t('Print Preview')}</DialogTitle>
-           </DialogHeader>
-            <div className="p-4 border rounded-md bg-white text-black">
-              <TicketContent />
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setIsPrintPreviewOpen(false)}>{t('Close')}</Button>
-                <Button onClick={handlePrintTicket}><Printer className="mr-2 h-4 w-4"/>{t('Print')}</Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <div className="p-4 flex flex-col h-full">
         <div className="flex justify-between items-start mb-1">
           <div>
