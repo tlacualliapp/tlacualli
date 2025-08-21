@@ -48,7 +48,7 @@ interface Order {
   id: string;
   items: OrderItem[];
   subtotal: number;
-  status: 'open' | 'preparing' | 'paid' | 'ready_for_pickup' | 'served';
+  status: 'open' | 'preparing' | 'paid' | 'ready_for_pickup' | 'served' | 'cancelled';
   sentToKitchenAt?: Timestamp;
   pickupAcknowledgedAt?: Timestamp;
   subaccounts: SubAccount[];
@@ -258,8 +258,10 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const handleCancelOrder = async () => {
     if(!order || !restaurantId) return;
     try {
-        await deleteDoc(doc(db, `restaurantes/${restaurantId}/orders`, order.id));
-        toast({ title: t('Order Cancelled'), description: t('The order has been completely removed.') });
+        const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
+        await updateDoc(orderRef, { status: 'cancelled' });
+
+        toast({ title: t('Order Cancelled'), description: t('The order has been marked as cancelled.') });
         
         if (order.status === 'preparing') {
              toast({
@@ -658,7 +660,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                     {itemsInSubAccount.map((item, index) => {
                       const status = item.status || 'pending';
                       const StatusIcon = statusInfo[status]?.icon;
-                      const canBeRemoved = !item.recipeId || item.status !== 'ready';
+                      const canBeRemoved = order.status === 'open' || (item.status !== 'ready' && !!item.recipeId) || !item.recipeId;
                       
                       return (
                           <div key={`${item.id}-${item.subAccountId}-${index}`} className="flex justify-between items-center group">
