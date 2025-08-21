@@ -127,12 +127,19 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   };
   
   const handleSelectChange = (name: string, value: string) => {
-     if (name === 'categoryId' && value === 'add_new') {
-      setIsAddCategoryOpen(true);
+    if (name === 'categoryId' && value === 'add_new') {
+        setIsAddCategoryOpen(true);
     } else if (name === 'preparationResponsible' && value === 'add_new') {
         setIsAddResponsibleOpen(true);
+    } else if (name === 'recipeId') {
+        const selectedRecipe = recipes.find(r => r.id === value);
+        setFormData(prev => ({
+            ...prev,
+            recipeId: value,
+            name: selectedRecipe && value !== 'none' ? selectedRecipe.name : prev.name,
+        }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -212,6 +219,17 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
+            <Label htmlFor="recipeId">{t('Select Recipe')}</Label>
+            <Select name="recipeId" value={formData.recipeId} onValueChange={(value) => handleSelectChange('recipeId', value)}>
+              <SelectTrigger><SelectValue placeholder={t('Select a recipe (optional)')} /></SelectTrigger>
+              <SelectContent>
+                  <SelectItem value="none">{t('None (custom dish)')}</SelectItem>
+                {recipes.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+        </div>
+      
+        <div className="space-y-2">
           <Label htmlFor="name">{t('Dish Name')}</Label>
           <Input id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder={t('e.g., Aztec Burger')} required />
         </div>
@@ -243,32 +261,20 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
             </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-              <Label htmlFor="recipeId">{t('Select Recipe')}</Label>
-              <Select name="recipeId" value={formData.recipeId} onValueChange={(value) => handleSelectChange('recipeId', value)}>
-                <SelectTrigger><SelectValue placeholder={t('Select a recipe (optional)')} /></SelectTrigger>
-                <SelectContent>
-                   <SelectItem value="none">{t('None')}</SelectItem>
-                  {recipes.map(rec => <SelectItem key={rec.id} value={rec.id}>{rec.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="preparationResponsible">{t('Responsable de preparación')}</Label>
-            <Select name="preparationResponsible" value={formData.preparationResponsible} onValueChange={(value) => handleSelectChange('preparationResponsible', value)}>
-                <SelectTrigger><SelectValue placeholder={t('Select a responsible')} /></SelectTrigger>
-                <SelectContent>
-                    {responsibles.map(resp => <SelectItem key={resp.id} value={resp.id}>{resp.name}</SelectItem>)}
-                    <SelectItem value="add_new" className="text-primary focus:text-primary-foreground">
-                      <div className="flex items-center">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        {t('Add new')}
-                      </div>
-                    </SelectItem>
-                </SelectContent>
-            </Select>
-        </div>
+        <div className="space-y-2">
+          <Label htmlFor="preparationResponsible">{t('Responsable de preparación')}</Label>
+          <Select name="preparationResponsible" value={formData.preparationResponsible} onValueChange={(value) => handleSelectChange('preparationResponsible', value)}>
+              <SelectTrigger><SelectValue placeholder={t('Select a responsible')} /></SelectTrigger>
+              <SelectContent>
+                  {responsibles.map(resp => <SelectItem key={resp.id} value={resp.id}>{resp.name}</SelectItem>)}
+                  <SelectItem value="add_new" className="text-primary focus:text-primary-foreground">
+                    <div className="flex items-center">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      {t('Add new')}
+                    </div>
+                  </SelectItem>
+              </SelectContent>
+          </Select>
         </div>
         
         <div className="space-y-2">
