@@ -76,7 +76,6 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const { toast } = useToast();
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('');
-  const ticketRef = useRef<HTMLDivElement>(null);
   const [printerType, setPrinterType] = useState<'thermal' | 'conventional'>('thermal');
 
 
@@ -351,7 +350,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
           </html>
       `;
   };
-
+  
   const handlePrintTicket = () => {
     const ticketHTML = getTicketHTML();
     const printWindow = window.open('', '_blank');
@@ -362,12 +361,20 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         printWindow.onload = () => {
             printWindow.focus();
             printWindow.print();
-            printWindow.close();
         };
+        // Some browsers, like Chrome, might close the window before the print dialog is confirmed by the user.
+        // We can add a small delay to the close, but it's not foolproof. The user might need to close it manually.
+        setTimeout(() => {
+            if (!printWindow.closed) {
+              // printWindow.close();
+            }
+        }, 500);
+
     } else {
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not open print window. Please allow pop-ups for this site.') });
     }
   };
+
 
   const handleSendWhatsApp = async () => {
     if (!whatsappNumber) {
@@ -543,11 +550,9 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                               </div>
                               <div className="flex items-center gap-2">
                                   <p className="font-mono">${(item.price * item.quantity).toFixed(2)}</p>
-                                  {canBeRemoved && (
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item, index)}>
-                                      <MinusCircle className="h-4 w-4" />
-                                    </Button>
-                                  )}
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveItem(item, index)} disabled={!canBeRemoved}>
+                                    <MinusCircle className="h-4 w-4" />
+                                  </Button>
                               </div>
                           </div>
                       );
