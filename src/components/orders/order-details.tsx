@@ -21,6 +21,8 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { WhatsappIcon } from '../icons/whatsapp';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Checkbox } from '../ui/checkbox';
+
 
 interface OrderItem {
   id: string; // This is the menuItemId
@@ -75,8 +77,19 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const [elapsedTime, setElapsedTime] = useState('00:00');
   const { toast } = useToast();
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [printerType, setPrinterType] = useState<'thermal' | 'conventional'>('thermal');
+  const [paymentData, setPaymentData] = useState({
+    paidAmount: 0,
+    tip: 0,
+    paymentMethod: '',
+    requiresInvoice: false,
+    invoiceName: '',
+    invoiceAddress: '',
+    invoiceRfc: '',
+    invoiceEmail: '',
+  });
 
 
   useEffect(() => {
@@ -104,6 +117,9 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                 });
             }
             setOrder(initialOrder);
+            // Pre-fill payment amount when order loads
+            setPaymentData(prev => ({ ...prev, paidAmount: initialOrder.subtotal * 1.16 }));
+
         } else {
             setOrder(null);
             console.warn(`Order with ID ${orderId} not found.`);
@@ -155,12 +171,27 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     
     try {
         const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
+        
+        // 1. Save payment information
+        const paymentRef = collection(db, `restaurantes/${restaurantId}/payments`);
+        await addDoc(paymentRef, {
+            orderId: order.id,
+            ...paymentData,
+            totalPaid: paymentData.paidAmount,
+            orderSubtotal: order.subtotal,
+            orderTotal: order.subtotal * 1.16,
+            paymentDate: serverTimestamp()
+        });
+
+        // 2. Update order status
         await updateDoc(orderRef, { status: 'paid' });
         
         toast({ title: t('Order Closed'), description: `${t('Table')} ${tableName} ${t('is now')} ${t('available')}.`});
+        setIsPaymentModalOpen(false);
         onOrderClosed();
 
     } catch(e) {
+        console.error(e)
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not close the order.')});
     }
   }
@@ -168,7 +199,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const handleRemoveItem = async (itemToRemove: OrderItem, itemIndex: number) => {
     if (!order || !restaurantId) return;
 
-    if (itemToRemove.status === 'ready' && itemToRemove.recipeId) {
+    if (itemToRemove.recipeId && itemToRemove.status === 'ready') {
         toast({
             variant: "destructive",
             title: t("Cannot Remove"),
@@ -188,12 +219,18 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
             let currentItems: OrderItem[] = orderDoc.data().items || [];
             
+            if (currentItems.length <= itemIndex) {
+              throw new Error("Item index out of bounds");
+            }
+            
+            const actualItemToRemove = currentItems[itemIndex];
+
             // If it's a direct inventory item, we need to update its stock
-            if (!itemToRemove.recipeId && itemToRemove.inventoryItemId) {
-                const inventoryItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, itemToRemove.inventoryItemId);
+            if (!actualItemToRemove.recipeId && actualItemToRemove.inventoryItemId) {
+                const inventoryItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, actualItemToRemove.inventoryItemId);
                 const inventoryItemDoc = await transaction.get(inventoryItemRef);
                 if (inventoryItemDoc.exists()) {
-                    const newStock = (inventoryItemDoc.data().currentStock || 0) + 1; // Add one back
+                    const newStock = (inventoryItemDoc.data().currentStock || 0) + actualItemToRemove.quantity;
                     transaction.update(inventoryItemRef, { currentStock: newStock });
                 }
             }
@@ -211,7 +248,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
     } catch (error) {
         console.error("Error removing item:", error);
-        toast({ variant: "destructive", title: t("Error"), description: t("Could not remove the item.") });
+        toast({ variant: "destructive", title: t("Error"), description: (error as Error).message || t("Could not remove the item.") });
     }
   };
 
@@ -293,85 +330,74 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     }
   }
 
-  const getTicketHTML = () => {
-      if (!order) return '';
-
-      const width = printerType === 'thermal' ? '80mm' : '210mm';
-      const fontSize = printerType === 'thermal' ? '12px' : '14px';
-      const titleSize = printerType === 'thermal' ? '16px' : '20px';
-
-      const itemsHTML = order.items.map(item => `
-          <tr style="font-size: ${fontSize};">
-              <td style="vertical-align: top;">${item.quantity}x</td>
-              <td style="word-break: break-all;">${item.name}</td>
-              <td style="vertical-align: top; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
-          </tr>
-      `).join('');
-
-      return `
-          <html>
-              <head>
-                  <title>Print Ticket</title>
-                  <style>
-                      body { font-family: monospace; margin: 0; padding: 10px; background-color: #fff; }
-                      .ticket { width: ${width}; margin: 0 auto; color: #000; }
-                      table { width: 100%; border-collapse: collapse; }
-                      hr { border-top: 1px dashed #000; }
-                  </style>
-              </head>
-              <body>
-                  <div class="ticket">
-                      <h2 style="text-align: center; font-size: ${titleSize}; margin: 0 0 10px 0;">Tlacualli Restaurant</h2>
-                      <p style="text-align: center; margin: 0;">${t('Table')}: ${tableName}</p>
-                      <p style="text-align: center; margin: 0 0 10px 0;">${t('Date')}: ${new Date().toLocaleString()}</p>
-                      <hr />
-                      <table>
-                          <thead>
-                              <tr>
-                                  <th style="text-align: left;">${t('Qty')}</th>
-                                  <th style="text-align: left;">${t('Description')}</th>
-                                  <th style="text-align: right;">${t('Amount')}</th>
-                              </tr>
-                          </thead>
-                          <tbody>${itemsHTML}</tbody>
-                      </table>
-                      <hr />
-                      <table style="font-size: ${fontSize};">
-                          <tr><td>${t('Subtotal')}:</td><td style="text-align: right;">$${order.subtotal.toFixed(2)}</td></tr>
-                          <tr><td>${t('IVA (16%)')}:</td><td style="text-align: right;">$${(order.subtotal * 0.16).toFixed(2)}</td></tr>
-                      </table>
-                      <hr />
-                      <table style="font-size: ${titleSize}; font-weight: bold;">
-                           <tr><td>TOTAL:</td><td style="text-align: right;">$${(order.subtotal * 1.16).toFixed(2)}</td></tr>
-                      </table>
-                      <p style="text-align: center; margin-top: 15px;">${t('Thank you for your visit!')}</p>
-                  </div>
-              </body>
-          </html>
-      `;
-  };
-  
   const handlePrintTicket = () => {
-    const ticketHTML = getTicketHTML();
-    const printWindow = window.open('', '_blank');
-
-    if (printWindow) {
-        printWindow.document.write(ticketHTML);
-        printWindow.document.close();
-        printWindow.onload = () => {
-            printWindow.focus();
-            printWindow.print();
-        };
-        // Some browsers, like Chrome, might close the window before the print dialog is confirmed by the user.
-        // We can add a small delay to the close, but it's not foolproof. The user might need to close it manually.
-        setTimeout(() => {
-            if (!printWindow.closed) {
-              // printWindow.close();
+    if (!order) return;
+    
+    const ticketHTML = `
+      <html>
+        <head>
+          <title>Print Ticket</title>
+          <style>
+            body { font-family: ${printerType === 'thermal' ? 'monospace' : 'sans-serif'}; margin: 0; padding: 10px; background-color: #fff; color: #000; }
+            .ticket { width: ${printerType === 'thermal' ? '80mm' : '100%'}; margin: 0 auto; }
+            table { width: 100%; border-collapse: collapse; font-size: ${printerType === 'thermal' ? '12px' : '14px'}; }
+            hr { border: none; border-top: 1px dashed #000; }
+            h2 { font-size: ${printerType === 'thermal' ? '16px' : '20px'}; }
+            th, td { padding: 2px; }
+          </style>
+        </head>
+        <body>
+          <div class="ticket">
+            <h2 style="text-align: center; margin: 0 0 10px 0;">Tlacualli Restaurant</h2>
+            <p style="text-align: center; margin: 0;">${t('Table')}: ${tableName}</p>
+            <p style="text-align: center; margin: 0 0 10px 0;">${t('Date')}: ${new Date().toLocaleString()}</p>
+            <hr />
+            <table>
+              <thead>
+                <tr>
+                  <th style="text-align: left;">${t('Qty')}</th>
+                  <th style="text-align: left;">${t('Description')}</th>
+                  <th style="text-align: right;">${t('Amount')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${order.items.map(item => `
+                  <tr>
+                    <td style="vertical-align: top;">${item.quantity}x</td>
+                    <td style="word-break: break-all;">${item.name}</td>
+                    <td style="vertical-align: top; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <hr />
+            <table>
+              <tr><td>${t('Subtotal')}:</td><td style="text-align: right;">$${order.subtotal.toFixed(2)}</td></tr>
+              <tr><td>${t('IVA (16%)')}:</td><td style="text-align: right;">$${(order.subtotal * 0.16).toFixed(2)}</td></tr>
+            </table>
+            <hr />
+            <table style="font-size: ${printerType === 'thermal' ? '16px' : '20px'}; font-weight: bold;">
+              <tr><td>TOTAL:</td><td style="text-align: right;">$${(order.subtotal * 1.16).toFixed(2)}</td></tr>
+            </table>
+            <p style="text-align: center; margin-top: 15px;">${t('Thank you for your visit!')}</p>
+          </div>
+          <script>
+            window.onload = function() {
+              window.focus();
+              window.print();
+              window.onafterprint = function() { window.close(); }
             }
-        }, 500);
+          </script>
+        </body>
+      </html>
+    `;
 
+    const printWindow = window.open('', '_blank', 'height=600,width=800');
+    if (printWindow) {
+      printWindow.document.write(ticketHTML);
+      printWindow.document.close();
     } else {
-        toast({ variant: 'destructive', title: t('Error'), description: t('Could not open print window. Please allow pop-ups for this site.') });
+      toast({ variant: 'destructive', title: t('Error'), description: t('Could not open print window. Please allow pop-ups for this site.') });
     }
   };
 
@@ -466,6 +492,70 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                 </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>{t('Register Payment')}</DialogTitle>
+                <DialogDescription>{t('Confirm the payment details to close the order.')}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="paidAmount">{t('Paid Amount')}</Label>
+                    <Input id="paidAmount" type="number" value={paymentData.paidAmount} onChange={(e) => setPaymentData({...paymentData, paidAmount: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="tip">{t('Tip')}</Label>
+                    <Input id="tip" type="number" value={paymentData.tip} onChange={(e) => setPaymentData({...paymentData, tip: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="paymentMethod">{t('Payment Method')}</Label>
+                    <Select value={paymentData.paymentMethod} onValueChange={(value) => setPaymentData({...paymentData, paymentMethod: value})}>
+                        <SelectTrigger>
+                            <SelectValue placeholder={t('Select a method')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="cash">{t('Cash')}</SelectItem>
+                            <SelectItem value="credit_card">{t('Credit Card')}</SelectItem>
+                            <SelectItem value="debit_card">{t('Debit Card')}</SelectItem>
+                            <SelectItem value="transfer">{t('Bank Transfer')}</SelectItem>
+                            <SelectItem value="other">{t('Other')}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="items-top flex space-x-2">
+                    <Checkbox id="requiresInvoice" checked={paymentData.requiresInvoice} onCheckedChange={(checked) => setPaymentData({...paymentData, requiresInvoice: !!checked})} />
+                    <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="requiresInvoice" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{t('Requires Invoice')}</label>
+                    </div>
+                </div>
+                {paymentData.requiresInvoice && (
+                    <div className="space-y-4 p-4 border rounded-md">
+                        <div className="space-y-2">
+                            <Label htmlFor="invoiceName">{t('Name or Business Name')}</Label>
+                            <Input id="invoiceName" value={paymentData.invoiceName} onChange={(e) => setPaymentData({...paymentData, invoiceName: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="invoiceRfc">{t('RFC')}</Label>
+                            <Input id="invoiceRfc" value={paymentData.invoiceRfc} onChange={(e) => setPaymentData({...paymentData, invoiceRfc: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="invoiceAddress">{t('Fiscal Address')}</Label>
+                            <Input id="invoiceAddress" value={paymentData.invoiceAddress} onChange={(e) => setPaymentData({...paymentData, invoiceAddress: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="invoiceEmail">{t('Email')}</Label>
+                            <Input id="invoiceEmail" type="email" value={paymentData.invoiceEmail} onChange={(e) => setPaymentData({...paymentData, invoiceEmail: e.target.value})} />
+                        </div>
+                    </div>
+                )}
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsPaymentModalOpen(false)}>{t('Cancel')}</Button>
+                <Button onClick={handleCloseOrder}>{t('Confirm Payment & Close Order')}</Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
       
@@ -607,7 +697,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                 <Printer className="mr-2 h-4 w-4" />
                 {t('Request Bill')}
               </Button>
-               <Button size="lg" variant="outline" className="w-full">
+               <Button size="lg" variant="outline" className="w-full" onClick={() => setIsPaymentModalOpen(true)}>
                   <CircleDollarSign className="mr-2 h-4 w-4" />
                   {t('Go to Payment')}
               </Button>
