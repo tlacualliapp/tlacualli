@@ -98,28 +98,32 @@ export default function MenuPage() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Existing Recipes Card */}
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><List />{t('Existing Recipes')}</CardTitle>
-                 <CardDescription>{t('View and manage your current recipes.')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <RecipesTable restaurantId={restaurantId} />
-            </CardContent>
-        </Card>
+        <div className="lg:col-span-1">
+          <Card>
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><List />{t('Existing Recipes')}</CardTitle>
+                   <CardDescription>{t('View and manage your current recipes.')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <RecipesTable restaurantId={restaurantId} />
+              </CardContent>
+          </Card>
+        </div>
 
         {/* Menu Items Card */}
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><List />{t('Menu Items')}</CardTitle>
-                <CardDescription>{t('View and manage your current menu dishes.')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <MenuTable restaurantId={restaurantId} />
-            </CardContent>
-        </Card>
+        <div className="lg:col-span-2">
+          <Card>
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><List />{t('Menu Items')}</CardTitle>
+                  <CardDescription>{t('View and manage your current menu dishes.')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <MenuTable restaurantId={restaurantId} />
+              </CardContent>
+          </Card>
+        </div>
       </div>
 
     </AdminLayout>
