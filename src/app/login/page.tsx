@@ -24,7 +24,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedEmail');
@@ -73,6 +73,9 @@ export default function LoginPage() {
             restaurantName = restaurantSnap.data().restaurantName || 'Desconocido';
         }
       }
+
+      // Set language to Spanish on successful login
+      i18n.changeLanguage('es');
 
       // 3. Log to Monitor
        await addDoc(collection(db, "monitor"), {
