@@ -11,16 +11,27 @@ import { useTranslation } from 'react-i18next';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { addDays, format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'date-fns';
+import { addDays, format, startOfMonth, endOfMonth, startOfYear, subMonths } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+
+interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  notes?: string;
+  subAccountId: string;
+}
 
 interface Order {
   id: string;
   status: string;
   subtotal: number;
-  items: { categoryId: string, price: number, quantity: number, name: string }[];
+  items: OrderItem[];
   createdAt: Timestamp;
   tableName?: string;
   takeoutId?: string;
@@ -55,6 +66,10 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     from: new Date(),
     to: new Date(),
   });
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [orderIdFilter, setOrderIdFilter] = useState('');
+  const [tableNameFilter, setTableNameFilter] = useState('');
 
   // Real-time stats effect
   useEffect(() => {
@@ -89,9 +104,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
           activeCount++;
         }
         
-        if (order.status === 'paid' || order.status === 'served') {
+        if ((order.status === 'paid' || order.status === 'served') && order.items) {
             order.items.forEach(item => {
-                const categoryId = item.categoryId || 'uncategorized';
+                const categoryId = (item as any).categoryId || 'uncategorized';
                 const categoryName = categoryNames[categoryId] || t('Uncategorized');
                 const itemTotal = item.price * item.quantity;
                 if (categorySales[categoryName]) {
@@ -139,7 +154,13 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
   }, [restaurantId, date]);
 
-  const totalSalesInRange = salesReportData.reduce((acc, order) => acc + order.subtotal, 0);
+  const filteredSalesReport = salesReportData.filter(order => {
+    const orderName = (order.tableName || order.takeoutId || '').toLowerCase();
+    return order.id.toLowerCase().includes(orderIdFilter.toLowerCase()) &&
+           orderName.includes(tableNameFilter.toLowerCase());
+  });
+
+  const totalSalesInRange = filteredSalesReport.reduce((acc, order) => acc + order.subtotal, 0);
 
   const setDatePreset = (preset: 'thisMonth' | 'lastMonth' | 'thisYear') => {
     const now = new Date();
@@ -153,6 +174,10 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     }
   };
 
+  const handleRowClick = (order: Order) => {
+    setSelectedOrder(order);
+    setIsModalOpen(true);
+  }
 
   return (
     <div className="space-y-6">
@@ -238,7 +263,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                 </TabsList>
                 <TabsContent value="sales" className="pt-4 space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-4">
-                         <h3 className="text-lg font-medium">{t('Filter Sales by Date')}</h3>
+                         <h3 className="text-lg font-medium">{t('Filter Sales')}</h3>
                          <div className="flex flex-wrap items-center gap-2">
                              <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
                              <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
@@ -278,6 +303,18 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                             </Popover>
                          </div>
                     </div>
+                     <div className="flex gap-4">
+                        <Input 
+                            placeholder={t('Filter by Order ID...')} 
+                            value={orderIdFilter} 
+                            onChange={(e) => setOrderIdFilter(e.target.value)}
+                        />
+                        <Input 
+                            placeholder={t('Filter by Table/Takeout...')}
+                            value={tableNameFilter}
+                            onChange={(e) => setTableNameFilter(e.target.value)}
+                        />
+                    </div>
                     <Card>
                         <CardHeader>
                             <CardTitle>{t('Sales Summary')}</CardTitle>
@@ -300,9 +337,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                                     <TableBody>
                                     {isSalesLoading ? (
                                         <TableRow><TableCell colSpan={4} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                                    ) : salesReportData.length > 0 ? (
-                                        salesReportData.map(order => (
-                                        <TableRow key={order.id}>
+                                    ) : filteredSalesReport.length > 0 ? (
+                                        filteredSalesReport.map(order => (
+                                        <TableRow key={order.id} onClick={() => handleRowClick(order)} className="cursor-pointer">
                                             <TableCell className="font-mono text-xs">{order.id}</TableCell>
                                             <TableCell>{order.createdAt.toDate().toLocaleString()}</TableCell>
                                             <TableCell>{order.tableName || order.takeoutId || 'N/A'}</TableCell>
@@ -330,6 +367,49 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             </Tabs>
         </CardContent>
       </Card>
+      
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-md">
+           {selectedOrder && (
+             <>
+                <DialogHeader>
+                    <DialogTitle>{t('Order Detail')}: {selectedOrder.id.substring(0, 8)}...</DialogTitle>
+                    <DialogDescription>
+                        {t('Table')}: {selectedOrder.tableName || selectedOrder.takeoutId} - {selectedOrder.createdAt.toDate().toLocaleString()}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="max-h-96 overflow-y-auto pr-4 -mr-4">
+                    <div className="space-y-2">
+                        {selectedOrder.items.map((item, index) => (
+                            <div key={index} className="flex justify-between items-center text-sm">
+                                <span>{item.quantity}x {item.name}</span>
+                                <span className="font-mono">${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <hr className="my-4"/>
+                    <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">{t('Subtotal')}</span>
+                            <span className="font-mono">${selectedOrder.subtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">{t('Taxes (16%)')}</span>
+                            <span className="font-mono">${(selectedOrder.subtotal * 0.16).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold">
+                            <span>{t('Total')}</span>
+                            <span className="font-mono">${(selectedOrder.subtotal * 1.16).toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+             </>
+           )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
+
+    
