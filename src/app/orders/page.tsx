@@ -193,7 +193,7 @@ export default function OrdersPage() {
       const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${table.roomId}/tables`, table.id);
       try {
         await updateDoc(tableRef, { status });
-        toast({ title: t('Status Updated'), description: `${t('Table')} ${table.name} ${t('is now')} ${t(status)}.`});
+        toast({ title: t('Status Updated'), description: t('Table {{tableName}} is now {{status}}.', { tableName: table.name, status: t(status) })});
         if (selectedTable && selectedTable.id === table.id) {
           setSelectedTable(prev => prev ? ({ ...prev, status }) : null);
         }
@@ -251,7 +251,7 @@ export default function OrdersPage() {
         setView('menu');
         toast({
             title: t('Order Started'),
-            description: `${t('Table')} ${selectedTable.name} ${t('is now occupied.')}`
+            description: t('Table {{tableName}} is now occupied.', { tableName: selectedTable.name})
         });
     } catch (error) {
         toast({
@@ -304,7 +304,7 @@ export default function OrdersPage() {
 
         toast({
             title: t('Takeout Order Created'),
-            description: `${t('Order')} #${newTakeoutId} ${t('has been created.')}`
+            description: t('Order #{{takeoutId}} has been created.', { takeoutId: newTakeoutId})
         });
 
     } catch (error) {

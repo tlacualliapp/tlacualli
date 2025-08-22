@@ -53,6 +53,7 @@ interface OrderItem {
   status?: 'pending' | 'preparing' | 'ready';
   recipeId?: string;
   inventoryItemId?: string;
+  categoryId?: string;
 }
 
 interface SubAccount {
@@ -251,7 +252,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
         
         toast({
             title: `${t('Added')}!`,
-            description: `${selectedItemForNotes.name} ${t('has been added to the order.')}`
+            description: t('{{itemName}} has been added to the order.', {itemName: selectedItemForNotes.name})
         })
 
     } catch (error) {
@@ -369,11 +370,11 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
                     <AlertTriangle className="h-6 w-6 text-destructive" />
                     {t('Insufficient Ingredients')}
                 </AlertDialogTitle>
-                 <AlertDialogDescription>
+                <AlertDialogDescription>
                     {t('The following ingredients do not have enough stock:')}
                 </AlertDialogDescription>
-                <div className="text-sm text-muted-foreground pt-2">
-                    <ul className="list-disc pl-5 space-y-1">
+                <div className="pt-2">
+                    <ul className="list-disc pl-5 text-sm text-muted-foreground">
                     {missingIngredients.map(ing => (
                         <li key={ing.name}>
                             {ing.name} ({t('Required')}: {ing.required}, {t('In Stock')}: {ing.inStock})

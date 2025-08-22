@@ -209,7 +209,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         // 2. Update order status
         await updateDoc(orderRef, { status: 'paid' });
         
-        toast({ title: t('Order Closed'), description: `${t('Table')} ${tableName} ${t('is now')} ${t('available')}.`});
+        toast({ title: t('Order Closed'), description: t('Table {{tableName}} is now available.', {tableName: tableName})});
         setIsPaymentModalOpen(false);
         onOrderClosed();
 
@@ -237,7 +237,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         await runTransaction(db, async (transaction) => {
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) {
-                throw new Error("Order does not exist!");
+                throw new Error(t("Order document does not exist!"));
             }
 
             let currentItems: OrderItem[] = orderDoc.data().items || [];
@@ -734,7 +734,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
               <span className="font-bold font-mono">${order.subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
-              <span className="text-muted-foreground">${t('IVA')} (${ivaRate}%)</span>
+              <span className="text-muted-foreground">{t('IVA')} ({ivaRate}%)</span>
               <span className="font-bold font-mono">${ivaAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold text-xl">
@@ -801,7 +801,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                           <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleCloseOrder}>{t('Yes, close order')}</AlertDialogAction>
+                          <AlertDialogAction onClick={() => setIsPaymentModalOpen(true)}>{t('Yes, close order')}</AlertDialogAction>
                           </AlertDialogFooter>
                       </AlertDialogContent>
                   </AlertDialog>
