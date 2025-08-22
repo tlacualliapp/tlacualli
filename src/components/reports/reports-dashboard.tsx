@@ -480,96 +480,96 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   }, [restaurantId, date, activeTab, t]);
 
     // Performance Analytics effect for Operational Analytics Card
-    useEffect(() => {
-        if (!restaurantId || !date?.from) return;
+  useEffect(() => {
+    if (!restaurantId || !date?.from) return;
 
-        const calculatePerformance = async () => {
-            setIsPerformanceLoading(true);
+    const calculatePerformance = async () => {
+        setIsPerformanceLoading(true);
 
-            const startDate = new Date(date.from!);
-            startDate.setHours(0, 0, 0, 0);
-            const endDate = date.to ? new Date(date.to) : new Date(date.from!);
-            endDate.setHours(23, 59, 59, 999);
-            
-            // 1. Fetch all needed data
-            const paymentsQuery = getDocs(query(
-                collection(db, `restaurantes/${restaurantId}/payments`),
-                where('paymentDate', '>=', Timestamp.fromDate(startDate)),
-                where('paymentDate', '<=', Timestamp.fromDate(endDate))
-            ));
-            const ordersQuery = getDocs(query(
-                collection(db, `restaurantes/${restaurantId}/orders`),
-                where('createdAt', '>=', Timestamp.fromDate(startDate)),
-                where('createdAt', '<=', Timestamp.fromDate(endDate))
-            ));
-            
-            const [paymentsSnap, ordersSnap] = await Promise.all([paymentsQuery, ordersQuery]);
+        const startDate = new Date(date.from!);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = date.to ? new Date(date.to) : new Date(date.from!);
+        endDate.setHours(23, 59, 59, 999);
+        
+        const ordersQuery = query(
+            collection(db, `restaurantes/${restaurantId}/orders`),
+            where('createdAt', '>=', Timestamp.fromDate(startDate)),
+            where('createdAt', '<=', Timestamp.fromDate(endDate))
+        );
+        const [ordersSnap] = await Promise.all([getDocs(ordersQuery)]);
+        const orders = ordersSnap.docs.map(d => ({id: d.id, ...d.data()}) as Order);
+        
+        const paymentsQuery = getDocs(query(
+            collection(db, `restaurantes/${restaurantId}/payments`),
+            where('paymentDate', '>=', Timestamp.fromDate(startDate)),
+            where('paymentDate', '<=', Timestamp.fromDate(endDate))
+        ));
+        const [paymentsSnap] = await Promise.all([paymentsQuery]);
+        
+        const paymentTimesMap = new Map<string, Timestamp>();
+        paymentsSnap.forEach(doc => {
+            const payment = doc.data() as Payment;
+            paymentTimesMap.set(payment.orderId, payment.paymentDate);
+        });
 
-            const paymentTimesMap = new Map<string, Timestamp>();
-            paymentsSnap.forEach(doc => {
-                const payment = doc.data() as Payment;
-                paymentTimesMap.set(payment.orderId, payment.paymentDate);
-            });
-            const orders = ordersSnap.docs.map(d => ({id: d.id, ...d.data()}) as Order);
-
-            // 2. Table Turnaround Time
-            const turnaroundMap = new Map<string, { totalMinutes: number, count: number }>();
-            orders.forEach(order => {
-                if (order.type !== 'dine-in' || !order.tableName) return;
-                const paymentTime = paymentTimesMap.get(order.id);
-                if (paymentTime && order.createdAt) {
-                    const durationMinutes = (paymentTime.toMillis() - order.createdAt.toMillis()) / (1000 * 60);
-                    const existing = turnaroundMap.get(order.tableName) || { totalMinutes: 0, count: 0 };
-                    existing.totalMinutes += durationMinutes;
-                    existing.count++;
-                    turnaroundMap.set(order.tableName, existing);
-                }
-            });
-            const turnaroundReport: TableTurnaroundTimeData[] = Array.from(turnaroundMap.entries()).map(([name, data]) => ({
-                id: name,
-                name,
-                averageTimeMinutes: data.totalMinutes / data.count,
-                orderCount: data.count,
-            }));
-            setTableTurnaroundData(turnaroundReport);
-
-            // 3. Peak Hours
-            const ordersByHour: { [hour: string]: number } = {};
-            for (let i = 0; i < 24; i++) {
-                ordersByHour[String(i).padStart(2,'0')] = 0;
+        // 1. Table Turnaround Time
+        const turnaroundMap = new Map<string, { totalMinutes: number, count: number }>();
+        orders.forEach(order => {
+            if (order.type !== 'dine-in' || !order.tableName) return;
+            const paymentTime = paymentTimesMap.get(order.id);
+            if (paymentTime && order.createdAt) {
+                const durationMinutes = (paymentTime.toMillis() - order.createdAt.toMillis()) / (1000 * 60);
+                const existing = turnaroundMap.get(order.tableName) || { totalMinutes: 0, count: 0 };
+                existing.totalMinutes += durationMinutes;
+                existing.count++;
+                turnaroundMap.set(order.tableName, existing);
             }
-            orders.forEach(order => {
-                const hour = String(order.createdAt.toDate().getHours()).padStart(2,'0');
-                ordersByHour[hour]++;
+        });
+        const turnaroundReport: TableTurnaroundTimeData[] = Array.from(turnaroundMap.entries()).map(([name, data]) => ({
+            id: name,
+            name,
+            averageTimeMinutes: data.totalMinutes / data.count,
+            orderCount: data.count,
+        }));
+        setTableTurnaroundData(turnaroundReport);
+
+        // 2. Peak Hours
+        const ordersByHour: { [hour: string]: number } = {};
+        for (let i = 0; i < 24; i++) {
+            ordersByHour[String(i).padStart(2,'0')] = 0;
+        }
+        orders.forEach(order => {
+            const hour = String(order.createdAt.toDate().getHours()).padStart(2,'0');
+            ordersByHour[hour]++;
+        });
+
+        const peakHoursReport: PeakHoursData[] = Object.entries(ordersByHour).map(([hour, count]) => ({
+            hour: `${hour}:00`,
+            orders: count,
+        }));
+        setPeakHoursData(peakHoursReport);
+
+        // 3. Dish Ranking
+        const dishRankingMap = new Map<string, { name: string; quantitySold: number; }>();
+        orders.forEach(orderDoc => {
+            if (orderDoc.status !== 'paid' && orderDoc.status !== 'served') return;
+            orderDoc.items.forEach(item => {
+              const existing = dishRankingMap.get(item.id) || { name: item.name, quantitySold: 0 };
+              existing.quantitySold += item.quantity;
+              dishRankingMap.set(item.id, existing);
             });
+        });
+        const rankingReport: DishRankingData[] = Array.from(dishRankingMap.entries()).map(([id, data]) => ({
+            id,
+            name: data.name,
+            quantitySold: data.quantitySold
+        }));
+        setDishRankingData(rankingReport);
 
-            const peakHoursReport: PeakHoursData[] = Object.entries(ordersByHour).map(([hour, count]) => ({
-                hour: `${hour}:00`,
-                orders: count,
-            }));
-            setPeakHoursData(peakHoursReport);
-
-            // 4. Dish Ranking
-            const dishRankingMap = new Map<string, { name: string; quantitySold: number; }>();
-            orders.forEach(orderDoc => {
-                if (orderDoc.status !== 'paid' && orderDoc.status !== 'served') return;
-                orderDoc.items.forEach(item => {
-                  const existing = dishRankingMap.get(item.id) || { name: item.name, quantitySold: 0 };
-                  existing.quantitySold += item.quantity;
-                  dishRankingMap.set(item.id, existing);
-                });
-            });
-            const rankingReport: DishRankingData[] = Array.from(dishRankingMap.entries()).map(([id, data]) => ({
-                id,
-                name: data.name,
-                quantitySold: data.quantitySold
-            }));
-            setDishRankingData(rankingReport);
-
-            setIsPerformanceLoading(false);
-        };
-        calculatePerformance();
-    }, [restaurantId, date, t]);
+        setIsPerformanceLoading(false);
+    };
+    calculatePerformance();
+  }, [restaurantId, date, t]);
 
 
  const requestSortProfitability = (key: SortKeyProfitability) => {
@@ -1128,10 +1128,16 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
           <CardDescription>{t('Get AI-powered insights to optimize your menu for profitability and customer satisfaction.')}</CardDescription>
         </CardHeader>
         <CardContent>
-            <ReportForm />
+            <ReportForm 
+                restaurantId={restaurantId}
+                dateRange={{
+                    from: date?.from?.toISOString() || '',
+                    to: date?.to?.toISOString() || '',
+                }}
+            />
         </CardContent>
       </Card>
-
+      
       <Card>
         <CardHeader>
             <div className="flex items-center justify-between">
@@ -1141,7 +1147,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="grid md:grid-cols-2 lg:grid-cols-2 gap-6">
+        <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Award className="h-5 w-5" />{t('Dish Ranking')}</CardTitle>
@@ -1205,7 +1211,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="md:col-span-2 lg:col-span-2">
+            <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Hourglass className="h-5 w-5" />{t('Peak Hours')}</CardTitle>
                     <CardDescription>{t('Busiest hours based on order volume.')}</CardDescription>
@@ -1230,6 +1236,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             </Card>
         </CardContent>
       </Card>
+
       
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md">
