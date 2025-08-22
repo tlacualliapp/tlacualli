@@ -22,7 +22,8 @@ import {
   Truck,
   BarChart,
   Map,
-  Utensils
+  Utensils,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -61,13 +62,14 @@ import '@/app/i18n';
 const allNavItems = [
   { key: 'dashboard', href: '/dashboard-admin', label: 'Dashboard', icon: Home },
   { key: 'orders', href: '/orders', label: 'Orders', icon: ClipboardList },
-  { key: 'menu', href: '/dashboard-admin/menu', label: 'Menu y recetas', icon: Utensils },
+  { key: 'menu', href: '/dashboard-admin/menu', label: 'Menu & Recipes', icon: Utensils },
   { key: 'staff', href: '/dashboard-admin/employees', label: 'Staff', icon: Users },
   { key: 'inventory', href: '/dashboard-admin/inventory', label: 'Inventory', icon: Package },
   { key: 'kitchen', href: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { key: 'deliveries', href: '/deliveries', label: 'Deliveries', icon: Truck },
   { key: 'reports', href: '/dashboard-admin/reports', label: 'Reports', icon: BarChart },
   { key: 'map', href: '/dashboard-admin/map', label: 'Digital Map', icon: Map },
+  { key: 'settings', href: '/dashboard-admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
