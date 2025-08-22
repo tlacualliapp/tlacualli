@@ -22,7 +22,6 @@ const modules = [
   { href: '/dashboard-admin/employees', icon: Users, label: 'Staff', color: 'bg-teal-500' },
   { href: '/dashboard-admin/inventory', icon: Package, label: 'Inventory', color: 'bg-orange-500' },
   { href: '/kitchen', icon: ChefHat, label: 'Kitchen', color: 'bg-gray-500' },
-  { href: '/deliveries', icon: Truck, label: 'Deliveries', color: 'bg-indigo-500' },
   { href: '/dashboard-admin/reports', icon: BarChart, label: 'Reports', color: 'bg-green-500' },
   { href: '/dashboard-admin/map', icon: Map, label: 'Digital Map', color: 'bg-purple-500' },
   { href: '/dashboard-admin/settings', icon: Settings, label: 'Settings', color: 'bg-slate-600' },
