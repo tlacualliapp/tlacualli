@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,16 @@ export default function CreateRestaurantPage() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const [user, loading] = useAuthState(auth);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
 
   useEffect(() => {
-    // If there is no user and we are not loading, set language to Spanish
-    if (!loading && !user) {
+    if (!loading) {
+      setIsAuthenticated(!!user);
+      setIsAuthChecked(true);
+      if (!user) {
         i18n.changeLanguage('es');
+      }
     }
   }, [user, loading, i18n]);
 
@@ -34,7 +39,7 @@ export default function CreateRestaurantPage() {
             </CardTitle>
             <CardDescription className="text-gray-600">{t('Add a new restaurant and its administrator to the system.')}</CardDescription>
           </div>
-          {user && (
+          {isAuthenticated && (
             <Button variant="outline" onClick={() => router.back()}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 {t('Go Back')}
@@ -48,26 +53,25 @@ export default function CreateRestaurantPage() {
           <CardTitle>{t('Restaurant Information')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <RestaurantForm onSuccess={() => router.push(user ? '/dashboard-am' : '/login')} />
+          <RestaurantForm onSuccess={() => router.push(isAuthenticated ? '/dashboard-am' : '/login')} />
         </CardContent>
       </Card>
     </>
   );
 
-  if (loading) {
+  if (!isAuthChecked) {
       return (
         <div className="flex items-center justify-center h-screen bg-gray-100">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
         </div>
       );
   }
-
-  // If user is authenticated, render with the app layout
-  if (user) {
-      return <AppLayout>{renderContent()}</AppLayout>;
+  
+  if (isAuthenticated) {
+    return <AppLayout>{renderContent()}</AppLayout>;
   }
 
-  // If no user, render the public registration page
+  // Public registration page
   return (
     <div 
         className="relative flex flex-col items-center justify-center min-h-screen bg-cover bg-center p-4 sm:p-6 md:p-8"
