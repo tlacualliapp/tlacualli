@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart as BarChartIcon, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award, Hourglass } from 'lucide-react';
+import { BarChart as BarChartIcon, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award, Hourglass, Wand2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Progress } from '../ui/progress';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
+import { ReportForm } from '@/app/reports/report-form';
 
 
 interface OrderItem {
@@ -827,8 +828,8 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         <CardHeader>
             <div className="flex items-center justify-between">
                 <div>
-                    <CardTitle className="flex items-center gap-2"><ListChecks className="h-6 w-6" /> {t('Operational Analytics')}</CardTitle>
-                    <CardDescription>{t('Analyze the performance of your restaurant operations in the selected date range.')}</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><ListChecks className="h-6 w-6" /> {t('Detailed Reports')}</CardTitle>
+                    <CardDescription>{t('Select a date range and explore detailed reports on different aspects of your business.')}</CardDescription>
                 </div>
                  <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
@@ -837,7 +838,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     <Popover>
                     <PopoverTrigger asChild>
                     <Button
-                        id="date-operational"
+                        id="date-detailed"
                         variant={"outline"}
                         className={"w-[300px] justify-start text-left font-normal"}
                     >
@@ -869,101 +870,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                 </Popover>
                 </div>
             </div>
-        </CardHeader>
-        <CardContent className="grid md:grid-cols-2 lg:grid-cols-2 gap-6">
-            <Card className="lg:col-span-1">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Award className="h-5 w-5" />{t('Dish Ranking')}</CardTitle>
-                    <CardDescription>{t('Most sold dishes in the selected period.')}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border h-96 overflow-y-auto">
-                        {isPerformanceLoading ? (
-                            <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
-                        ) : dishRankingData.length > 0 ? (
-                            <div className="space-y-4 p-4">
-                                {dishRankingData.sort((a,b) => b.quantitySold - a.quantitySold).map((item, index) => (
-                                    <div key={item.id}>
-                                        <div className="flex justify-between items-center text-sm mb-1">
-                                            <span className="font-medium">#{index+1} {item.name}</span>
-                                            <span className="font-mono text-muted-foreground">{item.quantitySold} {t('sold')}</span>
-                                        </div>
-                                        <Progress value={(item.quantitySold / maxDishRankingQuantity) * 100} />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">{t('No data available.')}</div>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-             <Card className="lg:col-span-1">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />{t('Table Turnaround Time')}</CardTitle>
-                    <CardDescription>{t('Average time customers spend at each table from order creation to payment.')}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border h-96 overflow-y-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>{t('Table')}</TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortTableTurnaround('averageTimeMinutes')}>
-                                        <div className="flex items-center justify-end gap-1">{t('Average Time (min)')} <ArrowUpDown className="h-3 w-3" /></div>
-                                    </TableHead>
-                                    <TableHead className="text-right">{t('Order Count')}</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {isPerformanceLoading ? (
-                                    <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                                ) : sortedTableTurnaround.length > 0 ? (
-                                    sortedTableTurnaround.map((item) => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>{item.name}</TableCell>
-                                            <TableCell className="text-right font-mono">{item.averageTimeMinutes.toFixed(1)}</TableCell>
-                                            <TableCell className="text-right font-mono">{item.orderCount}</TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
-            <Card className="md:col-span-2 lg:col-span-2">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Hourglass className="h-5 w-5" />{t('Peak Hours')}</CardTitle>
-                    <CardDescription>{t('Busiest hours based on order volume.')}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {isPerformanceLoading ? (
-                        <div className="flex items-center justify-center h-[300px]"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
-                    ) : peakHoursData.length > 0 ? (
-                        <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                             <BarChart accessibilityLayer data={peakHoursData}>
-                                 <CartesianGrid vertical={false} />
-                                 <XAxis dataKey="hour" tickLine={false} tickMargin={10} axisLine={false} />
-                                 <YAxis tickLine={false} tickMargin={10} axisLine={false} />
-                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                 <Bar dataKey="orders" fill="var(--color-orders)" radius={8} />
-                             </BarChart>
-                         </ChartContainer>
-                    ) : (
-                        <div className="flex items-center justify-center h-[300px] text-muted-foreground">{t('No data available.')}</div>
-                    )}
-                </CardContent>
-            </Card>
-        </CardContent>
-      </Card>
-
-    <Card>
-        <CardHeader>
-             <CardTitle>{t('Detailed Reports')}</CardTitle>
-             <CardDescription>{t("Select a date range and explore detailed reports on different aspects of your business.")}</CardDescription>
         </CardHeader>
         <CardContent>
             <Tabs defaultValue="sales" onValueChange={setActiveTab}>
@@ -1211,6 +1117,117 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     </div>
                 </TabsContent>
             </Tabs>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wand2 className="h-6 w-6" /> {t('Menu Optimization (AI)')}
+          </CardTitle>
+          <CardDescription>{t('Get AI-powered insights to optimize your menu for profitability and customer satisfaction.')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <ReportForm />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+            <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2"><ListChecks className="h-6 w-6" /> {t('Operational Analytics')}</CardTitle>
+                    <CardDescription>{t('Analyze the performance of your restaurant operations in the selected date range.')}</CardDescription>
+                </div>
+            </div>
+        </CardHeader>
+        <CardContent className="grid md:grid-cols-2 lg:grid-cols-2 gap-6">
+            <Card className="lg:col-span-1">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Award className="h-5 w-5" />{t('Dish Ranking')}</CardTitle>
+                    <CardDescription>{t('Most sold dishes in the selected period.')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border h-96 overflow-y-auto">
+                        {isPerformanceLoading ? (
+                            <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+                        ) : dishRankingData.length > 0 ? (
+                            <div className="space-y-4 p-4">
+                                {dishRankingData.sort((a,b) => b.quantitySold - a.quantitySold).map((item, index) => (
+                                    <div key={item.id}>
+                                        <div className="flex justify-between items-center text-sm mb-1">
+                                            <span className="font-medium">#{index+1} {item.name}</span>
+                                            <span className="font-mono text-muted-foreground">{item.quantitySold} {t('sold')}</span>
+                                        </div>
+                                        <Progress value={(item.quantitySold / maxDishRankingQuantity) * 100} />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-muted-foreground">{t('No data available.')}</div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+             <Card className="lg:col-span-1">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />{t('Table Turnaround Time')}</CardTitle>
+                    <CardDescription>{t('Average time customers spend at each table from order creation to payment.')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border h-96 overflow-y-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t('Table')}</TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortTableTurnaround('averageTimeMinutes')}>
+                                        <div className="flex items-center justify-end gap-1">{t('Average Time (min)')} <ArrowUpDown className="h-3 w-3" /></div>
+                                    </TableHead>
+                                    <TableHead className="text-right">{t('Order Count')}</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isPerformanceLoading ? (
+                                    <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : sortedTableTurnaround.length > 0 ? (
+                                    sortedTableTurnaround.map((item) => (
+                                        <TableRow key={item.id}>
+                                            <TableCell>{item.name}</TableCell>
+                                            <TableCell className="text-right font-mono">{item.averageTimeMinutes.toFixed(1)}</TableCell>
+                                            <TableCell className="text-right font-mono">{item.orderCount}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+            <Card className="md:col-span-2 lg:col-span-2">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Hourglass className="h-5 w-5" />{t('Peak Hours')}</CardTitle>
+                    <CardDescription>{t('Busiest hours based on order volume.')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isPerformanceLoading ? (
+                        <div className="flex items-center justify-center h-[300px]"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+                    ) : peakHoursData.length > 0 ? (
+                        <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                             <BarChart accessibilityLayer data={peakHoursData}>
+                                 <CartesianGrid vertical={false} />
+                                 <XAxis dataKey="hour" tickLine={false} tickMargin={10} axisLine={false} />
+                                 <YAxis tickLine={false} tickMargin={10} axisLine={false} />
+                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                 <Bar dataKey="orders" fill="var(--color-orders)" radius={8} />
+                             </BarChart>
+                         </ChartContainer>
+                    ) : (
+                        <div className="flex items-center justify-center h-[300px] text-muted-foreground">{t('No data available.')}</div>
+                    )}
+                </CardContent>
+            </Card>
         </CardContent>
       </Card>
       
