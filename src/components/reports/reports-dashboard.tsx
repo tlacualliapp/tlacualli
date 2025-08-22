@@ -878,14 +878,50 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="lg:col-span-2">
+             <Card className="md:col-span-2 lg:col-span-2">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />{t('Table Turnaround Time')}</CardTitle>
+                    <CardDescription>{t('Average time customers spend at each table from order creation to payment.')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border h-96 overflow-y-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t('Table')}</TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortTableTurnaround('averageTimeMinutes')}>
+                                        <div className="flex items-center justify-end gap-1">{t('Average Time (min)')} <ArrowUpDown className="h-3 w-3" /></div>
+                                    </TableHead>
+                                    <TableHead className="text-right">{t('Order Count')}</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isPerformanceLoading ? (
+                                    <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : sortedTableTurnaround.length > 0 ? (
+                                    sortedTableTurnaround.map((item) => (
+                                        <TableRow key={item.id}>
+                                            <TableCell>{item.name}</TableCell>
+                                            <TableCell className="text-right font-mono">{item.averageTimeMinutes.toFixed(1)}</TableCell>
+                                            <TableCell className="text-right font-mono">{item.orderCount}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+            <Card className="md:col-span-2 lg:col-span-3">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Hourglass className="h-5 w-5" />{t('Peak Hours')}</CardTitle>
                     <CardDescription>{t('Busiest hours based on order volume.')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {isPerformanceLoading ? (
-                        <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+                        <div className="flex items-center justify-center h-[300px]"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
                     ) : peakHoursData.length > 0 ? (
                         <ChartContainer config={chartConfig} className="h-[300px] w-full">
                             <BarChart accessibilityLayer data={peakHoursData}>
@@ -899,42 +935,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     ) : (
                         <div className="flex items-center justify-center h-[300px] text-muted-foreground">{t('No data available.')}</div>
                     )}
-                </CardContent>
-            </Card>
-            <Card className="md:col-span-2 lg:col-span-3">
-                    <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />{t('Table Turnaround Time')}</CardTitle>
-                    <CardDescription>{t('Average time customers spend at each table from order creation to payment.')}</CardDescription>
-                </CardHeader>
-                    <CardContent>
-                    <div className="rounded-md border h-96 overflow-y-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>{t('Table')}</TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortTableTurnaround('averageTimeMinutes')}>
-                                        <div className="flex items-center justify-end gap-1">{t('Average Time (min)')} <ArrowUpDown className="h-3 w-3" /></div>
-                                    </TableHead>
-                                    <TableHead className="text-right">{t('Order Count')}</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                    {isPerformanceLoading ? (
-                                    <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                                ) : sortedTableTurnaround.length > 0 ? (
-                                    sortedTableTurnaround.map((item) => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>{item.name}</TableCell>
-                                            <TableCell className="text-right font-mono">{item.averageTimeMinutes.toFixed(1)}</TableCell>
-                                            <TableCell className="text-right font-mono">{item.orderCount}</TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                        <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
                 </CardContent>
             </Card>
         </CardContent>
