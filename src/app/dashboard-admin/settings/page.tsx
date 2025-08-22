@@ -152,7 +152,7 @@ export default function SettingsPage() {
           <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
             <Settings className="h-8 w-8" /> {t('Restaurant Settings')}
           </CardTitle>
-          <CardDescription>{t('Manage your restaurant\'s general information.')}</CardDescription>
+          <CardDescription>{t("Manage your restaurant's general information.")}</CardDescription>
         </CardHeader>
       </Card>
 
@@ -167,7 +167,7 @@ export default function SettingsPage() {
                     <AccordionTrigger className="p-6">
                         <CardHeader className="p-0">
                             <CardTitle className="flex items-center gap-2"><Info className="h-6 w-6"/>{t('Basic Information')}</CardTitle>
-                             <CardDescription className="text-left">{t('Update your restaurant\'s information.')}</CardDescription>
+                             <CardDescription className="text-left">{t("Update your restaurant's information.")}</CardDescription>
                         </CardHeader>
                     </AccordionTrigger>
                     <AccordionContent>
