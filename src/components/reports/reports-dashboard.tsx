@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -126,6 +127,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [profitabilityReportData, setProfitabilityReportData] = useState<ProfitabilityData[]>([]);
   const [valuedInventoryData, setValuedInventoryData] = useState<InventoryItem[]>([]);
   const [consumptionReportData, setConsumptionReportData] = useState<ConsumptionData[]>([]);
+  const [ivaRate, setIvaRate] = useState(16);
 
   const [isSalesLoading, setIsSalesLoading] = useState(false);
   const [isProfitabilityLoading, setIsProfitabilityLoading] = useState(false);
@@ -153,6 +155,20 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   // Real-time stats effect
   useEffect(() => {
     if (!restaurantId) return;
+
+    // Fetch IVA rate
+    const fetchIvaRate = async () => {
+        try {
+            const restaurantRef = doc(db, 'restaurantes', restaurantId);
+            const restaurantSnap = await getDoc(restaurantRef);
+            if(restaurantSnap.exists() && restaurantSnap.data().iva) {
+                setIvaRate(restaurantSnap.data().iva);
+            }
+        } catch (error) {
+            console.error("Failed to fetch IVA rate, using default.", error);
+        }
+    }
+    fetchIvaRate();
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -537,7 +553,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   });
 
   const totalSubtotalInRange = filteredSalesReport.reduce((acc, order) => acc + order.subtotal, 0);
-  const totalIvaInRange = totalSubtotalInRange * 0.16;
+  const totalIvaInRange = totalSubtotalInRange * (ivaRate / 100);
   const totalSalesInRange = totalSubtotalInRange + totalIvaInRange;
 
   const totalProfitability = useMemo(() => {
@@ -597,7 +613,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
               <CardContent>
                 <div className="text-2xl font-bold">${dailySales.toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground pt-1 mt-1 border-t">
-                  ${(dailySales * 1.16).toFixed(2)} ({t('IVA included')})
+                  ${(dailySales * (1 + ivaRate / 100)).toFixed(2)} ({t('IVA included')})
                 </p>
               </CardContent>
             </Card>
@@ -721,7 +737,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                              <CardDescription>
                                 <div className="flex flex-wrap gap-x-6 gap-y-1">
                                     <span>{t('Subtotal')}: <span className="font-bold text-primary ml-1">${totalSubtotalInRange.toFixed(2)}</span></span>
-                                    <span>{t('IVA (16%)')}: <span className="font-bold text-primary ml-1">${totalIvaInRange.toFixed(2)}</span></span>
+                                    <span>${t('IVA')} (${ivaRate}%): <span className="font-bold text-primary ml-1">${totalIvaInRange.toFixed(2)}</span></span>
                                     <span>{t('Total')}: <span className="font-bold text-primary ml-1">${totalSalesInRange.toFixed(2)}</span></span>
                                 </div>
                             </CardDescription>
@@ -735,7 +751,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                                         <TableHead>{t('Table/Takeout')}</TableHead>
                                         <TableHead>{t('Status')}</TableHead>
                                         <TableHead className="text-right">{t('Subtotal')}</TableHead>
-                                        <TableHead className="text-right">{t('IVA (16%)')}</TableHead>
+                                        <TableHead className="text-right">${t('IVA')} (${ivaRate}%)</TableHead>
                                         <TableHead className="text-right">{t('Total')}</TableHead>
                                     </TableRow>
                                     </TableHeader>
@@ -749,8 +765,8 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                                             <TableCell>{order.tableName || order.takeoutId || 'N/A'}</TableCell>
                                             <TableCell><Badge className={statusColors[order.status]}>{t(order.status)}</Badge></TableCell>
                                             <TableCell className="text-right font-mono">${order.subtotal.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right font-mono">${(order.subtotal * 0.16).toFixed(2)}</TableCell>
-                                            <TableCell className="text-right font-mono font-bold">${(order.subtotal * 1.16).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right font-mono">${(order.subtotal * (ivaRate / 100)).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right font-mono font-bold">${(order.subtotal * (1 + ivaRate / 100)).toFixed(2)}</TableCell>
                                         </TableRow>
                                         ))
                                     ) : (
@@ -962,12 +978,12 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                             <span className="font-mono">${selectedOrder.subtotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-muted-foreground">{t('Taxes (16%)')}</span>
-                            <span className="font-mono">${(selectedOrder.subtotal * 0.16).toFixed(2)}</span>
+                            <span className="text-muted-foreground">${t('IVA')} (${ivaRate}%)</span>
+                            <span className="font-mono">${(selectedOrder.subtotal * (ivaRate/100)).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between font-bold">
                             <span>{t('Total')}</span>
-                            <span className="font-mono">${(selectedOrder.subtotal * 1.16).toFixed(2)}</span>
+                            <span className="font-mono">${(selectedOrder.subtotal * (1 + ivaRate/100)).toFixed(2)}</span>
                         </div>
                     </div>
                 </div>

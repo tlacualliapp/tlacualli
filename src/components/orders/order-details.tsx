@@ -82,6 +82,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [printerType, setPrinterType] = useState<'thermal' | 'conventional'>('thermal');
+  const [ivaRate, setIvaRate] = useState(16); // Default to 16%
+
   const [paymentData, setPaymentData] = useState({
     paidAmount: 0,
     tip: 0,
@@ -101,6 +103,20 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         return;
     };
     
+    // Fetch IVA rate
+    const fetchIvaRate = async () => {
+        try {
+            const restaurantRef = doc(db, 'restaurantes', restaurantId);
+            const restaurantSnap = await getDoc(restaurantRef);
+            if(restaurantSnap.exists() && restaurantSnap.data().iva) {
+                setIvaRate(restaurantSnap.data().iva);
+            }
+        } catch (error) {
+            console.error("Failed to fetch IVA rate, using default.", error);
+        }
+    }
+    fetchIvaRate();
+
     setIsLoading(true);
     const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
     
@@ -119,9 +135,6 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
                 });
             }
             setOrder(initialOrder);
-            // Pre-fill payment amount when order loads
-            setPaymentData(prev => ({ ...prev, paidAmount: initialOrder.subtotal * 1.16 }));
-
         } else {
             setOrder(null);
             console.warn(`Order with ID ${orderId} not found.`);
@@ -134,6 +147,14 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
     return () => unsubscribe();
   }, [orderId, restaurantId, t]);
+
+  // Effect to update paidAmount when order or IVA changes
+  useEffect(() => {
+    if (order) {
+        const total = order.subtotal * (1 + ivaRate / 100);
+        setPaymentData(prev => ({ ...prev, paidAmount: total }));
+    }
+  }, [order, ivaRate]);
 
 
   useEffect(() => {
@@ -181,7 +202,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
             ...paymentData,
             totalPaid: paymentData.paidAmount,
             orderSubtotal: order.subtotal,
-            orderTotal: order.subtotal * 1.16,
+            orderTotal: order.subtotal * (1 + ivaRate / 100),
             paymentDate: serverTimestamp()
         });
 
@@ -336,6 +357,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
 
   const handlePrintTicket = () => {
     if (!order) return;
+    const ivaAmount = order.subtotal * (ivaRate / 100);
+    const totalAmount = order.subtotal + ivaAmount;
 
     const ticketHTML = `
       <html>
@@ -380,11 +403,11 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
             <hr />
             <table>
               <tr><td>${t('Subtotal')}:</td><td class="text-right">$${order.subtotal.toFixed(2)}</td></tr>
-              <tr><td>${t('IVA (16%)')}:</td><td class="text-right">$${(order.subtotal * 0.16).toFixed(2)}</td></tr>
+              <tr><td>${t('IVA')} (${ivaRate}%):</td><td class="text-right">$${ivaAmount.toFixed(2)}</td></tr>
             </table>
             <hr />
             <table style="font-size: ${printerType === 'thermal' ? '16px' : '20px'};" class="font-bold">
-              <tr><td>TOTAL:</td><td class="text-right">$${(order.subtotal * 1.16).toFixed(2)}</td></tr>
+              <tr><td>TOTAL:</td><td class="text-right">$${totalAmount.toFixed(2)}</td></tr>
             </table>
             <p class="text-center" style="margin-top: 15px;">${t('Thank you for your visit!')}</p>
           </div>
@@ -420,6 +443,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not generate the bill content.') });
         return;
     }
+    const ivaAmount = order.subtotal * (ivaRate / 100);
+    const totalAmount = order.subtotal + ivaAmount;
 
     const billContentEl = document.createElement('div');
     billContentEl.innerHTML = `
@@ -429,8 +454,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
             ${order.items.map(item => `<p>${item.quantity}x ${item.name} - <b>$${(item.price * item.quantity).toFixed(2)}</b></p>`).join('')}
             <hr />
             <p>${t('Subtotal')}: $${order.subtotal.toFixed(2)}</p>
-            <p>${t('IVA (16%)')}: $${(order.subtotal * 0.16).toFixed(2)}</p>
-            <h3>Total: $${(order.subtotal * 1.16).toFixed(2)}</h3>
+            <p>${t('IVA')} (${ivaRate}%): $${ivaAmount.toFixed(2)}</p>
+            <h3>Total: $${totalAmount.toFixed(2)}</h3>
             <hr />
             <p>${t('Thank you for your visit!')}</p>
         </div>
@@ -446,11 +471,9 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
     
-    // Instead of sending, we'll open WhatsApp with a pre-filled message.
-    // The user can then attach the downloaded PDF.
     const billText = order.items.map(item => `${item.quantity}x ${item.name} - $${(item.price * item.quantity).toFixed(2)}`).join('\\n');
-    const total = (order.subtotal * 1.16).toFixed(2);
-    const fullMessage = `${t('Hello! Here is your bill for')} ${t('Table')} ${tableName}:\\n\\n${billText}\\n\\nSubtotal: $${order.subtotal.toFixed(2)}\\nIVA (16%): $${(order.subtotal * 0.16).toFixed(2)}\\n*Total: $${total}*\\n\\n${t('Thank you for your visit!')}`;
+    const total = totalAmount.toFixed(2);
+    const fullMessage = `${t('Hello! Here is your bill for')} ${t('Table')} ${tableName}:\\n\\n${billText}\\n\\nSubtotal: $${order.subtotal.toFixed(2)}\\n${t('IVA')} (${ivaRate}%): $${ivaAmount.toFixed(2)}\\n*Total: $${total}*\\n\\n${t('Thank you for your visit!')}`;
     
     const whatsappUrl = `https://api.whatsapp.com/send/?phone=${whatsappNumber}&text=${encodeURIComponent(fullMessage)}&type=phone_number&app_absent=0`;
     window.open(whatsappUrl, '_blank');
@@ -485,7 +508,9 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
 
   const pendingItemsCount = order.items?.filter(item => item.status !== 'ready').length || 0;
-  
+  const ivaAmount = order.subtotal * (ivaRate / 100);
+  const totalAmount = order.subtotal + ivaAmount;
+
   return (
     <>
       <Dialog open={isBillModalOpen} onOpenChange={setIsBillModalOpen}>
@@ -709,12 +734,12 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
               <span className="font-bold font-mono">${order.subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('Taxes (16%)')}</span>
-              <span className="font-bold font-mono">${(order.subtotal * 0.16).toFixed(2)}</span>
+              <span className="text-muted-foreground">${t('IVA')} (${ivaRate}%)</span>
+              <span className="font-bold font-mono">${ivaAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold text-xl">
               <span>{t('Total')}</span>
-              <span className="font-mono">${(order.subtotal * 1.16).toFixed(2)}</span>
+              <span className="font-mono">${totalAmount.toFixed(2)}</span>
           </div>
         </div>
 
