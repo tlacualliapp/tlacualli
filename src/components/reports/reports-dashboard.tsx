@@ -5,11 +5,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award, Hourglass } from 'lucide-react';
+import { BarChart as BarChartIcon, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award, Hourglass } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Bar, XAxis, YAxis, CartesianGrid, BarChart } from 'recharts';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -734,7 +734,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       <Card className="bg-card/65 backdrop-blur-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
-            <BarChart className="h-8 w-8" /> {t('Reports & Analytics')}
+            <BarChartIcon className="h-8 w-8" /> {t('Reports & Analytics')}
           </CardTitle>
           <CardDescription>{t('Vital information for decision-making and business performance understanding.')}</CardDescription>
         </CardHeader>
@@ -812,25 +812,30 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
               </CardHeader>
                <CardContent>
                 {salesByCategory.length > 0 ? (
-                  <ChartContainer config={chartConfig} className="mx-auto aspect-square h-[150px]">
-                      <PieChart>
-                        <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-                        <Pie
-                            data={salesByCategory}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={60}
-                            label={renderCustomizedLabel}
-                            labelLine={false}
-                        >
-                            {salesByCategory.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                        </Pie>
-                         <Legend iconSize={10} />
-                      </PieChart>
+                  <ChartContainer
+                    config={chartConfig}
+                    className="mx-auto aspect-square h-[150px]"
+                  >
+                    <PieChart>
+                      <ChartTooltip
+                        content={<ChartTooltipContent nameKey="name" hideLabel />}
+                      />
+                      <Pie
+                        data={salesByCategory}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={60}
+                        label={renderCustomizedLabel}
+                        labelLine={false}
+                      >
+                        {salesByCategory.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                       <Legend iconSize={10} />
+                    </PieChart>
                   </ChartContainer>
                 ) : (
                   <div className="flex items-center justify-center h-[150px] text-muted-foreground">{t('No sales data for today yet.')}</div>
