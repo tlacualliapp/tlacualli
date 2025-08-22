@@ -83,6 +83,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     imageUrl: menuItemToEdit?.imageUrl || '',
     preparationResponsible: menuItemToEdit?.preparationResponsible || '',
     preparationTime: menuItemToEdit?.preparationTime || 0,
+    status: menuItemToEdit?.status || 'active',
   });
 
   useEffect(() => {
@@ -131,6 +132,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         imageUrl: menuItemToEdit.imageUrl || '',
         preparationResponsible: menuItemToEdit.preparationResponsible || '',
         preparationTime: menuItemToEdit.preparationTime || 0,
+        status: menuItemToEdit.status || 'active',
       });
     }
   }, [menuItemToEdit]);
@@ -234,6 +236,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         imageUrl: '',
         preparationResponsible: '',
         preparationTime: 0,
+        status: 'active',
       })
     } catch (error) {
       console.error("Error saving menu item:", error);
