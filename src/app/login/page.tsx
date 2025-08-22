@@ -74,9 +74,6 @@ export default function LoginPage() {
         }
       }
 
-      // Set language to Spanish on successful login
-      i18n.changeLanguage('es');
-
       // 3. Log to Monitor
        await addDoc(collection(db, "monitor"), {
             accion: "Inicio de sesion",
