@@ -29,6 +29,7 @@ interface MenuItem {
   imageUrl?: string;
   preparationResponsible?: string;
   preparationTime?: number;
+  status?: 'active' | 'inactive';
 }
 
 interface Recipe {
@@ -218,7 +219,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         toast({ title: t("Update Successful"), description: t("The menu item has been updated.") });
       } else {
         const collectionRef = collection(db, `restaurantes/${restaurantId}/menuItems`);
-        await addDoc(collectionRef, { ...menuItemData, createdAt: serverTimestamp(), availability: 'available' });
+        await addDoc(collectionRef, { ...menuItemData, createdAt: serverTimestamp(), status: 'active' });
         toast({ title: t("Menu Item Added"), description: t("The new item has been added to the menu.") });
       }
       onSuccess?.();

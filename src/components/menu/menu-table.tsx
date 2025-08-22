@@ -4,16 +4,18 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { Loader2, MoreHorizontal, FilePenLine, Trash2 } from 'lucide-react';
+import { Loader2, MoreHorizontal, FilePenLine, Trash2, Power, PowerOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MenuItemForm } from './menu-item-form';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
 
 interface MenuItem {
   id: string;
@@ -27,6 +29,7 @@ interface MenuItem {
   preparationResponsible?: string;
   preparationResponsibleName?: string;
   preparationTime?: number;
+  status?: 'active' | 'inactive';
 }
 
 interface MenuTableProps {
@@ -111,6 +114,25 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
     }
   };
 
+  const handleToggleStatus = async (itemId: string, currentStatus?: 'active' | 'inactive') => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    try {
+      const itemRef = doc(db, `restaurantes/${restaurantId}/menuItems`, itemId);
+      await updateDoc(itemRef, { status: newStatus });
+      toast({
+        title: t("Status Updated"),
+        description: t("The menu item status has been updated to {{status}}.", { status: t(newStatus) }),
+      });
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({
+        variant: "destructive",
+        title: t("Error"),
+        description: t("Could not update the item status."),
+      });
+    }
+  };
+
   return (
     <>
       <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
@@ -145,7 +167,12 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
               ) : items.length > 0 ? (
                 items.map(item => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="font-medium">
+                       <div className="flex items-center gap-2">
+                          <span className={cn(item.status === 'inactive' && 'text-muted-foreground line-through')}>{item.name}</span>
+                          {item.status === 'inactive' && <Badge variant="outline">{t('Inactive')}</Badge>}
+                      </div>
+                    </TableCell>
                     <TableCell><Badge variant="outline">{item.categoryName}</Badge></TableCell>
                     <TableCell><Badge variant="secondary">{item.preparationResponsibleName}</Badge></TableCell>
                     <TableCell className="text-right font-mono">{item.preparationTime ? `${item.preparationTime} min` : '-'}</TableCell>
@@ -159,6 +186,11 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
                             <DropdownMenuItem onSelect={() => handleEdit(item)}><FilePenLine className="mr-2 h-4 w-4" />{t('Edit')}</DropdownMenuItem>
+                             <DropdownMenuItem onSelect={() => handleToggleStatus(item.id, item.status)}>
+                                {item.status === 'inactive' ? <Power className="mr-2 h-4 w-4 text-green-500" /> : <PowerOff className="mr-2 h-4 w-4 text-destructive" />}
+                                {item.status === 'inactive' ? t('Activate') : t('Deactivate')}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <AlertDialogTrigger asChild>
                               <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />{t('Delete')}</DropdownMenuItem>
                             </AlertDialogTrigger>

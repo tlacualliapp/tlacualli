@@ -27,6 +27,7 @@ interface MenuItem {
   categoryId: string;
   recipeId?: string;
   inventoryItemId?: string;
+  status?: 'active' | 'inactive';
 }
 
 interface OrderItem {
@@ -77,7 +78,10 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
 
     setIsLoading(true);
     const categoriesQuery = query(collection(db, `restaurantes/${restaurantId}/menuCategories`));
-    const itemsQuery = query(collection(db, `restaurantes/${restaurantId}/menuItems`));
+    const itemsQuery = query(
+        collection(db, `restaurantes/${restaurantId}/menuItems`),
+        where('status', '==', 'active')
+    );
     const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
 
     const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
