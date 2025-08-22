@@ -4,12 +4,13 @@
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, Truck, History, DollarSign, AlertTriangle } from 'lucide-react';
+import { Package, Truck, History, DollarSign, AlertTriangle, Loader2 } from 'lucide-react';
 import { InventoryItemsTable } from '@/components/inventory/items-table';
 import { SuppliersTable } from '@/components/inventory/suppliers-table';
 import { MovementsTable } from '@/components/inventory/movements-table';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -17,12 +18,19 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 export default function InventoryPage() {
   const { t } = useTranslation();
   const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [stats, setStats] = useState({
     lowStockItems: 0,
     inventoryValue: 0,
   });
 
+   useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+  
    useEffect(() => {
     const fetchRestaurantId = async () => {
       if (user) {
@@ -65,7 +73,14 @@ export default function InventoryPage() {
     return () => unsubscribe();
   }, [restaurantId]);
 
-
+ if (loading || !user) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-16 w-16 animate-spin" />
+        </div>
+    );
+ }
+ 
   return (
     <AdminLayout>
       <Card className="mb-6 bg-card/65 backdrop-blur-lg">
@@ -123,3 +138,5 @@ export default function InventoryPage() {
     </AdminLayout>
   );
 }
+
+    

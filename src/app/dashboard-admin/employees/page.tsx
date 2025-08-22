@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,7 +53,8 @@ interface Employee {
 }
 
 export default function EmployeesPage() {
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +64,12 @@ export default function EmployeesPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
 
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+  
   useEffect(() => {
     const fetchRestaurantId = async () => {
       const id = await getRestaurantIdForCurrentUser();
@@ -192,6 +200,14 @@ export default function EmployeesPage() {
     };
     return t(roles[profileId] || 'Unknown');
  };
+
+ if (loading || !user) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-16 w-16 animate-spin" />
+        </div>
+    );
+ }
 
   return (
     <AdminLayout>
@@ -325,3 +341,5 @@ export default function EmployeesPage() {
     </AdminLayout>
   );
 }
+
+    

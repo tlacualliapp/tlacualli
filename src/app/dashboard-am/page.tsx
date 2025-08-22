@@ -1,19 +1,23 @@
 
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, LineChart, Users, UtensilsCrossed } from 'lucide-react';
+import { BarChart, LineChart, Users, UtensilsCrossed, Loader2 } from 'lucide-react';
 import { DailyAccessChart } from '@/components/dashboard/daily-access-chart';
 import { RestaurantActionsChart } from '@/components/dashboard/restaurant-actions-chart';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RestaurantsTable } from '@/components/dashboard/restaurants-table';
 import { MasterUsersTable } from '@/components/dashboard/master-users-table';
-import { db } from '@/lib/firebase';
 import { collection, query, where, getCountFromServer, onSnapshot, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 
 export default function AdminMasterDashboard() {
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [stats, setStats] = useState({
     restaurants: 0,
     adminMasters: 0,
@@ -24,6 +28,13 @@ export default function AdminMasterDashboard() {
   const { t } = useTranslation();
 
   useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+  
+  useEffect(() => {
+    if (!user) return;
     const fetchInitialCounts = async () => {
         try {
             const restaurantsQuery = query(collection(db, "restaurantes"), where("status", "==", "1"));
@@ -77,8 +88,15 @@ export default function AdminMasterDashboard() {
       unsubRestaurants();
       unsubUsers();
     }
-  }, []);
+  }, [user]);
 
+ if (loading || !user) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-16 w-16 animate-spin" />
+        </div>
+    );
+ }
 
   return (
     <div className="relative z-10">
@@ -169,3 +187,5 @@ export default function AdminMasterDashboard() {
     </div>
   );
 }
+
+    

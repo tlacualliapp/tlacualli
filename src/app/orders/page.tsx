@@ -7,6 +7,7 @@ import { ClipboardList, Loader2, Beer, CircleDollarSign, ConciergeBell, Shopping
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import '@/app/i18n';
@@ -45,7 +46,8 @@ interface UserAssignments {
 }
 
 export default function OrdersPage() {
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [userAssignments, setUserAssignments] = useState<UserAssignments | null>(null);
   const { t } = useTranslation();
@@ -61,6 +63,12 @@ export default function OrdersPage() {
   const [view, setView] = useState<'table_map' | 'menu' | 'order_summary'>('table_map');
   const [elapsedTimes, setElapsedTimes] = useState<{ [orderId: string]: string }>({});
   const [activeSubAccountId, setActiveSubAccountId] = useState<string>('main');
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -322,6 +330,14 @@ export default function OrdersPage() {
     setView('menu');
   }
   
+  if (loading || !user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-16 w-16 animate-spin" />
+      </div>
+    );
+  }
+  
   const renderRightPanel = () => {
     if (!selectedTable) {
         return (
@@ -512,3 +528,5 @@ export default function OrdersPage() {
     </AdminLayout>
   );
 }
+
+    

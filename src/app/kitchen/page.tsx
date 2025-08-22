@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, runTransaction, getDoc, getDocs, DocumentData, collectionGroup, limit } from 'firebase/firestore';
 import { AdminLayout } from '@/components/layout/admin-layout';
@@ -28,8 +29,15 @@ export default function KitchenPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     const fetchRestaurantId = async () => {
@@ -195,6 +203,14 @@ export default function KitchenPage() {
     }
   };
 
+  if (loading || !user) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-16 w-16 animate-spin" />
+        </div>
+    );
+  }
+
   return (
     <AdminLayout>
       <Card className="mb-6 bg-card/65 backdrop-blur-lg">
@@ -234,3 +250,5 @@ export default function KitchenPage() {
     </AdminLayout>
   );
 }
+
+    

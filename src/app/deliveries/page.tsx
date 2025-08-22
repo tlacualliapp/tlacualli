@@ -2,10 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Truck } from 'lucide-react';
+import { PlusCircle, Truck, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
@@ -17,11 +18,18 @@ import { DeliveryBoard } from '@/components/deliveries/delivery-board';
 import { DeliveryOrderForm } from '@/components/deliveries/delivery-order-form';
 
 export default function DeliveriesPage() {
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const { t } = useTranslation();
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+  
   useEffect(() => {
     const fetchRestaurantId = async () => {
       if (user) {
@@ -35,6 +43,14 @@ export default function DeliveriesPage() {
     };
     fetchRestaurantId();
   }, [user]);
+
+  if (loading || !user) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-16 w-16 animate-spin" />
+        </div>
+    );
+  }
 
   if (!restaurantId) {
     return <AdminLayout><div>{t('Loading...')}</div></AdminLayout>;
@@ -76,3 +92,5 @@ export default function DeliveriesPage() {
     </AdminLayout>
   );
 }
+
+    

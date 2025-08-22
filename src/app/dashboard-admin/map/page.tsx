@@ -3,11 +3,12 @@
 
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Map as MapIcon } from 'lucide-react';
+import { Users, Map as MapIcon, Loader2 } from 'lucide-react';
 import { MapEditor } from '@/components/map/map-editor';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -15,10 +16,17 @@ import { useTranslation } from 'react-i18next';
 import { AssignmentManager } from '@/components/map/assignment-manager';
 
 export default function MapPage() {
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const { t } = useTranslation();
 
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+  
   useEffect(() => {
     const fetchRestaurantId = async () => {
       if (user) {
@@ -32,6 +40,14 @@ export default function MapPage() {
     };
     fetchRestaurantId();
   }, [user]);
+
+  if (loading || !user) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-16 w-16 animate-spin" />
+        </div>
+    );
+ }
 
   return (
     <AdminLayout>
@@ -75,3 +91,5 @@ export default function MapPage() {
     </AdminLayout>
   );
 }
+
+    

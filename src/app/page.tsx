@@ -57,12 +57,9 @@ export default function LandingPage() {
             <TacoIcon className="h-8 w-8 text-primary" />
             <span className="font-headline text-xl">Tlacualli</span>
           </Link>
-          <nav className="ml-auto flex items-center gap-4">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Iniciar Sesión</Link>
-            </Button>
+          <nav className="ml-auto flex items-center gap-4">            
             <Button className="bg-accent hover:bg-accent/90">
-                <Link href="/dashboard-am/restaurants">Regístrate Ahora</Link>
+                <Link href="/login">Acceso a Usuarios</Link>
             </Button>
           </nav>
         </div>
@@ -72,8 +69,8 @@ export default function LandingPage() {
         {/* Hero Section */}
         <section className="relative h-[80vh] min-h-[600px] w-full">
             <Image 
-                src="/assets/landing-hero.jpg" 
-                alt="Restaurante elegante" 
+                src="/assets/banner_tlacualli.png" 
+                alt="Restaurante" 
                 layout="fill"
                 objectFit="cover"
                 quality={85}
@@ -90,13 +87,10 @@ export default function LandingPage() {
                 <div className="mt-8 flex gap-4">
                     <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold" asChild>
                         <Link href="/dashboard-am/restaurants">
-                            Comienza a Crecer
+                            Comienza a Crecer (Prueba 30 días)
                             <ArrowRight className="ml-2 h-5 w-5" />
                         </Link>
-                    </Button>
-                    <Button size="lg" variant="secondary">
-                        Ver Funcionalidades
-                    </Button>
+                    </Button>                    
                 </div>
             </div>
         </section>
@@ -167,7 +161,7 @@ export default function LandingPage() {
                 <div className="mt-8">
                     <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold" asChild>
                        <Link href="/dashboard-am/restaurants">
-                            Obtener Acceso Anticipado
+                            Obtener Acceso Anticipado (Prueba 30 días)
                             <ArrowRight className="ml-2 h-5 w-5" />
                         </Link>
                     </Button>

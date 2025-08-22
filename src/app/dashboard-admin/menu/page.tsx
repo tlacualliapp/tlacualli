@@ -2,10 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, BookOpen, Utensils, List } from 'lucide-react';
+import { PlusCircle, BookOpen, Utensils, List, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { RecipeForm } from '@/components/recipes/recipe-form';
 import { RecipesTable } from '@/components/recipes/recipes-table';
@@ -17,11 +18,18 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 
 export default function MenuPage() {
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const { t } = useTranslation();
   const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
   const [isMenuItemModalOpen, setIsMenuItemModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     const fetchRestaurantId = async () => {
@@ -36,6 +44,14 @@ export default function MenuPage() {
     };
     fetchRestaurantId();
   }, [user]);
+
+  if (loading || !user) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-16 w-16 animate-spin" />
+        </div>
+    );
+  }
 
   if (!restaurantId) {
     return <AdminLayout><div>{t('Loading...')}</div></AdminLayout>;
@@ -129,3 +145,5 @@ export default function MenuPage() {
     </AdminLayout>
   );
 }
+
+    

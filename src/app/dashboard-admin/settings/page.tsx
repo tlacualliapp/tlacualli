@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, Loader2, Image as ImageIcon, Percent, Info } from 'lucide-react';
@@ -36,7 +37,8 @@ interface Restaurant {
 
 export default function SettingsPage() {
   const { t } = useTranslation();
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,6 +49,12 @@ export default function SettingsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const storage = getStorage();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     const fetchRestaurantData = async () => {
@@ -145,6 +153,14 @@ export default function SettingsPage() {
     }
   };
 
+  if (loading || !user) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-16 w-16 animate-spin" />
+        </div>
+    );
+  }
+
   return (
     <AdminLayout>
       <Card className="mb-6 bg-card/65 backdrop-blur-lg">
@@ -242,3 +258,5 @@ export default function SettingsPage() {
     </AdminLayout>
   );
 }
+
+    
