@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect } from 'react';
 import { AppLayout } from '@/components/layout/app-layout';
@@ -71,7 +70,7 @@ export default function CreateRestaurantPage() {
       <div className="relative z-10 w-full max-w-4xl space-y-6">
         <header className="text-center text-white">
              <div className="flex justify-center mb-4">
-                <TacoIcon className="h-24 w-24 text-red-600" />
+                <TacoIcon className="h-24 w-24 text-primary" />
               </div>
               <h1 className="font-headline text-4xl font-bold tracking-wider text-white">TLACUALLI</h1>
               <p className="text-white/80 mt-2">{t('The first step to elevate your restaurant')}</p>
