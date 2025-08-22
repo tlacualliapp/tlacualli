@@ -245,6 +245,8 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
                 updatePayload.status = 'preparing';
                 updatePayload.sentToKitchenAt = serverTimestamp(); // new items sent now
                 updatePayload.pickupAcknowledgedAt = null;
+            } else if (orderData.status === 'new') { // If it's a delivery order, move it to preparing
+                updatePayload.status = 'preparing';
             }
             
             transaction.update(orderRef, updatePayload);
@@ -283,7 +285,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft />
         </Button>
-        <h2 className="text-xl font-bold font-headline ml-2">{t('Add to Order')}: {t('Table')} {tableName}</h2>
+        <h2 className="text-xl font-bold font-headline ml-2">{t('Add to Order')}: {tableName}</h2>
       </div>
 
        <div className="grid grid-cols-2 gap-4 mb-4">

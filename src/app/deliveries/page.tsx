@@ -1,27 +1,78 @@
+
+'use client';
+
+import { useState, useEffect } from 'react';
 import { AdminLayout } from '@/components/layout/admin-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Truck } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, Truck } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { DeliveryBoard } from '@/components/deliveries/delivery-board';
+import { DeliveryOrderForm } from '@/components/deliveries/delivery-order-form';
 
 export default function DeliveriesPage() {
+  const [user] = useAuthState(auth);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const { t } = useTranslation();
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchRestaurantId = async () => {
+      if (user) {
+        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          setRestaurantId(userData.restauranteId);
+        }
+      }
+    };
+    fetchRestaurantId();
+  }, [user]);
+
+  if (!restaurantId) {
+    return <AdminLayout><div>{t('Loading...')}</div></AdminLayout>;
+  }
+
   return (
     <AdminLayout>
-      <div className="flex flex-col items-center justify-center h-full text-center">
-        <div className="p-4 bg-primary/10 rounded-full mb-6">
-          <Truck className="h-12 w-12 text-primary" />
-        </div>
-        <h1 className="text-4xl font-bold font-headline mb-4">Delivery Management</h1>
-        <p className="text-lg text-muted-foreground mb-8 max-w-md">
-          Track and manage your outgoing deliveries with ease.
-        </p>
-        <Card className="w-full max-w-lg">
-          <CardHeader>
-            <CardTitle>Coming Soon!</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Our delivery tracking module is on its way. You'll soon be able to manage your deliveries seamlessly!</p>
-          </CardContent>
+      <DndProvider backend={HTML5Backend}>
+        <Card className="mb-6 bg-card/65 backdrop-blur-lg">
+            <CardHeader className="flex flex-row justify-between items-center">
+                <div>
+                    <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
+                        <Truck className="h-8 w-8" /> {t('Delivery Management')}
+                    </CardTitle>
+                    <CardDescription>
+                        {t('Manage your home delivery orders.')}
+                    </CardDescription>
+                </div>
+                 <Dialog open={isOrderModalOpen} onOpenChange={setIsOrderModalOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="bg-accent hover:bg-accent/90">
+                          <PlusCircle className="mr-2 h-4 w-4" /> {t('Create Delivery Order')}
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-4xl">
+                        <DialogHeader>
+                            <DialogTitle>{t('New Delivery Order')}</DialogTitle>
+                            <DialogDescription>{t("Enter the customer's details and select the items for the order.")}</DialogDescription>
+                        </DialogHeader>
+                        <DeliveryOrderForm restaurantId={restaurantId} onSuccess={() => setIsOrderModalOpen(false)} />
+                    </DialogContent>
+                </Dialog>
+            </CardHeader>
         </Card>
-      </div>
+        
+        <DeliveryBoard restaurantId={restaurantId} />
+
+      </DndProvider>
     </AdminLayout>
   );
 }
