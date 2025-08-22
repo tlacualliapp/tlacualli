@@ -529,17 +529,17 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             setTableTurnaroundData(turnaroundReport);
 
             // 2. Peak Hours
-            const ordersByHour: { [hour: number]: number } = {};
+            const ordersByHour: { [hour: string]: number } = {};
             for (let i = 0; i < 24; i++) {
-                ordersByHour[i] = 0;
+                ordersByHour[String(i).padStart(2,'0')] = 0;
             }
             orders.forEach(order => {
-                const hour = order.createdAt.toDate().getHours();
+                const hour = String(order.createdAt.toDate().getHours()).padStart(2,'0');
                 ordersByHour[hour]++;
             });
 
             const peakHoursReport: PeakHoursData[] = Object.entries(ordersByHour).map(([hour, count]) => ({
-                hour: `${hour.padStart(2, '0')}:00`,
+                hour: `${hour}:00`,
                 orders: count,
             }));
             setPeakHoursData(peakHoursReport);
