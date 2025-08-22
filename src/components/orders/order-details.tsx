@@ -57,6 +57,16 @@ interface Order {
   createdAt: Timestamp;
 }
 
+interface RestaurantDetails {
+    restaurantName: string;
+    address: string;
+    municipality: string;
+    state: string;
+    phone: string;
+    logoUrl?: string;
+    iva?: number;
+}
+
 interface OrderDetailsProps {
   restaurantId: string;
   orderId: string;
@@ -74,6 +84,7 @@ const statusInfo = {
 
 export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onOrderClosed }: OrderDetailsProps) => {
   const [order, setOrder] = useState<Order | null>(null);
+  const [restaurantDetails, setRestaurantDetails] = useState<RestaurantDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
   const [elapsedTime, setElapsedTime] = useState('00:00');
@@ -103,19 +114,23 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         return;
     };
     
-    // Fetch IVA rate
-    const fetchIvaRate = async () => {
+    // Fetch IVA rate and restaurant details
+    const fetchRestaurantData = async () => {
         try {
             const restaurantRef = doc(db, 'restaurantes', restaurantId);
             const restaurantSnap = await getDoc(restaurantRef);
-            if(restaurantSnap.exists() && restaurantSnap.data().iva) {
-                setIvaRate(restaurantSnap.data().iva);
+            if(restaurantSnap.exists()) {
+                const data = restaurantSnap.data() as RestaurantDetails;
+                setRestaurantDetails(data);
+                if (data.iva) {
+                    setIvaRate(data.iva);
+                }
             }
         } catch (error) {
-            console.error("Failed to fetch IVA rate, using default.", error);
+            console.error("Failed to fetch restaurant details:", error);
         }
     }
-    fetchIvaRate();
+    fetchRestaurantData();
 
     setIsLoading(true);
     const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
@@ -356,7 +371,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
   }
 
   const handlePrintTicket = () => {
-    if (!order) return;
+    if (!order || !restaurantDetails) return;
     const ivaAmount = order.subtotal * (ivaRate / 100);
     const totalAmount = order.subtotal + ivaAmount;
 
@@ -367,9 +382,12 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
           <style>
             body { font-family: ${printerType === 'thermal' ? "'Courier New', Courier, monospace" : "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"}; margin: 0; padding: 10px; background-color: #fff; color: #000; }
             .ticket { width: ${printerType === 'thermal' ? '80mm' : '100%'}; margin: 0 auto; }
+            .header { text-align: center; margin-bottom: 10px; }
+            .header img { max-width: 100px; max-height: 80px; margin-bottom: 5px; }
+            .header h2 { font-size: ${printerType === 'thermal' ? '18px' : '22px'}; margin: 0; }
+            .header p { font-size: ${printerType === 'thermal' ? '10px' : '12px'}; margin: 1px 0; }
             table { width: 100%; border-collapse: collapse; font-size: ${printerType === 'thermal' ? '12px' : '14px'}; }
             hr { border: none; border-top: 1px dashed #000; }
-            h2 { font-size: ${printerType === 'thermal' ? '16px' : '20px'}; }
             th, td { padding: 2px; }
             .text-center { text-align: center; }
             .text-right { text-align: right; }
@@ -378,7 +396,12 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         </head>
         <body>
           <div class="ticket">
-            <h2 class="text-center" style="margin: 0 0 10px 0;">Tlacualli Restaurant</h2>
+            <div class="header">
+              ${restaurantDetails.logoUrl ? `<img src="${restaurantDetails.logoUrl}" alt="Logo">` : ''}
+              <h2>${restaurantDetails.restaurantName}</h2>
+              <p>${restaurantDetails.address || ''}, ${restaurantDetails.municipality || ''}, ${restaurantDetails.state || ''}</p>
+              <p>${t('Phone')}: ${restaurantDetails.phone || ''}</p>
+            </div>
             <p class="text-center" style="margin: 0;">${t('Table')}: ${tableName}</p>
             <p class="text-center" style="margin: 0 0 10px 0;">${t('Date')}: ${new Date().toLocaleString()}</p>
             <hr />
