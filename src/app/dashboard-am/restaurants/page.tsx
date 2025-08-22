@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, UtensilsCrossed, LogIn } from 'lucide-react';
+import { ArrowLeft, UtensilsCrossed, LogIn, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { RestaurantForm } from '@/components/dashboard/restaurant-form';
 import { useTranslation } from 'react-i18next';
@@ -18,10 +18,11 @@ export default function CreateRestaurantPage() {
   const [user, loading] = useAuthState(auth);
 
   useEffect(() => {
-    if (!user) {
+    // If there is no user and we are not loading, set language to Spanish
+    if (!loading && !user) {
         i18n.changeLanguage('es');
     }
-  }, [user, i18n]);
+  }, [user, loading, i18n]);
 
   const renderContent = () => (
     <>
@@ -54,13 +55,19 @@ export default function CreateRestaurantPage() {
   );
 
   if (loading) {
-      return <div className="flex items-center justify-center h-screen"><UtensilsCrossed className="h-16 w-16 animate-spin" /></div>
+      return (
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        </div>
+      );
   }
 
+  // If user is authenticated, render with the app layout
   if (user) {
       return <AppLayout>{renderContent()}</AppLayout>;
   }
 
+  // If no user, render the public registration page
   return (
     <div 
         className="relative flex flex-col items-center justify-center min-h-screen bg-cover bg-center p-4 sm:p-6 md:p-8"
