@@ -28,11 +28,12 @@ export const DeliveryBoard = ({ restaurantId }: DeliveryBoardProps) => {
 
     const ordersQuery = query(
         collection(db, `restaurantes/${restaurantId}/orders`), 
-        where('type', '==', 'delivery'),
-        where('status', '!=', 'cancelled')
+        where('type', '==', 'delivery')
     );
     const unsubscribe = onSnapshot(ordersQuery, snapshot => {
-      const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+      const ordersData = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Order))
+        .filter(order => order.status !== 'cancelled');
       setOrders(ordersData);
       setIsLoading(false);
     }, error => {
