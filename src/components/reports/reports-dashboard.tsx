@@ -74,6 +74,12 @@ interface ProfitabilityData {
   profitMargin: number;
 }
 
+interface DishRankingData {
+    id: string;
+    name: string;
+    quantitySold: number;
+}
+
 interface InventoryItem {
   id: string;
   name: string;
@@ -95,13 +101,6 @@ interface TableTurnaroundTimeData {
     id: string;
     name: string;
     averageTimeMinutes: number;
-    orderCount: number;
-}
-
-interface DishPreparationTimeData {
-    id: string;
-    name: string;
-    averageTimeSeconds: number;
     orderCount: number;
 }
 
@@ -152,6 +151,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [salesByCategory, setSalesByCategory] = useState<{ name: string, value: number }[]>([]);
   const [salesReportData, setSalesReportData] = useState<Order[]>([]);
   const [profitabilityReportData, setProfitabilityReportData] = useState<ProfitabilityData[]>([]);
+  const [dishRankingData, setDishRankingData] = useState<DishRankingData[]>([]);
   const [valuedInventoryData, setValuedInventoryData] = useState<InventoryItem[]>([]);
   const [consumptionReportData, setConsumptionReportData] = useState<ConsumptionData[]>([]);
   const [tableTurnaroundData, setTableTurnaroundData] = useState<TableTurnaroundTimeData[]>([]);
@@ -491,8 +491,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             endDate.setHours(23, 59, 59, 999);
             
             // 1. Fetch all needed data
-            const menuItemsQuery = getDocs(collection(db, `restaurantes/${restaurantId}/menuItems`));
-            const recipesQuery = getDocs(collection(db, `restaurantes/${restaurantId}/recipes`));
             const paymentsQuery = getDocs(query(
                 collection(db, `restaurantes/${restaurantId}/payments`),
                 where('paymentDate', '>=', Timestamp.fromDate(startDate)),
@@ -504,10 +502,8 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                 where('createdAt', '<=', Timestamp.fromDate(endDate))
             ));
             
-            const [menuItemsSnap, recipesSnap, paymentsSnap, ordersSnap] = await Promise.all([menuItemsQuery, recipesQuery, paymentsQuery, ordersQuery]);
+            const [paymentsSnap, ordersSnap] = await Promise.all([paymentsQuery, ordersQuery]);
 
-            const menuItemsMap = new Map<string, MenuItem>(menuItemsSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as MenuItem]));
-            const recipesMap = new Map<string, Recipe>(recipesSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as Recipe]));
             const paymentTimesMap = new Map<string, Timestamp>();
             paymentsSnap.forEach(doc => {
                 const payment = doc.data() as Payment;
@@ -553,17 +549,21 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             setPeakHoursData(peakHoursReport);
 
             // 4. Dish Ranking
-            const profitabilityMap = new Map<string, { name: string; quantitySold: number; }>();
+            const dishRankingMap = new Map<string, { name: string; quantitySold: number; }>();
             orders.forEach(orderDoc => {
                 if (orderDoc.status !== 'paid' && orderDoc.status !== 'served') return;
                 orderDoc.items.forEach(item => {
-                  const existing = profitabilityMap.get(item.id) || { name: item.name, quantitySold: 0 };
+                  const existing = dishRankingMap.get(item.id) || { name: item.name, quantitySold: 0 };
                   existing.quantitySold += item.quantity;
-                  profitabilityMap.set(item.id, existing);
+                  dishRankingMap.set(item.id, existing);
                 });
             });
-            const rankingReport: any[] = Array.from(profitabilityMap.values());
-            setProfitabilityReportData(rankingReport);
+            const rankingReport: DishRankingData[] = Array.from(dishRankingMap.entries()).map(([id, data]) => ({
+                id,
+                name: data.name,
+                quantitySold: data.quantitySold
+            }));
+            setDishRankingData(rankingReport);
 
             setIsPerformanceLoading(false);
         };
@@ -692,9 +692,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   }, [tableTurnaroundData, tableTurnaroundSortConfig]);
 
   const maxDishRankingQuantity = useMemo(() => {
-    if (profitabilityReportData.length === 0) return 1;
-    return Math.max(...profitabilityReportData.map(item => item.quantitySold), 0);
-  }, [profitabilityReportData]);
+    if (dishRankingData.length === 0) return 1;
+    return Math.max(...dishRankingData.map(item => item.quantitySold), 0);
+  }, [dishRankingData]);
 
 
   const filteredSalesReport = salesReportData.filter(order => {
@@ -870,7 +870,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CardContent className="grid md:grid-cols-2 lg:grid-cols-2 gap-6">
             <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Award className="h-5 w-5" />{t('Dish Ranking')}</CardTitle>
@@ -880,9 +880,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     <div className="rounded-md border h-96 overflow-y-auto">
                         {isPerformanceLoading ? (
                             <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
-                        ) : profitabilityReportData.length > 0 ? (
+                        ) : dishRankingData.length > 0 ? (
                             <div className="space-y-4 p-4">
-                                {profitabilityReportData.sort((a,b) => b.quantitySold - a.quantitySold).map((item, index) => (
+                                {dishRankingData.sort((a,b) => b.quantitySold - a.quantitySold).map((item, index) => (
                                     <div key={item.id}>
                                         <div className="flex justify-between items-center text-sm mb-1">
                                             <span className="font-medium">#{index+1} {item.name}</span>
@@ -934,7 +934,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="md:col-span-2 lg:col-span-3">
+            <Card className="md:col-span-2 lg:col-span-2">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Hourglass className="h-5 w-5" />{t('Peak Hours')}</CardTitle>
                     <CardDescription>{t('Busiest hours based on order volume.')}</CardDescription>
@@ -943,15 +943,15 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     {isPerformanceLoading ? (
                         <div className="flex items-center justify-center h-[300px]"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
                     ) : peakHoursData.length > 0 ? (
-                         <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                            <BarChart accessibilityLayer data={peakHoursData}>
-                                <CartesianGrid vertical={false} />
-                                <XAxis dataKey="hour" tickLine={false} tickMargin={10} axisLine={false} />
-                                <YAxis tickLine={false} tickMargin={10} axisLine={false} />
-                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Bar dataKey="orders" fill="var(--color-orders)" radius={8} />
-                            </BarChart>
-                        </ChartContainer>
+                        <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                             <BarChart accessibilityLayer data={peakHoursData}>
+                                 <CartesianGrid vertical={false} />
+                                 <XAxis dataKey="hour" tickLine={false} tickMargin={10} axisLine={false} />
+                                 <YAxis tickLine={false} tickMargin={10} axisLine={false} />
+                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                 <Bar dataKey="orders" fill="var(--color-orders)" radius={8} />
+                             </BarChart>
+                         </ChartContainer>
                     ) : (
                         <div className="flex items-center justify-center h-[300px] text-muted-foreground">{t('No data available.')}</div>
                     )}
