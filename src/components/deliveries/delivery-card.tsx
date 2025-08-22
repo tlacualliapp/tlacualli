@@ -39,7 +39,7 @@ export const DeliveryCard = ({ order }: DeliveryCardProps) => {
     }),
   }), [order.id]);
 
-  const time = order.createdAt?.toDate().toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' }) || 'N/A';
+  const time = order.createdAt?.toDate().toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' }) || t('N/A');
 
   return (
     <Card
