@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks } from 'lucide-react';
+import { BarChart, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
@@ -39,6 +39,14 @@ interface Order {
   createdAt: Timestamp;
   tableName?: string;
   takeoutId?: string;
+  type?: 'dine-in' | 'takeout';
+  sentToKitchenAt?: Timestamp;
+  pickupAcknowledgedAt?: Timestamp;
+}
+
+interface Payment {
+    orderId: string;
+    paymentDate: Timestamp;
 }
 
 interface Recipe {
@@ -85,10 +93,25 @@ interface ConsumptionData {
     totalCost: number;
 }
 
+interface TableTurnaroundTimeData {
+    id: string;
+    name: string;
+    averageTimeMinutes: number;
+    orderCount: number;
+}
+
+interface DishPreparationTimeData {
+    id: string;
+    name: string;
+    averageTimeSeconds: number;
+    orderCount: number;
+}
+
 type SortKeyProfitability = keyof ProfitabilityData;
 type SortKeyInventory = keyof InventoryItem;
 type SortKeyConsumption = keyof ConsumptionData;
-
+type SortKeyTableTurnaround = keyof TableTurnaroundTimeData;
+type SortKeyDishPreparation = keyof DishPreparationTimeData;
 
 interface ReportsDashboardProps {
   restaurantId: string;
@@ -127,12 +150,15 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [profitabilityReportData, setProfitabilityReportData] = useState<ProfitabilityData[]>([]);
   const [valuedInventoryData, setValuedInventoryData] = useState<InventoryItem[]>([]);
   const [consumptionReportData, setConsumptionReportData] = useState<ConsumptionData[]>([]);
+  const [tableTurnaroundData, setTableTurnaroundData] = useState<TableTurnaroundTimeData[]>([]);
+  const [dishPreparationData, setDishPreparationData] = useState<DishPreparationTimeData[]>([]);
   const [ivaRate, setIvaRate] = useState(16);
 
   const [isSalesLoading, setIsSalesLoading] = useState(false);
   const [isProfitabilityLoading, setIsProfitabilityLoading] = useState(false);
   const [isInventoryLoading, setIsInventoryLoading] = useState(false);
   const [isConsumptionLoading, setIsConsumptionLoading] = useState(false);
+  const [isPerformanceLoading, setIsPerformanceLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('sales');
 
   const [date, setDate] = useState<DateRange | undefined>({
@@ -150,6 +176,8 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [profitabilitySortConfig, setProfitabilitySortConfig] = useState<{ key: SortKeyProfitability; direction: 'ascending' | 'descending' } | null>({ key: 'netProfit', direction: 'descending' });
   const [inventorySortConfig, setInventorySortConfig] = useState<{ key: SortKeyInventory; direction: 'ascending' | 'descending' } | null>({ key: 'totalValue', direction: 'descending' });
   const [consumptionSortConfig, setConsumptionSortConfig] = useState<{ key: SortKeyConsumption; direction: 'ascending' | 'descending' } | null>({ key: 'totalCost', direction: 'descending' });
+  const [tableTurnaroundSortConfig, setTableTurnaroundSortConfig] = useState<{ key: SortKeyTableTurnaround; direction: 'ascending' | 'descending' } | null>({ key: 'averageTimeMinutes', direction: 'descending' });
+  const [dishPreparationSortConfig, setDishPreparationSortConfig] = useState<{ key: SortKeyDishPreparation; direction: 'ascending' | 'descending' } | null>({ key: 'averageTimeSeconds', direction: 'descending' });
 
 
   // Real-time stats effect
@@ -447,6 +475,91 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
   }, [restaurantId, date, activeTab, t]);
 
+    // Performance Analytics effect
+    useEffect(() => {
+        if (!restaurantId || !date?.from || activeTab !== 'performance') return;
+
+        const calculatePerformance = async () => {
+            setIsPerformanceLoading(true);
+
+            const startDate = new Date(date.from!);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = date.to ? new Date(date.to) : new Date(date.from!);
+            endDate.setHours(23, 59, 59, 999);
+
+            // Fetch payments to get closing times
+            const paymentsQuery = query(
+                collection(db, `restaurantes/${restaurantId}/payments`),
+                where('paymentDate', '>=', Timestamp.fromDate(startDate)),
+                where('paymentDate', '<=', Timestamp.fromDate(endDate))
+            );
+            const paymentsSnap = await getDocs(paymentsQuery);
+            const paymentTimesMap = new Map<string, Timestamp>();
+            paymentsSnap.forEach(doc => {
+                const payment = doc.data() as Payment;
+                paymentTimesMap.set(payment.orderId, payment.paymentDate);
+            });
+
+            // Fetch all orders in range
+            const ordersQuery = query(
+                collection(db, `restaurantes/${restaurantId}/orders`),
+                where('createdAt', '>=', Timestamp.fromDate(startDate)),
+                where('createdAt', '<=', Timestamp.fromDate(endDate))
+            );
+            const ordersSnap = await getDocs(ordersQuery);
+            const orders = ordersSnap.docs.map(d => ({id: d.id, ...d.data()}) as Order);
+
+            // 1. Table Turnaround Time
+            const turnaroundMap = new Map<string, { totalMinutes: number, count: number }>();
+            orders.forEach(order => {
+                if (order.type !== 'dine-in' || !order.tableName) return;
+                const paymentTime = paymentTimesMap.get(order.id);
+                if (paymentTime && order.createdAt) {
+                    const durationMinutes = (paymentTime.toMillis() - order.createdAt.toMillis()) / (1000 * 60);
+                    const existing = turnaroundMap.get(order.tableName) || { totalMinutes: 0, count: 0 };
+                    existing.totalMinutes += durationMinutes;
+                    existing.count++;
+                    turnaroundMap.set(order.tableName, existing);
+                }
+            });
+            const turnaroundReport: TableTurnaroundTimeData[] = Array.from(turnaroundMap.entries()).map(([name, data]) => ({
+                id: name,
+                name,
+                averageTimeMinutes: data.totalMinutes / data.count,
+                orderCount: data.count,
+            }));
+            setTableTurnaroundData(turnaroundReport);
+
+            // 2. Dish Preparation Time
+            const prepTimeMap = new Map<string, { totalSeconds: number, count: number }>();
+            orders.forEach(order => {
+                if (order.status !== 'paid' && order.status !== 'served' && order.status !== 'ready_for_pickup') return;
+                if (!order.sentToKitchenAt || !order.pickupAcknowledgedAt) return;
+
+                const prepTimeSeconds = (order.pickupAcknowledgedAt.toMillis() - order.sentToKitchenAt.toMillis()) / 1000;
+                order.items.forEach(item => {
+                    const existing = prepTimeMap.get(item.id) || { totalSeconds: 0, count: 0 };
+                    existing.totalSeconds += prepTimeSeconds; // Simplified: uses order prep time for all items in it
+                    existing.count++;
+                    prepTimeMap.set(item.id, existing);
+                });
+            });
+             const prepTimeReport: DishPreparationTimeData[] = Array.from(prepTimeMap.entries()).map(([id, data]) => {
+                const orderItem = orders.flatMap(o => o.items).find(i => i.id === id);
+                return {
+                    id,
+                    name: orderItem?.name || t('Unknown Dish'),
+                    averageTimeSeconds: data.totalSeconds / data.count,
+                    orderCount: data.count,
+                }
+            });
+            setDishPreparationData(prepTimeReport);
+
+            setIsPerformanceLoading(false);
+        };
+        calculatePerformance();
+    }, [restaurantId, date, activeTab, t]);
+
 
  const requestSortProfitability = (key: SortKeyProfitability) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -543,6 +656,54 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     }
     return sortableItems;
   }, [consumptionReportData, consumptionSortConfig, consumptionSearchTerm]);
+
+  const requestSortTableTurnaround = (key: SortKeyTableTurnaround) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (tableTurnaroundSortConfig?.key === key && tableTurnaroundSortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setTableTurnaroundSortConfig({ key, direction });
+  };
+
+  const sortedTableTurnaround = useMemo(() => {
+    let sortableItems = [...tableTurnaroundData];
+    if (tableTurnaroundSortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[tableTurnaroundSortConfig.key] < b[tableTurnaroundSortConfig.key]) {
+          return tableTurnaroundSortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[tableTurnaroundSortConfig.key] > b[tableTurnaroundSortConfig.key]) {
+          return tableTurnaroundSortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [tableTurnaroundData, tableTurnaroundSortConfig]);
+  
+  const requestSortDishPreparation = (key: SortKeyDishPreparation) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (dishPreparationSortConfig?.key === key && dishPreparationSortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setDishPreparationSortConfig({ key, direction });
+  };
+  
+  const sortedDishPreparation = useMemo(() => {
+    let sortableItems = [...dishPreparationData];
+    if (dishPreparationSortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[dishPreparationSortConfig.key] < b[dishPreparationSortConfig.key]) {
+          return dishPreparationSortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[dishPreparationSortConfig.key] > b[dishPreparationSortConfig.key]) {
+          return dishPreparationSortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [dishPreparationData, dishPreparationSortConfig]);
 
 
   const filteredSalesReport = salesReportData.filter(order => {
@@ -667,9 +828,10 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         </CardHeader>
         <CardContent>
             <Tabs defaultValue="sales" onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="sales"><TrendingUp className="mr-2"/>{t('Sales Report')}</TabsTrigger>
                     <TabsTrigger value="profitability"><DollarSign className="mr-2"/>{t('Profitability Report')}</TabsTrigger>
+                    <TabsTrigger value="performance"><ListChecks className="mr-2"/>{t('Operational Analytics')}</TabsTrigger>
                     <TabsTrigger value="inventory-value"><Package className="mr-2"/>{t('Valued Inventory')}</TabsTrigger>
                     <TabsTrigger value="consumption"><TrendingDown className="mr-2"/>{t('Consumption Report')}</TabsTrigger>
                 </TabsList>
@@ -851,6 +1013,116 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                             </div>
                         </CardContent>
                     </Card>
+                </TabsContent>
+                <TabsContent value="performance" className="pt-4 space-y-6">
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <Card>
+                             <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><Award className="h-5 w-5" />{t('Dish Ranking')}</CardTitle>
+                                <CardDescription>{t('Most sold dishes in the selected period.')}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="rounded-md border h-96 overflow-y-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>{t('Rank')}</TableHead>
+                                                <TableHead>{t('Dish')}</TableHead>
+                                                <TableHead className="text-right">{t('Quantity Sold')}</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                             {isPerformanceLoading ? (
+                                                <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                            ) : sortedAndFilteredProfitability.sort((a,b) => b.quantitySold - a.quantitySold).length > 0 ? (
+                                                sortedAndFilteredProfitability.map((item, index) => (
+                                                    <TableRow key={item.id}>
+                                                        <TableCell className="font-bold">#{index + 1}</TableCell>
+                                                        <TableCell>{item.name}</TableCell>
+                                                        <TableCell className="text-right font-mono">{item.quantitySold}</TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                 <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                             <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />{t('Table Turnaround Time')}</CardTitle>
+                                <CardDescription>{t('Average time customers spend at each table.')}</CardDescription>
+                            </CardHeader>
+                             <CardContent>
+                                <div className="rounded-md border h-96 overflow-y-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>{t('Table')}</TableHead>
+                                                <TableHead className="text-right cursor-pointer" onClick={() => requestSortTableTurnaround('averageTimeMinutes')}>
+                                                    <div className="flex items-center justify-end gap-1">{t('Average Time (min)')} <ArrowUpDown className="h-3 w-3" /></div>
+                                                </TableHead>
+                                                <TableHead className="text-right">{t('Order Count')}</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                             {isPerformanceLoading ? (
+                                                <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                            ) : sortedTableTurnaround.length > 0 ? (
+                                                sortedTableTurnaround.map((item) => (
+                                                    <TableRow key={item.id}>
+                                                        <TableCell>{item.name}</TableCell>
+                                                        <TableCell className="text-right font-mono">{item.averageTimeMinutes.toFixed(1)}</TableCell>
+                                                        <TableCell className="text-right font-mono">{item.orderCount}</TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                 <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                         <Card className="md:col-span-2">
+                             <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><Utensils className="h-5 w-5" />{t('Dish Preparation Time')}</CardTitle>
+                                <CardDescription>{t('Average time from order sent to kitchen until ready for pickup.')}</CardDescription>
+                            </CardHeader>
+                             <CardContent>
+                                <div className="rounded-md border h-96 overflow-y-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>{t('Dish')}</TableHead>
+                                                <TableHead className="text-right cursor-pointer" onClick={() => requestSortDishPreparation('averageTimeSeconds')}>
+                                                    <div className="flex items-center justify-end gap-1">{t('Average Time (sec)')} <ArrowUpDown className="h-3 w-3" /></div>
+                                                </TableHead>
+                                                <TableHead className="text-right">{t('Preparation Count')}</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                             {isPerformanceLoading ? (
+                                                <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                            ) : sortedDishPreparation.length > 0 ? (
+                                                sortedDishPreparation.map((item) => (
+                                                    <TableRow key={item.id}>
+                                                        <TableCell>{item.name}</TableCell>
+                                                        <TableCell className="text-right font-mono">{item.averageTimeSeconds.toFixed(1)}</TableCell>
+                                                        <TableCell className="text-right font-mono">{item.orderCount}</TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                 <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </TabsContent>
                 <TabsContent value="inventory-value" className="pt-4 space-y-4">
                     <div className="flex justify-between items-center">
