@@ -71,7 +71,7 @@ export default function CreateRestaurantPage() {
     return <AppLayout>{renderContent()}</AppLayout>;
   }
 
-  // Public registration page
+  // This part is now effectively deprecated in favor of /register, but kept for logic reference
   return (
     <div 
         className="relative flex flex-col items-center justify-center min-h-screen bg-cover bg-center p-4 sm:p-6 md:p-8"
