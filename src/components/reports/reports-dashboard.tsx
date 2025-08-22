@@ -21,7 +21,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Progress } from '../ui/progress';
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart';
 
 
 interface OrderItem {
@@ -881,7 +882,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     {isPerformanceLoading ? (
                         <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
                     ) : peakHoursData.length > 0 ? (
-                         <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                        <ChartContainer config={chartConfig} className="h-[300px] w-full">
                             <BarChart accessibilityLayer data={peakHoursData}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis dataKey="hour" tickLine={false} tickMargin={10} axisLine={false} />
