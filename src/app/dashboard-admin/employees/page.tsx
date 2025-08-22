@@ -39,6 +39,7 @@ import { getRestaurantIdForCurrentUser } from '@/lib/users';
 
 interface Employee {
   id: string;
+  uid: string;
   nombre: string;
   apellidos: string;
   email: string;
@@ -84,6 +85,7 @@ export default function EmployeesPage() {
             const data = doc.data();
             staff.push({
                 id: doc.id,
+                uid: data.uid,
                 nombre: data.nombre,
                 apellidos: data.apellidos,
                 perfil: data.perfil,
@@ -268,10 +270,14 @@ export default function EmployeesPage() {
                                 <>
                                   <DropdownMenuItem onSelect={() => handleEdit(employee)}><FilePenLine className="mr-2 h-4 w-4" />{t('Edit')}</DropdownMenuItem>
                                   <DropdownMenuItem onSelect={() => handlePermissions(employee)}><ShieldCheck className="mr-2 h-4 w-4" />{t('Permissions')}</DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />{t('Deactivate')}</DropdownMenuItem>
-                                  </AlertDialogTrigger>
+                                  {user?.uid !== employee.uid && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <AlertDialogTrigger asChild>
+                                            <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />{t('Deactivate')}</DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                    </>
+                                  )}
                                 </>
                               ) : (
                                 <>

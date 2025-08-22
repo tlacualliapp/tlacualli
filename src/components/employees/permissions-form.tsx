@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 interface Employee {
   id: string;
+  perfil: string;
   permissions?: { [key: string]: boolean };
 }
 
@@ -21,16 +22,17 @@ interface PermissionsFormProps {
   onSuccess?: () => void;
 }
 
-const availableModules = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'orders', label: 'Orders' },
-  { key: 'menu', label: 'Menu & Recipes' },
-  { key: 'staff', label: 'Staff' },
-  { key: 'inventory', label: 'Inventory' },
-  { key: 'kitchen', label: 'Kitchen' },
-  { key: 'deliveries', label: 'Deliveries' },
-  { key: 'reports', label: 'Reports' },
-  { key: 'map', label: 'Digital Map' },
+const allModules = [
+  { key: 'dashboard', label: 'Dashboard', adminOnly: false },
+  { key: 'orders', label: 'Orders', adminOnly: false },
+  { key: 'menu', label: 'Menu & Recipes', adminOnly: false },
+  { key: 'staff', label: 'Staff', adminOnly: true },
+  { key: 'inventory', label: 'Inventory', adminOnly: false },
+  { key: 'kitchen', label: 'Kitchen', adminOnly: false },
+  { key: 'deliveries', label: 'Deliveries', adminOnly: false },
+  { key: 'reports', label: 'Reports', adminOnly: true },
+  { key: 'map', label: 'Digital Map', adminOnly: false },
+  { key: 'settings', label: 'Settings', adminOnly: true },
 ];
 
 export function PermissionsForm({ employee, onSuccess }: PermissionsFormProps) {
@@ -39,9 +41,19 @@ export function PermissionsForm({ employee, onSuccess }: PermissionsFormProps) {
   const [permissions, setPermissions] = useState<{ [key: string]: boolean }>({});
   const { t } = useTranslation();
 
+  const isAdministrator = useMemo(() => employee.perfil === '1', [employee.perfil]);
+  
+  const availableModules = useMemo(() => {
+    if (isAdministrator) {
+        return allModules;
+    }
+    return allModules.filter(module => !module.adminOnly);
+  }, [isAdministrator]);
+
+
   useEffect(() => {
     // Initialize permissions from employee data or with all as false
-    const initialPermissions = availableModules.reduce((acc, module) => {
+    const initialPermissions = allModules.reduce((acc, module) => {
       acc[module.key] = employee.permissions?.[module.key] || false;
       return acc;
     }, {} as { [key: string]: boolean });
