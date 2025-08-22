@@ -613,7 +613,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
              
             <Card className="md:col-span-2">
                <CardHeader>
-                 <CardTitle className="text-sm font-medium">{t('Today\'s Sales by Category')}</CardTitle>
+                 <CardTitle className="text-sm font-medium">{t("Today's Sales by Category")}</CardTitle>
               </CardHeader>
                <CardContent>
                 {salesByCategory.length > 0 ? (
@@ -979,5 +979,3 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     </div>
   );
 }
-
-    
