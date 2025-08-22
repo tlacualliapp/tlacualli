@@ -12,7 +12,6 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useTranslation } from 'react-i18next';
-import '@/app/i18n';
 import { AssignmentManager } from '@/components/map/assignment-manager';
 
 export default function MapPage() {
