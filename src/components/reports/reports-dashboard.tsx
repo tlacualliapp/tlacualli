@@ -54,6 +54,7 @@ interface Payment {
 interface Recipe {
   id: string;
   cost: number;
+  ingredients: { itemId: string; quantity: number, itemName: string }[];
 }
 
 interface MenuItem {
@@ -488,30 +489,33 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             startDate.setHours(0, 0, 0, 0);
             const endDate = date.to ? new Date(date.to) : new Date(date.from!);
             endDate.setHours(23, 59, 59, 999);
-
-            // Fetch payments to get closing times
-            const paymentsQuery = query(
+            
+            // 1. Fetch all needed data
+            const menuItemsQuery = getDocs(collection(db, `restaurantes/${restaurantId}/menuItems`));
+            const recipesQuery = getDocs(collection(db, `restaurantes/${restaurantId}/recipes`));
+            const paymentsQuery = getDocs(query(
                 collection(db, `restaurantes/${restaurantId}/payments`),
                 where('paymentDate', '>=', Timestamp.fromDate(startDate)),
                 where('paymentDate', '<=', Timestamp.fromDate(endDate))
-            );
-            const paymentsSnap = await getDocs(paymentsQuery);
+            ));
+            const ordersQuery = getDocs(query(
+                collection(db, `restaurantes/${restaurantId}/orders`),
+                where('createdAt', '>=', Timestamp.fromDate(startDate)),
+                where('createdAt', '<=', Timestamp.fromDate(endDate))
+            ));
+            
+            const [menuItemsSnap, recipesSnap, paymentsSnap, ordersSnap] = await Promise.all([menuItemsQuery, recipesQuery, paymentsQuery, ordersQuery]);
+
+            const menuItemsMap = new Map<string, MenuItem>(menuItemsSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as MenuItem]));
+            const recipesMap = new Map<string, Recipe>(recipesSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as Recipe]));
             const paymentTimesMap = new Map<string, Timestamp>();
             paymentsSnap.forEach(doc => {
                 const payment = doc.data() as Payment;
                 paymentTimesMap.set(payment.orderId, payment.paymentDate);
             });
-
-            // Fetch all orders in range
-            const ordersQuery = query(
-                collection(db, `restaurantes/${restaurantId}/orders`),
-                where('createdAt', '>=', Timestamp.fromDate(startDate)),
-                where('createdAt', '<=', Timestamp.fromDate(endDate))
-            );
-            const ordersSnap = await getDocs(ordersQuery);
             const orders = ordersSnap.docs.map(d => ({id: d.id, ...d.data()}) as Order);
 
-            // 1. Table Turnaround Time
+            // 2. Table Turnaround Time
             const turnaroundMap = new Map<string, { totalMinutes: number, count: number }>();
             orders.forEach(order => {
                 if (order.type !== 'dine-in' || !order.tableName) return;
@@ -532,7 +536,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             }));
             setTableTurnaroundData(turnaroundReport);
 
-            // 2. Peak Hours
+            // 3. Peak Hours
             const ordersByHour: { [hour: string]: number } = {};
             for (let i = 0; i < 24; i++) {
                 ordersByHour[String(i).padStart(2,'0')] = 0;
@@ -547,6 +551,19 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                 orders: count,
             }));
             setPeakHoursData(peakHoursReport);
+
+            // 4. Dish Ranking
+            const profitabilityMap = new Map<string, { name: string; quantitySold: number; }>();
+            orders.forEach(orderDoc => {
+                if (orderDoc.status !== 'paid' && orderDoc.status !== 'served') return;
+                orderDoc.items.forEach(item => {
+                  const existing = profitabilityMap.get(item.id) || { name: item.name, quantitySold: 0 };
+                  existing.quantitySold += item.quantity;
+                  profitabilityMap.set(item.id, existing);
+                });
+            });
+            const rankingReport: any[] = Array.from(profitabilityMap.values());
+            setProfitabilityReportData(rankingReport);
 
             setIsPerformanceLoading(false);
         };
@@ -805,13 +822,55 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             </Card>
         </CardContent>
       </Card>
-
-    <Card>
+      
+      <Card>
         <CardHeader>
-            <CardTitle className="flex items-center gap-2"><ListChecks className="h-6 w-6" /> {t('Operational Analytics')}</CardTitle>
-            <CardDescription>{t('Analyze the performance of your restaurant operations in the selected date range.')}</CardDescription>
+            <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2"><ListChecks className="h-6 w-6" /> {t('Operational Analytics')}</CardTitle>
+                    <CardDescription>{t('Analyze the performance of your restaurant operations in the selected date range.')}</CardDescription>
+                </div>
+                 <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
+                    <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
+                    <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
+                    <Popover>
+                    <PopoverTrigger asChild>
+                    <Button
+                        id="date-operational"
+                        variant={"outline"}
+                        className={"w-[300px] justify-start text-left font-normal"}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date?.from ? (
+                        date.to ? (
+                            <>
+                            {format(date.from, "LLL dd, y")} -{" "}
+                            {format(date.to, "LLL dd, y")}
+                            </>
+                        ) : (
+                            format(date.from, "LLL dd, y")
+                        )
+                        ) : (
+                        <span>{t('Pick a date')}</span>
+                        )}
+                    </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={date?.from}
+                            selected={date}
+                            onSelect={setDate}
+                            numberOfMonths={2}
+                        />
+                    </PopoverContent>
+                </Popover>
+                </div>
+            </div>
         </CardHeader>
-        <CardContent className="grid md:grid-cols-2 lg:grid-cols-2 gap-6">
+        <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Award className="h-5 w-5" />{t('Dish Ranking')}</CardTitle>
@@ -875,7 +934,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="md:col-span-2 lg:col-span-2">
+            <Card className="md:col-span-2 lg:col-span-3">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Hourglass className="h-5 w-5" />{t('Peak Hours')}</CardTitle>
                     <CardDescription>{t('Busiest hours based on order volume.')}</CardDescription>
@@ -899,52 +958,12 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                 </CardContent>
             </Card>
         </CardContent>
-    </Card>
+      </Card>
 
-      <Card>
+    <Card>
         <CardHeader>
-            <CardTitle>{t('Detailed Reports')}</CardTitle>
-            <div className="flex items-center justify-between">
-                <CardDescription>{t("Select a date range and explore detailed reports on different aspects of your business.")}</CardDescription>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
-                    <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
-                    <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
-                    <Popover>
-                    <PopoverTrigger asChild>
-                    <Button
-                        id="date"
-                        variant={"outline"}
-                        className={"w-[300px] justify-start text-left font-normal"}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date?.from ? (
-                        date.to ? (
-                            <>
-                            {format(date.from, "LLL dd, y")} -{" "}
-                            {format(date.to, "LLL dd, y")}
-                            </>
-                        ) : (
-                            format(date.from, "LLL dd, y")
-                        )
-                        ) : (
-                        <span>{t('Pick a date')}</span>
-                        )}
-                    </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={date?.from}
-                            selected={date}
-                            onSelect={setDate}
-                            numberOfMonths={2}
-                        />
-                    </PopoverContent>
-                </Popover>
-                </div>
-            </div>
+             <CardTitle>{t('Detailed Reports')}</CardTitle>
+             <CardDescription>{t("Select a date range and explore detailed reports on different aspects of your business.")}</CardDescription>
         </CardHeader>
         <CardContent>
             <Tabs defaultValue="sales" onValueChange={setActiveTab}>
