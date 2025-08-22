@@ -78,13 +78,13 @@ export default function KitchenPage() {
             // --- 1. READS ---
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) {
-                throw new Error("Order document not found.");
+                throw new Error(t("Order document not found."));
             }
 
             const currentOrder = { id: orderDoc.id, ...orderDoc.data() } as Order;
             const itemIndex = currentOrder.items.findIndex((item, index) => `${item.id}-${index}` === itemId);
             if (itemIndex === -1) {
-                throw new Error("Item not found in order.");
+                throw new Error(t("Item not found in order."));
             }
 
             const orderItem = currentOrder.items[itemIndex];
