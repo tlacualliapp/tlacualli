@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, getDoc, doc, where, getDocs, updateDoc, arrayUnion, runTransaction } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
-import { Loader2, ArrowLeft, Search } from 'lucide-react';
+import { Loader2, ArrowLeft, Search, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { serverTimestamp } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from '@/components/ui/alert-dialog';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 
@@ -29,6 +30,18 @@ interface MenuItem {
   inventoryItemId?: string;
   status?: 'active' | 'inactive';
 }
+
+interface Recipe {
+    id: string;
+    ingredients: { itemId: string; quantity: number, itemName: string }[];
+}
+
+interface InventoryItem {
+    id: string;
+    name: string;
+    currentStock: number;
+}
+
 
 interface OrderItem {
   id: string;
@@ -52,6 +65,12 @@ interface Category {
   name: string;
 }
 
+interface MissingIngredient {
+    name: string;
+    required: number;
+    inStock: number;
+}
+
 interface MenuSelectionProps {
   restaurantId: string;
   orderId: string;
@@ -69,9 +88,13 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [selectedItemForNotes, setSelectedItemForNotes] = useState<MenuItem | null>(null);
   const [itemNotes, setItemNotes] = useState('');
+
+  const [isInventoryAlertOpen, setIsInventoryAlertOpen] = useState(false);
+  const [missingIngredients, setMissingIngredients] = useState<MissingIngredient[]>([]);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -107,11 +130,67 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
     };
   }, [restaurantId, orderId, t]);
   
-  const openNotesModal = (item: MenuItem) => {
-    setSelectedItemForNotes(item);
+  const handleSelectItem = async (item: MenuItem) => {
+    setSelectedItemForNotes(item); // Set the item for later use
+    
+    // If it's not a recipe-based item, just open the notes modal
+    if (!item.recipeId || item.recipeId === 'none') {
+        setItemNotes('');
+        setIsNotesModalOpen(true);
+        return;
+    }
+
+    // It's a recipe, check inventory
+    try {
+        const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, item.recipeId);
+        const recipeSnap = await getDoc(recipeRef);
+
+        if (!recipeSnap.exists()) {
+            toast({ variant: 'destructive', title: t('Error'), description: t('Recipe not found for this item.') });
+            return;
+        }
+
+        const recipe = recipeSnap.data() as Recipe;
+        const missing: MissingIngredient[] = [];
+
+        for (const ingredient of recipe.ingredients) {
+            const invItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, ingredient.itemId);
+            const invItemSnap = await getDoc(invItemRef);
+            
+            if (invItemSnap.exists()) {
+                const inventoryItem = invItemSnap.data() as InventoryItem;
+                if (inventoryItem.currentStock < ingredient.quantity) {
+                    missing.push({
+                        name: inventoryItem.name,
+                        required: ingredient.quantity,
+                        inStock: inventoryItem.currentStock
+                    });
+                }
+            } else {
+                missing.push({ name: ingredient.itemName, required: ingredient.quantity, inStock: 0 });
+            }
+        }
+        
+        if (missing.length > 0) {
+            setMissingIngredients(missing);
+            setIsInventoryAlertOpen(true);
+        } else {
+            // All ingredients are available, open notes modal
+            setItemNotes('');
+            setIsNotesModalOpen(true);
+        }
+
+    } catch (error) {
+        console.error("Error checking inventory:", error);
+        toast({ variant: 'destructive', title: t('Error'), description: t('Could not check inventory.')});
+    }
+  };
+
+  const confirmAddItemAnyway = () => {
+    setIsInventoryAlertOpen(false);
     setItemNotes('');
     setIsNotesModalOpen(true);
-  };
+  }
 
   const handleAddItemToOrder = async () => {
     if (!selectedItemForNotes || !restaurantId || !orderId) {
@@ -237,7 +316,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
                   <Card 
                     key={item.id} 
                     className="cursor-pointer hover:shadow-md hover:border-primary transition-all"
-                    onClick={() => openNotesModal(item)}
+                    onClick={() => handleSelectItem(item)}
                   >
                     <CardContent className="p-3">
                       <h3 className="font-semibold text-sm truncate">{item.name}</h3>
@@ -275,6 +354,33 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+    <AlertDialog open={isInventoryAlertOpen} onOpenChange={setIsInventoryAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-6 w-6 text-destructive" />
+                    {t('Insufficient Ingredients')}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                    {t('The following ingredients do not have enough stock:')}
+                    <ul className="list-disc pl-5 mt-2 text-foreground">
+                       {missingIngredients.map(ing => (
+                         <li key={ing.name}>
+                            {ing.name} ({t('Required')}: {ing.required}, {t('In Stock')}: {ing.inStock})
+                         </li>
+                       ))}
+                    </ul>
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmAddItemAnyway}>
+                    {t('Confirm Anyway')}
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 };
