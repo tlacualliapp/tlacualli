@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -20,6 +21,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Progress } from '../ui/progress';
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+
 
 interface OrderItem {
   id: string;
@@ -720,6 +723,11 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     setIsModalOpen(true);
   }
 
+  const chartConfig = {
+    sales: { label: t('Sales') },
+    orders: { label: t('Orders'), color: 'hsl(var(--chart-1))' },
+  } satisfies ChartConfig;
+
   return (
     <div className="space-y-6">
       <Card className="bg-card/65 backdrop-blur-lg">
@@ -803,26 +811,26 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
               </CardHeader>
                <CardContent>
                 {salesByCategory.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={150}>
-                    <PieChart>
-                      <Pie
-                        data={salesByCategory}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={renderCustomizedLabel}
-                        outerRadius={60}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {salesByCategory.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
-                      <Legend iconSize={10} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <ChartContainer config={chartConfig} className="mx-auto aspect-square h-[150px]">
+                      <PieChart>
+                        <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
+                        <Pie
+                            data={salesByCategory}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={60}
+                            label={renderCustomizedLabel}
+                            labelLine={false}
+                        >
+                            {salesByCategory.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                        </Pie>
+                         <Legend iconSize={10} />
+                      </PieChart>
+                  </ChartContainer>
                 ) : (
                   <div className="flex items-center justify-center h-[150px] text-muted-foreground">{t('No sales data for today yet.')}</div>
                 )}
@@ -873,16 +881,15 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     {isPerformanceLoading ? (
                         <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
                     ) : peakHoursData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={peakHoursData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="hour" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="orders" fill="#8884d8" name={t('Orders')} />
+                         <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                            <BarChart accessibilityLayer data={peakHoursData}>
+                                <CartesianGrid vertical={false} />
+                                <XAxis dataKey="hour" tickLine={false} tickMargin={10} axisLine={false} />
+                                <YAxis tickLine={false} tickMargin={10} axisLine={false} />
+                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                <Bar dataKey="orders" fill="var(--color-orders)" radius={8} />
                             </BarChart>
-                        </ResponsiveContainer>
+                        </ChartContainer>
                     ) : (
                         <div className="flex items-center justify-center h-[300px] text-muted-foreground">{t('No data available.')}</div>
                     )}
@@ -1223,5 +1230,3 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     </div>
   );
 }
-
-    
