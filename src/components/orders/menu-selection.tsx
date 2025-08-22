@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -364,14 +363,14 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                     {t('The following ingredients do not have enough stock:')}
-                    <ul className="list-disc pl-5 mt-2 text-foreground">
-                       {missingIngredients.map(ing => (
-                         <li key={ing.name}>
-                            {ing.name} ({t('Required')}: {ing.required}, {t('In Stock')}: {ing.inStock})
-                         </li>
-                       ))}
-                    </ul>
                 </AlertDialogDescription>
+                 <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground">
+                   {missingIngredients.map(ing => (
+                     <li key={ing.name}>
+                        {ing.name} ({t('Required')}: {ing.required}, {t('In Stock')}: {ing.inStock})
+                     </li>
+                   ))}
+                </ul>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
