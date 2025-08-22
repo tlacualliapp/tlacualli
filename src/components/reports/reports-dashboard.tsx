@@ -811,7 +811,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             <CardTitle className="flex items-center gap-2"><ListChecks className="h-6 w-6" /> {t('Operational Analytics')}</CardTitle>
             <CardDescription>{t('Analyze the performance of your restaurant operations in the selected date range.')}</CardDescription>
         </CardHeader>
-        <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CardContent className="grid md:grid-cols-2 lg:grid-cols-2 gap-6">
             <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Award className="h-5 w-5" />{t('Dish Ranking')}</CardTitle>
@@ -875,7 +875,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="lg:col-span-1">
+            <Card className="md:col-span-2 lg:col-span-2">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Hourglass className="h-5 w-5" />{t('Peak Hours')}</CardTitle>
                     <CardDescription>{t('Busiest hours based on order volume.')}</CardDescription>
@@ -884,7 +884,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     {isPerformanceLoading ? (
                         <div className="flex items-center justify-center h-[300px]"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
                     ) : peakHoursData.length > 0 ? (
-                        <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                         <ChartContainer config={chartConfig} className="h-[300px] w-full">
                             <BarChart accessibilityLayer data={peakHoursData}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis dataKey="hour" tickLine={false} tickMargin={10} axisLine={false} />
@@ -904,47 +904,49 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       <Card>
         <CardHeader>
             <CardTitle>{t('Detailed Reports')}</CardTitle>
-            <CardDescription>{t("Select a date range and explore detailed reports on different aspects of your business.")}</CardDescription>
+            <div className="flex items-center justify-between">
+                <CardDescription>{t("Select a date range and explore detailed reports on different aspects of your business.")}</CardDescription>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
+                    <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
+                    <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
+                    <Popover>
+                    <PopoverTrigger asChild>
+                    <Button
+                        id="date"
+                        variant={"outline"}
+                        className={"w-[300px] justify-start text-left font-normal"}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date?.from ? (
+                        date.to ? (
+                            <>
+                            {format(date.from, "LLL dd, y")} -{" "}
+                            {format(date.to, "LLL dd, y")}
+                            </>
+                        ) : (
+                            format(date.from, "LLL dd, y")
+                        )
+                        ) : (
+                        <span>{t('Pick a date')}</span>
+                        )}
+                    </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={date?.from}
+                            selected={date}
+                            onSelect={setDate}
+                            numberOfMonths={2}
+                        />
+                    </PopoverContent>
+                </Popover>
+                </div>
+            </div>
         </CardHeader>
         <CardContent>
-            <div className="flex items-center justify-end gap-2 pb-4">
-                <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
-                <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
-                <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
-                <Popover>
-                <PopoverTrigger asChild>
-                <Button
-                    id="date"
-                    variant={"outline"}
-                    className={"w-[300px] justify-start text-left font-normal"}
-                >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date?.from ? (
-                    date.to ? (
-                        <>
-                        {format(date.from, "LLL dd, y")} -{" "}
-                        {format(date.to, "LLL dd, y")}
-                        </>
-                    ) : (
-                        format(date.from, "LLL dd, y")
-                    )
-                    ) : (
-                    <span>{t('Pick a date')}</span>
-                    )}
-                </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={date?.from}
-                        selected={date}
-                        onSelect={setDate}
-                        numberOfMonths={2}
-                    />
-                </PopoverContent>
-            </Popover>
-            </div>
             <Tabs defaultValue="sales" onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="sales"><TrendingUp className="mr-2"/>{t('Sales Report')}</TabsTrigger>
