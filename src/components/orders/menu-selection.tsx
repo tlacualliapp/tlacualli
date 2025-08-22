@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -132,41 +133,47 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
   const handleSelectItem = async (item: MenuItem) => {
     setSelectedItemForNotes(item); // Set the item for later use
     
-    // If it's not a recipe-based item, just open the notes modal
-    if (!item.recipeId || item.recipeId === 'none') {
-        setItemNotes('');
-        setIsNotesModalOpen(true);
-        return;
-    }
-
-    // It's a recipe, check inventory
     try {
-        const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, item.recipeId);
-        const recipeSnap = await getDoc(recipeRef);
-
-        if (!recipeSnap.exists()) {
-            toast({ variant: 'destructive', title: t('Error'), description: t('Recipe not found for this item.') });
-            return;
-        }
-
-        const recipe = recipeSnap.data() as Recipe;
         const missing: MissingIngredient[] = [];
+        // Case 1: Item is based on a recipe
+        if (item.recipeId && item.recipeId !== 'none') {
+            const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, item.recipeId);
+            const recipeSnap = await getDoc(recipeRef);
 
-        for (const ingredient of recipe.ingredients) {
-            const invItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, ingredient.itemId);
+            if (!recipeSnap.exists()) {
+                toast({ variant: 'destructive', title: t('Error'), description: t('Recipe not found for this item.') });
+                return;
+            }
+
+            const recipe = recipeSnap.data() as Recipe;
+            for (const ingredient of recipe.ingredients) {
+                const invItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, ingredient.itemId);
+                const invItemSnap = await getDoc(invItemRef);
+                
+                if (invItemSnap.exists()) {
+                    const inventoryItem = invItemSnap.data() as InventoryItem;
+                    if (inventoryItem.currentStock < ingredient.quantity) {
+                        missing.push({
+                            name: inventoryItem.name,
+                            required: ingredient.quantity,
+                            inStock: inventoryItem.currentStock
+                        });
+                    }
+                } else {
+                    missing.push({ name: ingredient.itemName, required: ingredient.quantity, inStock: 0 });
+                }
+            }
+        // Case 2: Item is a direct inventory item
+        } else if (item.inventoryItemId) {
+            const invItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, item.inventoryItemId);
             const invItemSnap = await getDoc(invItemRef);
-            
-            if (invItemSnap.exists()) {
+            if(invItemSnap.exists()) {
                 const inventoryItem = invItemSnap.data() as InventoryItem;
-                if (inventoryItem.currentStock < ingredient.quantity) {
-                    missing.push({
-                        name: inventoryItem.name,
-                        required: ingredient.quantity,
-                        inStock: inventoryItem.currentStock
-                    });
+                if (inventoryItem.currentStock < 1) { // Assuming it consumes 1 unit
+                    missing.push({ name: inventoryItem.name, required: 1, inStock: inventoryItem.currentStock });
                 }
             } else {
-                missing.push({ name: ingredient.itemName, required: ingredient.quantity, inStock: 0 });
+                 missing.push({ name: item.name, required: 1, inStock: 0 });
             }
         }
         
@@ -221,7 +228,8 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
                 status: 'pending',
                 notes: itemNotes.trim(),
                 recipeId: selectedItemForNotes.recipeId,
-                inventoryItemId: selectedItemForNotes.inventoryItemId
+                inventoryItemId: selectedItemForNotes.inventoryItemId,
+                categoryId: selectedItemForNotes.categoryId
             }];
 
             const newSubtotal = updatedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
@@ -361,16 +369,18 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
                     <AlertTriangle className="h-6 w-6 text-destructive" />
                     {t('Insufficient Ingredients')}
                 </AlertDialogTitle>
-                <AlertDialogDescription>
+                 <AlertDialogDescription>
                     {t('The following ingredients do not have enough stock:')}
                 </AlertDialogDescription>
-                 <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground">
-                   {missingIngredients.map(ing => (
-                     <li key={ing.name}>
-                        {ing.name} ({t('Required')}: {ing.required}, {t('In Stock')}: {ing.inStock})
-                     </li>
-                   ))}
-                </ul>
+                <div className="text-sm text-muted-foreground pt-2">
+                    <ul className="list-disc pl-5 space-y-1">
+                    {missingIngredients.map(ing => (
+                        <li key={ing.name}>
+                            {ing.name} ({t('Required')}: {ing.required}, {t('In Stock')}: {ing.inStock})
+                        </li>
+                    ))}
+                    </ul>
+                </div>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
