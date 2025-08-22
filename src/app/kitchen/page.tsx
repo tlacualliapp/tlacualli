@@ -144,8 +144,10 @@ export default function KitchenPage() {
 
             const allItemsReady = updatedItems.every(item => item.status === 'ready');
             const updatePayload: any = { items: updatedItems };
-
-            if (allItemsReady) {
+            
+            // Only update order status for dine-in or regular takeout, not for deliveries.
+            // The delivery board will handle the status changes from 'preparing' onwards.
+            if (allItemsReady && currentOrder.type !== 'delivery') {
                 updatePayload.status = 'ready_for_pickup';
             }
             
@@ -177,7 +179,7 @@ export default function KitchenPage() {
       const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
       
       const currentOrder = orders.find(o => o.id === orderId);
-      if (!currentOrder) return;
+      if (!currentOrder || currentOrder.type === 'delivery') return; // Do not use this for delivery orders
 
       // Mark all items as ready
       const updatedItems = currentOrder.items.map(item => ({ ...item, status: 'ready' }));

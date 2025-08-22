@@ -59,13 +59,22 @@ export const DeliveryBoard = ({ restaurantId }: DeliveryBoardProps) => {
   if (isLoading) {
     return <div className="flex justify-center items-center h-full"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
+  
+  const getOrderStatus = (order: Order) => {
+    // If the kitchen marked all items ready, the order status becomes 'ready_for_pickup'.
+    // For the delivery board, this means it's still 'preparing' (waiting for a driver).
+    if (order.status === 'ready_for_pickup') {
+      return 'preparing';
+    }
+    return order.status;
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {statuses.map(status => (
         <DeliveryColumn key={status} status={status} onDrop={handleStatusChange}>
           {orders
-            .filter(order => order.status === status)
+            .filter(order => getOrderStatus(order) === status)
             .sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0))
             .map(order => (
               <DeliveryCard key={order.id} order={order} />
