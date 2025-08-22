@@ -85,7 +85,7 @@ export function MovementForm({ restaurantId, item, type, onSuccess }: MovementFo
       onSuccess?.();
     } catch (error: any) {
       console.error("Error processing movement:", error);
-      toast({ variant: "destructive", title: t("Error"), description: error.message || t("Could not register the movement.") });
+      toast({ variant: "destructive", title: t("Error"), description: t(error.message) || t("Could not register the movement.") });
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +94,7 @@ export function MovementForm({ restaurantId, item, type, onSuccess }: MovementFo
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="quantity">{t('Quantity')} ({type})</Label>
+        <Label htmlFor="quantity">{t('Quantity')} ({t(type)})</Label>
         <Input 
           id="quantity" 
           name="quantity" 
@@ -128,4 +128,3 @@ export function MovementForm({ restaurantId, item, type, onSuccess }: MovementFo
     </form>
   );
 }
-

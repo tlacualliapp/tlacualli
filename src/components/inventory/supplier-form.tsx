@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,13 +35,36 @@ export function SupplierForm({ restaurantId, onSuccess, supplierToEdit }: Suppli
   const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
-    name: supplierToEdit?.name || '',
-    contactName: supplierToEdit?.contactName || '',
-    phone: supplierToEdit?.phone || '',
-    email: supplierToEdit?.email || '',
-    address: supplierToEdit?.address || '',
-    paymentTerms: supplierToEdit?.paymentTerms || '',
+    name: '',
+    contactName: '',
+    phone: '',
+    email: '',
+    address: '',
+    paymentTerms: '',
   });
+
+  useEffect(() => {
+      if (supplierToEdit) {
+          setFormData({
+              name: supplierToEdit.name || '',
+              contactName: supplierToEdit.contactName || '',
+              phone: supplierToEdit.phone || '',
+              email: supplierToEdit.email || '',
+              address: supplierToEdit.address || '',
+              paymentTerms: supplierToEdit.paymentTerms || '',
+          });
+      } else {
+           setFormData({
+              name: '',
+              contactName: '',
+              phone: '',
+              email: '',
+              address: '',
+              paymentTerms: '',
+          });
+      }
+  }, [supplierToEdit]);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

@@ -40,14 +40,39 @@ export function ItemForm({ restaurantId, onSuccess, itemToEdit }: ItemFormProps)
   const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
-    name: itemToEdit?.name || '',
-    unitOfMeasure: itemToEdit?.unitOfMeasure || '',
-    currentStock: itemToEdit?.currentStock || 0,
-    minimumStock: itemToEdit?.minimumStock || 0,
-    averageCost: itemToEdit?.averageCost || 0,
-    supplierId: itemToEdit?.supplierId || '',
-    category: itemToEdit?.category || '',
+    name: '',
+    unitOfMeasure: '',
+    currentStock: 0,
+    minimumStock: 0,
+    averageCost: 0,
+    supplierId: '',
+    category: '',
   });
+
+  useEffect(() => {
+    if (itemToEdit) {
+      setFormData({
+        name: itemToEdit.name || '',
+        unitOfMeasure: itemToEdit.unitOfMeasure || '',
+        currentStock: itemToEdit.currentStock || 0,
+        minimumStock: itemToEdit.minimumStock || 0,
+        averageCost: itemToEdit.averageCost || 0,
+        supplierId: itemToEdit.supplierId || '',
+        category: itemToEdit.category || '',
+      });
+    } else {
+        setFormData({
+            name: '',
+            unitOfMeasure: '',
+            currentStock: 0,
+            minimumStock: 0,
+            averageCost: 0,
+            supplierId: '',
+            category: '',
+        });
+    }
+  }, [itemToEdit]);
+
 
   useEffect(() => {
     const fetchSuppliers = async () => {
@@ -62,7 +87,7 @@ export function ItemForm({ restaurantId, onSuccess, itemToEdit }: ItemFormProps)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: name === 'name' ? value : Number(value) }));
+    setFormData(prev => ({ ...prev, [name]: ['currentStock', 'minimumStock', 'averageCost'].includes(name) ? Number(value) : value }));
   };
   
   const handleSelectChange = (name: string, value: string) => {
