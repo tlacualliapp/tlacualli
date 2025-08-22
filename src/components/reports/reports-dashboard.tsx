@@ -740,45 +740,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         </CardHeader>
       </Card>
 
-      <div className="flex items-center justify-end gap-2 py-4">
-            <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
-            <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
-            <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
-            <Popover>
-            <PopoverTrigger asChild>
-            <Button
-                id="date"
-                variant={"outline"}
-                className={"w-[300px] justify-start text-left font-normal"}
-            >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date?.from ? (
-                date.to ? (
-                    <>
-                    {format(date.from, "LLL dd, y")} -{" "}
-                    {format(date.to, "LLL dd, y")}
-                    </>
-                ) : (
-                    format(date.from, "LLL dd, y")
-                )
-                ) : (
-                <span>{t('Pick a date')}</span>
-                )}
-            </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={date?.from}
-                    selected={date}
-                    onSelect={setDate}
-                    numberOfMonths={2}
-                />
-            </PopoverContent>
-        </Popover>
-        </div>
-      
       <Card>
         <CardHeader>
             <CardTitle>{t('Financial Dashboard (Real-Time)')}</CardTitle>
@@ -878,7 +839,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     </div>
                 </CardContent>
             </Card>
-             <Card className="md:col-span-2 lg:col-span-2">
+             <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />{t('Table Turnaround Time')}</CardTitle>
                     <CardDescription>{t('Average time customers spend at each table from order creation to payment.')}</CardDescription>
@@ -914,7 +875,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="md:col-span-2 lg:col-span-3">
+            <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Hourglass className="h-5 w-5" />{t('Peak Hours')}</CardTitle>
                     <CardDescription>{t('Busiest hours based on order volume.')}</CardDescription>
@@ -943,8 +904,47 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       <Card>
         <CardHeader>
             <CardTitle>{t('Detailed Reports')}</CardTitle>
+            <CardDescription>{t("Select a date range and explore detailed reports on different aspects of your business.")}</CardDescription>
         </CardHeader>
         <CardContent>
+            <div className="flex items-center justify-end gap-2 pb-4">
+                <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
+                <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
+                <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
+                <Popover>
+                <PopoverTrigger asChild>
+                <Button
+                    id="date"
+                    variant={"outline"}
+                    className={"w-[300px] justify-start text-left font-normal"}
+                >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date?.from ? (
+                    date.to ? (
+                        <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                        </>
+                    ) : (
+                        format(date.from, "LLL dd, y")
+                    )
+                    ) : (
+                    <span>{t('Pick a date')}</span>
+                    )}
+                </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={date?.from}
+                        selected={date}
+                        onSelect={setDate}
+                        numberOfMonths={2}
+                    />
+                </PopoverContent>
+            </Popover>
+            </div>
             <Tabs defaultValue="sales" onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="sales"><TrendingUp className="mr-2"/>{t('Sales Report')}</TabsTrigger>
