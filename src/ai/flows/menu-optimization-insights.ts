@@ -71,17 +71,17 @@ const prompt = ai.definePrompt({
   name: 'menuOptimizationInsightsPrompt',
   input: {schema: z.object({ salesData: z.string() })},
   output: {schema: MenuOptimizationInsightsOutputSchema},
-  prompt: `You are a restaurant menu optimization expert. Analyze the provided sales data and provide recommendations to improve profitability and customer satisfaction.
+  prompt: `You are a restaurant menu optimization expert. Analyze the provided sales data and provide recommendations in Spanish to improve profitability and customer satisfaction.
 
 Sales Data:
 {{{salesData}}}
 
-Based on this data, provide a summary of your findings and a list of actionable recommendations. The recommendations should be specific and practical, focusing on aspects like pricing, menu item placement, ingredients, and promotions.
+Based on this data, provide a summary of your findings and a list of actionable recommendations. The recommendations should be specific, practical, and in Spanish, focusing on aspects like pricing, menu item placement, ingredients, and promotions.
 
 Summary:
 
 Recommendations:
-`, // Ensure the model outputs a Summary and Recommendations section.
+`,
 });
 
 const menuOptimizationInsightsFlow = ai.defineFlow(

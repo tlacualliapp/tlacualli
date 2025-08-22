@@ -1122,24 +1122,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wand2 className="h-6 w-6" /> {t('Menu Optimization (AI)')}
-          </CardTitle>
-          <CardDescription>{t('Get AI-powered insights to optimize your menu for profitability and customer satisfaction.')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <ReportForm 
-                restaurantId={restaurantId}
-                dateRange={{
-                    from: date?.from?.toISOString() || '',
-                    to: date?.to?.toISOString() || '',
-                }}
-            />
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
             <div className="flex items-center justify-between">
                 <div>
                     <CardTitle className="flex items-center gap-2"><ListChecks className="h-6 w-6" /> {t('Operational Analytics')}</CardTitle>
@@ -1237,6 +1219,23 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wand2 className="h-6 w-6" /> {t('Menu Optimization (AI)')}
+          </CardTitle>
+          <CardDescription>{t('Get AI-powered insights to optimize your menu for profitability and customer satisfaction.')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <ReportForm 
+                restaurantId={restaurantId}
+                dateRange={{
+                    from: date?.from?.toISOString() || '',
+                    to: date?.to?.toISOString() || '',
+                }}
+            />
+        </CardContent>
+      </Card>
       
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md">
