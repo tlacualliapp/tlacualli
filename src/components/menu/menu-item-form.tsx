@@ -336,7 +336,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="preparationResponsible">{t('Responsable de preparación')}</Label>
+              <Label htmlFor="preparationResponsible">{t('Preparation Responsible')}</Label>
               <Select name="preparationResponsible" value={formData.preparationResponsible} onValueChange={(value) => handleSelectChange('preparationResponsible', value)}>
                   <SelectTrigger><SelectValue placeholder={t('Select a responsible')} /></SelectTrigger>
                   <SelectContent>
