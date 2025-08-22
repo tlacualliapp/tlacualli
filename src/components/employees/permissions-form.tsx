@@ -24,7 +24,7 @@ interface PermissionsFormProps {
 const availableModules = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'orders', label: 'Orders' },
-  { key: 'menu', label: 'Menu y recetas' },
+  { key: 'menu', label: 'Menu & Recipes' },
   { key: 'staff', label: 'Staff' },
   { key: 'inventory', label: 'Inventory' },
   { key: 'kitchen', label: 'Kitchen' },
