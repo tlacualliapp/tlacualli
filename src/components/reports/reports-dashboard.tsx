@@ -1,15 +1,14 @@
 
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award } from 'lucide-react';
+import { BarChart, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award, Hourglass } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Progress } from '../ui/progress';
 
 interface OrderItem {
   id: string;
@@ -40,8 +40,6 @@ interface Order {
   tableName?: string;
   takeoutId?: string;
   type?: 'dine-in' | 'takeout';
-  sentToKitchenAt?: Timestamp;
-  pickupAcknowledgedAt?: Timestamp;
 }
 
 interface Payment {
@@ -52,11 +50,6 @@ interface Payment {
 interface Recipe {
   id: string;
   cost: number;
-  ingredients: {
-      itemId: string;
-      itemName: string;
-      quantity: number;
-  }[];
 }
 
 interface MenuItem {
@@ -107,6 +100,12 @@ interface DishPreparationTimeData {
     orderCount: number;
 }
 
+interface PeakHoursData {
+    hour: string;
+    orders: number;
+}
+
+
 type SortKeyProfitability = keyof ProfitabilityData;
 type SortKeyInventory = keyof InventoryItem;
 type SortKeyConsumption = keyof ConsumptionData;
@@ -151,7 +150,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [valuedInventoryData, setValuedInventoryData] = useState<InventoryItem[]>([]);
   const [consumptionReportData, setConsumptionReportData] = useState<ConsumptionData[]>([]);
   const [tableTurnaroundData, setTableTurnaroundData] = useState<TableTurnaroundTimeData[]>([]);
-  const [dishPreparationData, setDishPreparationData] = useState<DishPreparationTimeData[]>([]);
+  const [peakHoursData, setPeakHoursData] = useState<PeakHoursData[]>([]);
   const [ivaRate, setIvaRate] = useState(16);
 
   const [isSalesLoading, setIsSalesLoading] = useState(false);
@@ -177,7 +176,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [inventorySortConfig, setInventorySortConfig] = useState<{ key: SortKeyInventory; direction: 'ascending' | 'descending' } | null>({ key: 'totalValue', direction: 'descending' });
   const [consumptionSortConfig, setConsumptionSortConfig] = useState<{ key: SortKeyConsumption; direction: 'ascending' | 'descending' } | null>({ key: 'totalCost', direction: 'descending' });
   const [tableTurnaroundSortConfig, setTableTurnaroundSortConfig] = useState<{ key: SortKeyTableTurnaround; direction: 'ascending' | 'descending' } | null>({ key: 'averageTimeMinutes', direction: 'descending' });
-  const [dishPreparationSortConfig, setDishPreparationSortConfig] = useState<{ key: SortKeyDishPreparation; direction: 'ascending' | 'descending' } | null>({ key: 'averageTimeSeconds', direction: 'descending' });
 
 
   // Real-time stats effect
@@ -475,9 +473,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
   }, [restaurantId, date, activeTab, t]);
 
-    // Performance Analytics effect
+    // Performance Analytics effect for Operational Analytics Card
     useEffect(() => {
-        if (!restaurantId || !date?.from || activeTab !== 'performance') return;
+        if (!restaurantId || !date?.from) return;
 
         const calculatePerformance = async () => {
             setIsPerformanceLoading(true);
@@ -530,35 +528,26 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
             }));
             setTableTurnaroundData(turnaroundReport);
 
-            // 2. Dish Preparation Time
-            const prepTimeMap = new Map<string, { totalSeconds: number, count: number }>();
+            // 2. Peak Hours
+            const ordersByHour: { [hour: number]: number } = {};
+            for (let i = 0; i < 24; i++) {
+                ordersByHour[i] = 0;
+            }
             orders.forEach(order => {
-                if (order.status !== 'paid' && order.status !== 'served' && order.status !== 'ready_for_pickup') return;
-                if (!order.sentToKitchenAt || !order.pickupAcknowledgedAt) return;
+                const hour = order.createdAt.toDate().getHours();
+                ordersByHour[hour]++;
+            });
 
-                const prepTimeSeconds = (order.pickupAcknowledgedAt.toMillis() - order.sentToKitchenAt.toMillis()) / 1000;
-                order.items.forEach(item => {
-                    const existing = prepTimeMap.get(item.id) || { totalSeconds: 0, count: 0 };
-                    existing.totalSeconds += prepTimeSeconds; // Simplified: uses order prep time for all items in it
-                    existing.count++;
-                    prepTimeMap.set(item.id, existing);
-                });
-            });
-             const prepTimeReport: DishPreparationTimeData[] = Array.from(prepTimeMap.entries()).map(([id, data]) => {
-                const orderItem = orders.flatMap(o => o.items).find(i => i.id === id);
-                return {
-                    id,
-                    name: orderItem?.name || t('Unknown Dish'),
-                    averageTimeSeconds: data.totalSeconds / data.count,
-                    orderCount: data.count,
-                }
-            });
-            setDishPreparationData(prepTimeReport);
+            const peakHoursReport: PeakHoursData[] = Object.entries(ordersByHour).map(([hour, count]) => ({
+                hour: `${hour.padStart(2, '0')}:00`,
+                orders: count,
+            }));
+            setPeakHoursData(peakHoursReport);
 
             setIsPerformanceLoading(false);
         };
         calculatePerformance();
-    }, [restaurantId, date, activeTab, t]);
+    }, [restaurantId, date, t]);
 
 
  const requestSortProfitability = (key: SortKeyProfitability) => {
@@ -680,30 +669,11 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     }
     return sortableItems;
   }, [tableTurnaroundData, tableTurnaroundSortConfig]);
-  
-  const requestSortDishPreparation = (key: SortKeyDishPreparation) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (dishPreparationSortConfig?.key === key && dishPreparationSortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setDishPreparationSortConfig({ key, direction });
-  };
-  
-  const sortedDishPreparation = useMemo(() => {
-    let sortableItems = [...dishPreparationData];
-    if (dishPreparationSortConfig !== null) {
-      sortableItems.sort((a, b) => {
-        if (a[dishPreparationSortConfig.key] < b[dishPreparationSortConfig.key]) {
-          return dishPreparationSortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (a[dishPreparationSortConfig.key] > b[dishPreparationSortConfig.key]) {
-          return dishPreparationSortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [dishPreparationData, dishPreparationSortConfig]);
+
+  const maxDishRankingQuantity = useMemo(() => {
+    if (profitabilityReportData.length === 0) return 1;
+    return Math.max(...profitabilityReportData.map(item => item.quantitySold), 0);
+  }, [profitabilityReportData]);
 
 
   const filteredSalesReport = salesReportData.filter(order => {
@@ -760,6 +730,45 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
           <CardDescription>{t('Vital information for decision-making and business performance understanding.')}</CardDescription>
         </CardHeader>
       </Card>
+
+      <div className="flex items-center justify-end gap-2 py-4">
+            <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
+            <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
+            <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
+            <Popover>
+            <PopoverTrigger asChild>
+            <Button
+                id="date"
+                variant={"outline"}
+                className={"w-[300px] justify-start text-left font-normal"}
+            >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date?.from ? (
+                date.to ? (
+                    <>
+                    {format(date.from, "LLL dd, y")} -{" "}
+                    {format(date.to, "LLL dd, y")}
+                    </>
+                ) : (
+                    format(date.from, "LLL dd, y")
+                )
+                ) : (
+                <span>{t('Pick a date')}</span>
+                )}
+            </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={date?.from}
+                    selected={date}
+                    onSelect={setDate}
+                    numberOfMonths={2}
+                />
+            </PopoverContent>
+        </Popover>
+        </div>
       
       <Card>
         <CardHeader>
@@ -822,57 +831,114 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         </CardContent>
       </Card>
 
+    <Card>
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2"><ListChecks className="h-6 w-6" /> {t('Operational Analytics')}</CardTitle>
+            <CardDescription>{t('Analyze the performance of your restaurant operations in the selected date range.')}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-1">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Award className="h-5 w-5" />{t('Dish Ranking')}</CardTitle>
+                    <CardDescription>{t('Most sold dishes in the selected period.')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border h-96 overflow-y-auto">
+                        {isPerformanceLoading ? (
+                            <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+                        ) : profitabilityReportData.length > 0 ? (
+                            <div className="space-y-4 p-4">
+                                {profitabilityReportData.sort((a,b) => b.quantitySold - a.quantitySold).map((item, index) => (
+                                    <div key={item.id}>
+                                        <div className="flex justify-between items-center text-sm mb-1">
+                                            <span className="font-medium">#{index+1} {item.name}</span>
+                                            <span className="font-mono text-muted-foreground">{item.quantitySold} {t('sold')}</span>
+                                        </div>
+                                        <Progress value={(item.quantitySold / maxDishRankingQuantity) * 100} />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-muted-foreground">{t('No data available.')}</div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+            <Card className="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Hourglass className="h-5 w-5" />{t('Peak Hours')}</CardTitle>
+                    <CardDescription>{t('Busiest hours based on order volume.')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isPerformanceLoading ? (
+                        <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+                    ) : peakHoursData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={peakHoursData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="hour" />
+                                <YAxis />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="orders" fill="#8884d8" name={t('Orders')} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="flex items-center justify-center h-[300px] text-muted-foreground">{t('No data available.')}</div>
+                    )}
+                </CardContent>
+            </Card>
+            <Card className="md:col-span-2 lg:col-span-3">
+                    <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />{t('Table Turnaround Time')}</CardTitle>
+                    <CardDescription>{t('Average time customers spend at each table from order creation to payment.')}</CardDescription>
+                </CardHeader>
+                    <CardContent>
+                    <div className="rounded-md border h-96 overflow-y-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t('Table')}</TableHead>
+                                    <TableHead className="text-right cursor-pointer" onClick={() => requestSortTableTurnaround('averageTimeMinutes')}>
+                                        <div className="flex items-center justify-end gap-1">{t('Average Time (min)')} <ArrowUpDown className="h-3 w-3" /></div>
+                                    </TableHead>
+                                    <TableHead className="text-right">{t('Order Count')}</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                    {isPerformanceLoading ? (
+                                    <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : sortedTableTurnaround.length > 0 ? (
+                                    sortedTableTurnaround.map((item) => (
+                                        <TableRow key={item.id}>
+                                            <TableCell>{item.name}</TableCell>
+                                            <TableCell className="text-right font-mono">{item.averageTimeMinutes.toFixed(1)}</TableCell>
+                                            <TableCell className="text-right font-mono">{item.orderCount}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                        <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        </CardContent>
+    </Card>
+
       <Card>
         <CardHeader>
             <CardTitle>{t('Detailed Reports')}</CardTitle>
         </CardHeader>
         <CardContent>
             <Tabs defaultValue="sales" onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="sales"><TrendingUp className="mr-2"/>{t('Sales Report')}</TabsTrigger>
                     <TabsTrigger value="profitability"><DollarSign className="mr-2"/>{t('Profitability Report')}</TabsTrigger>
-                    <TabsTrigger value="performance"><ListChecks className="mr-2"/>{t('Operational Analytics')}</TabsTrigger>
                     <TabsTrigger value="inventory-value"><Package className="mr-2"/>{t('Valued Inventory')}</TabsTrigger>
                     <TabsTrigger value="consumption"><TrendingDown className="mr-2"/>{t('Consumption Report')}</TabsTrigger>
                 </TabsList>
-                 <div className="flex flex-wrap items-center justify-end gap-2 py-4">
-                     <Button variant="outline" size="sm" onClick={() => setDatePreset('thisMonth')}>{t('This Month')}</Button>
-                     <Button variant="outline" size="sm" onClick={() => setDatePreset('lastMonth')}>{t('Last Month')}</Button>
-                     <Button variant="outline" size="sm" onClick={() => setDatePreset('thisYear')}>{t('This Year')}</Button>
-                     <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date"
-                            variant={"outline"}
-                            className={"w-[300px] justify-start text-left font-normal"}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date?.from ? (
-                            date.to ? (
-                                <>
-                                {format(date.from, "LLL dd, y")} -{" "}
-                                {format(date.to, "LLL dd, y")}
-                                </>
-                            ) : (
-                                format(date.from, "LLL dd, y")
-                            )
-                            ) : (
-                            <span>{t('Pick a date')}</span>
-                            )}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                            <Calendar
-                                initialFocus
-                                mode="range"
-                                defaultMonth={date?.from}
-                                selected={date}
-                                onSelect={setDate}
-                                numberOfMonths={2}
-                            />
-                        </PopoverContent>
-                    </Popover>
-                 </div>
                 <TabsContent value="sales" className="pt-4 space-y-4">
                      <div className="flex gap-4">
                         <Input 
@@ -1013,116 +1079,6 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
                             </div>
                         </CardContent>
                     </Card>
-                </TabsContent>
-                <TabsContent value="performance" className="pt-4 space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <Card>
-                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Award className="h-5 w-5" />{t('Dish Ranking')}</CardTitle>
-                                <CardDescription>{t('Most sold dishes in the selected period.')}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="rounded-md border h-96 overflow-y-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>{t('Rank')}</TableHead>
-                                                <TableHead>{t('Dish')}</TableHead>
-                                                <TableHead className="text-right">{t('Quantity Sold')}</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                             {isPerformanceLoading ? (
-                                                <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                                            ) : sortedAndFilteredProfitability.sort((a,b) => b.quantitySold - a.quantitySold).length > 0 ? (
-                                                sortedAndFilteredProfitability.map((item, index) => (
-                                                    <TableRow key={item.id}>
-                                                        <TableCell className="font-bold">#{index + 1}</TableCell>
-                                                        <TableCell>{item.name}</TableCell>
-                                                        <TableCell className="text-right font-mono">{item.quantitySold}</TableCell>
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                 <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />{t('Table Turnaround Time')}</CardTitle>
-                                <CardDescription>{t('Average time customers spend at each table.')}</CardDescription>
-                            </CardHeader>
-                             <CardContent>
-                                <div className="rounded-md border h-96 overflow-y-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>{t('Table')}</TableHead>
-                                                <TableHead className="text-right cursor-pointer" onClick={() => requestSortTableTurnaround('averageTimeMinutes')}>
-                                                    <div className="flex items-center justify-end gap-1">{t('Average Time (min)')} <ArrowUpDown className="h-3 w-3" /></div>
-                                                </TableHead>
-                                                <TableHead className="text-right">{t('Order Count')}</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                             {isPerformanceLoading ? (
-                                                <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                                            ) : sortedTableTurnaround.length > 0 ? (
-                                                sortedTableTurnaround.map((item) => (
-                                                    <TableRow key={item.id}>
-                                                        <TableCell>{item.name}</TableCell>
-                                                        <TableCell className="text-right font-mono">{item.averageTimeMinutes.toFixed(1)}</TableCell>
-                                                        <TableCell className="text-right font-mono">{item.orderCount}</TableCell>
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                 <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </CardContent>
-                        </Card>
-                         <Card className="md:col-span-2">
-                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Utensils className="h-5 w-5" />{t('Dish Preparation Time')}</CardTitle>
-                                <CardDescription>{t('Average time from order sent to kitchen until ready for pickup.')}</CardDescription>
-                            </CardHeader>
-                             <CardContent>
-                                <div className="rounded-md border h-96 overflow-y-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>{t('Dish')}</TableHead>
-                                                <TableHead className="text-right cursor-pointer" onClick={() => requestSortDishPreparation('averageTimeSeconds')}>
-                                                    <div className="flex items-center justify-end gap-1">{t('Average Time (sec)')} <ArrowUpDown className="h-3 w-3" /></div>
-                                                </TableHead>
-                                                <TableHead className="text-right">{t('Preparation Count')}</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                             {isPerformanceLoading ? (
-                                                <TableRow><TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                                            ) : sortedDishPreparation.length > 0 ? (
-                                                sortedDishPreparation.map((item) => (
-                                                    <TableRow key={item.id}>
-                                                        <TableCell>{item.name}</TableCell>
-                                                        <TableCell className="text-right font-mono">{item.averageTimeSeconds.toFixed(1)}</TableCell>
-                                                        <TableCell className="text-right font-mono">{item.orderCount}</TableCell>
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                 <TableRow><TableCell colSpan={3} className="text-center h-24">{t('No data available.')}</TableCell></TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
                 </TabsContent>
                 <TabsContent value="inventory-value" className="pt-4 space-y-4">
                     <div className="flex justify-between items-center">
@@ -1267,3 +1223,5 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     </div>
   );
 }
+
+    
