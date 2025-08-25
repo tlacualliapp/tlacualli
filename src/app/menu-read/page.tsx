@@ -142,8 +142,12 @@ function MenuDisplay() {
 
 export default function MenuReadOnlyPage() {
     return (
-        <div className="bg-gray-100 flex items-center justify-center min-h-screen p-4">
-            <div className="w-full max-w-sm h-[85vh] max-h-[900px]">
+        <div 
+            className="relative flex items-center justify-center min-h-screen p-4 bg-cover bg-center"
+            style={{ backgroundImage: "url('/assets/background.png')" }}
+        >
+            <div className="absolute inset-0 bg-black/30"></div>
+            <div className="relative z-10 w-full max-w-sm h-[85vh] max-h-[900px]">
                 <Suspense fallback={<div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
                     <MenuDisplay />
                 </Suspense>
