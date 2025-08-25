@@ -87,11 +87,8 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   const [imageFile, setImageFile] = useState<File | null>(null);
   const isEditMode = !!menuItemToEdit;
 
-  const [formData, setFormData] = useState(initialFormData);
-
-  useEffect(() => {
-    if (menuItemToEdit) {
-      setFormData({
+  const [formData, setFormData] = useState(
+    menuItemToEdit ? {
         name: menuItemToEdit.name || '',
         description: menuItemToEdit.description || '',
         price: menuItemToEdit.price || 0,
@@ -102,11 +99,8 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         preparationResponsible: menuItemToEdit.preparationResponsible || '',
         preparationTime: menuItemToEdit.preparationTime || 0,
         status: menuItemToEdit.status || 'active',
-      });
-    } else {
-        setFormData(initialFormData);
-    }
-  }, [menuItemToEdit]);
+    } : initialFormData
+  );
   
   useEffect(() => {
     if (!restaurantId) return;
