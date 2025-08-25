@@ -432,7 +432,7 @@ export default function OrdersPage() {
       <div className="grid gap-6 lg:grid-cols-3 h-full">
         <div className="lg:col-span-2">
             <Card className="h-full">
-                 <CardHeader className="flex flex-row justify-between items-center">
+                 <CardHeader className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
                     <div>
                       <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
                           <ClipboardList className="h-8 w-8" /> {t('Order Management')}
@@ -441,7 +441,7 @@ export default function OrdersPage() {
                           {t('Select a table to start an order or manage an existing one.')}
                       </CardDescription>
                     </div>
-                     <Button variant="outline" onClick={handleTakeoutOrder}>
+                     <Button variant="outline" onClick={handleTakeoutOrder} className="w-full md:w-auto">
                         <ShoppingBag className="mr-2 h-4 w-4" />
                         {t('Register Takeout Order')}
                     </Button>
@@ -528,5 +528,3 @@ export default function OrdersPage() {
     </AdminLayout>
   );
 }
-
-    
