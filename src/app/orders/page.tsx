@@ -127,41 +127,36 @@ export default function OrdersPage() {
   }, [restaurantId]);
 
   // Effect to fetch rooms and tables
-  useEffect(() => {
-    if (!restaurantId) return;
-    setIsLoading(true);
+    useEffect(() => {
+        if (!restaurantId) return;
+        setIsLoading(true);
 
-    const roomsRef = collection(db, `restaurantes/${restaurantId}/rooms`);
-    const unsubscribeRooms = onSnapshot(roomsRef, (snapshot) => {
-      const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)).sort((a,b) => a.name.localeCompare(b.name));
-      setRooms(roomsData);
+        const roomsRef = collection(db, `restaurantes/${restaurantId}/rooms`);
+        const unsubscribeRooms = onSnapshot(roomsRef, (snapshot) => {
+            const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)).sort((a, b) => a.name.localeCompare(b.name));
+            setRooms(roomsData);
 
-      if (roomsData.length === 0) {
-        setIsLoading(false);
-        return;
-      }
+            const tableUnsubscribes = roomsData.map(room => {
+                const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
+                return onSnapshot(tablesRef, (tableSnapshot) => {
+                    const tablesData = tableSnapshot.docs.map(tableDoc => ({
+                        id: tableDoc.id,
+                        roomId: room.id,
+                        ...tableDoc.data()
+                    } as Table));
+                    setTablesByRoom(prev => ({ ...prev, [room.id]: tablesData }));
+                });
+            });
 
-      const tableSubscriptions = roomsData.map(room => {
-        const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
-        return onSnapshot(tablesRef, (tableSnapshot) => {
-          const tablesData = tableSnapshot.docs.map(doc => ({
-              id: doc.id,
-              roomId: room.id,
-              ...doc.data()
-          } as Table)).sort((a, b) => a.name.localeCompare(b.name));
-          
-          setTablesByRoom(prev => ({...prev, [room.id]: tablesData}));
+            if (roomsData.length > 0) {
+                 setIsLoading(false);
+            }
+
+            return () => tableUnsubscribes.forEach(unsub => unsub());
         });
-      });
-      
-      setIsLoading(false);
 
-      // Unsubscribe from all table listeners on cleanup
-      return () => tableSubscriptions.forEach(unsub => unsub());
-    });
-
-    return () => unsubscribeRooms();
-  }, [restaurantId]);
+        return () => unsubscribeRooms();
+    }, [restaurantId]);
 
    useEffect(() => {
     const timerInterval = setInterval(() => {
@@ -500,7 +495,7 @@ export default function OrdersPage() {
 
                                 return (
                                 <TabsContent key={room.id} value={room.id} className="flex-grow bg-muted/50 rounded-b-lg overflow-auto relative">
-                                    <div className="absolute inset-0">
+                                    <div className="w-full h-full">
                                         {filteredTables.map(table => (
                                             <TableItem 
                                                 key={table.id}
@@ -535,3 +530,5 @@ export default function OrdersPage() {
     </AdminLayout>
   );
 }
+
+    
