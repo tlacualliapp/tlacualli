@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { useDrop } from 'react-dnd';
 import { Loader2 } from 'lucide-react';
 import { Toolbar } from './toolbar';
@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TableForm } from './table-form';
 import { useTranslation } from 'react-i18next';
+import { Order } from '@/components/orders/order-details';
 
 
 export interface Room {
@@ -35,6 +36,7 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [tableToEdit, setTableToEdit] = useState<Table | null>(null);
+  const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -49,7 +51,20 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
       setIsLoading(false);
     });
 
-    return () => unsubscribeRooms();
+    const ordersQuery = query(
+      collection(db, `restaurantes/${restaurantId}/orders`),
+      where("status", "in", ["open", "preparing", "ready_for_pickup", "served"])
+    );
+    const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
+        const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+        setActiveOrders(ordersData);
+    });
+
+
+    return () => {
+        unsubscribeRooms();
+        unsubscribeOrders();
+    }
   }, [restaurantId, activeRoom]);
 
   useEffect(() => {
@@ -63,6 +78,21 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
 
     return () => unsubscribeTables();
   }, [restaurantId, activeRoom]);
+  
+  const getTableWithStatus = (table: Table): Table => {
+    const activeOrder = activeOrders.find(o => o.tableId === table.id && o.type !== 'takeout');
+    const dbStatus = table.status;
+
+    if (activeOrder) {
+      return { ...table, status: activeOrder.status as 'open' | 'preparing' | 'ready_for_pickup' | 'served' };
+    }
+    
+    if (dbStatus && ['dirty', 'reserved'].includes(dbStatus)) {
+        return { ...table, status: dbStatus };
+    }
+
+    return { ...table, status: 'available' };
+  };
 
   const moveTable = async (id: string, left: number, top: number) => {
     if (view !== 'admin') return; // Prevent moving in operational view
@@ -127,7 +157,7 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
                      {(tables[room.id] || []).map(table => (
                         <TableItem 
                             key={table.id} 
-                            {...table} 
+                            {...getTableWithStatus(table)}
                             onDelete={deleteTable} 
                             onEdit={handleEditTable}
                             onClick={() => handleTableClick(table)}
