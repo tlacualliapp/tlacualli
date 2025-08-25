@@ -26,7 +26,6 @@ interface MenuItem {
   recipeId?: string;
   inventoryItemId?: string;
   categoryId?: string;
-  availability?: string;
   imageUrl?: string;
   preparationResponsible?: string;
   preparationTime?: number;
@@ -157,12 +156,10 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     } else if (name === 'preparationResponsible' && value === 'add_new') {
         setIsAddResponsibleOpen(true);
     } else if (name === 'recipeId') {
-        const selectedRecipe = recipes.find(r => r.id === value);
         setFormData(prev => ({
             ...prev,
             recipeId: value,
             inventoryItemId: '', // Reset inventory item if recipe is chosen
-            name: selectedRecipe && value !== 'none' ? selectedRecipe.name : prev.name,
         }));
     } else {
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -186,12 +183,10 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
 
 
   const handleInventoryItemSelect = (value: string) => {
-    const selectedItem = inventoryItems.find(item => item.id === value);
     setFormData(prev => ({
       ...prev,
       inventoryItemId: value,
       recipeId: '', // Reset recipe if inventory item is chosen
-      name: selectedItem ? selectedItem.name : prev.name
     }));
     setIsComboboxOpen(false);
   }
