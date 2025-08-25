@@ -58,6 +58,19 @@ interface MenuItemFormProps {
   menuItemToEdit?: MenuItem | null;
 }
 
+const initialFormData = {
+  name: '',
+  description: '',
+  price: 0,
+  recipeId: '',
+  inventoryItemId: '',
+  categoryId: '',
+  imageUrl: '',
+  preparationResponsible: '',
+  preparationTime: 0,
+  status: 'active' as 'active' | 'inactive',
+};
+
 export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuItemFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -74,18 +87,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   const [imageFile, setImageFile] = useState<File | null>(null);
   const isEditMode = !!menuItemToEdit;
 
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: 0,
-    recipeId: '',
-    inventoryItemId: '',
-    categoryId: '',
-    imageUrl: '',
-    preparationResponsible: '',
-    preparationTime: 0,
-    status: 'active',
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   useEffect(() => {
     if (menuItemToEdit) {
@@ -102,11 +104,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         status: menuItemToEdit.status || 'active',
       });
     } else {
-        setFormData({
-            name: '', description: '', price: 0, recipeId: '', inventoryItemId: '',
-            categoryId: '', imageUrl: '', preparationResponsible: '',
-            preparationTime: 0, status: 'active',
-        });
+        setFormData(initialFormData);
     }
   }, [menuItemToEdit]);
   
@@ -146,8 +144,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    const isNumber = ['price', 'preparationTime'].includes(name);
-    setFormData(prev => ({ ...prev, [name]: isNumber ? Number(value) : value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
   
   const handleSelectChange = (name: string, value: string) => {
@@ -155,14 +152,13 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         setIsAddCategoryOpen(true);
     } else if (name === 'preparationResponsible' && value === 'add_new') {
         setIsAddResponsibleOpen(true);
-    } else if (name === 'recipeId') {
-        setFormData(prev => ({
-            ...prev,
-            recipeId: value,
-            inventoryItemId: '', // Reset inventory item if recipe is chosen
-        }));
     } else {
-        setFormData(prev => ({ ...prev, [name]: value }));
+       setFormData(prev => ({
+            ...prev,
+            [name]: value,
+            // Clear the other if one is selected
+            ...(name === 'recipeId' && { inventoryItemId: '' }),
+       }));
     }
   };
 
@@ -352,7 +348,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
             </div>
             <div className="space-y-2">
                 <Label htmlFor="price">{t('Sale Price ($)')}</Label>
-                <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleInputChange} required />
+                <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} required />
             </div>
         </div>
 
@@ -374,7 +370,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
             </div>
             <div className="space-y-2">
                 <Label htmlFor="preparationTime">{t('Estimated preparation time (mins)')}</Label>
-                <Input id="preparationTime" name="preparationTime" type="number" value={formData.preparationTime} onChange={handleInputChange} required />
+                <Input id="preparationTime" name="preparationTime" type="number" value={formData.preparationTime} onChange={(e) => setFormData({...formData, preparationTime: Number(e.target.value)})} required />
             </div>
         </div>
         
@@ -437,5 +433,3 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       </Dialog>
     </>
   );
-
-    
