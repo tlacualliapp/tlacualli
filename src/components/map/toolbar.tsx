@@ -71,7 +71,7 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
 
 
   return (
-    <div className="p-2 border-b flex items-center justify-between gap-4 bg-card">
+    <div className="p-2 border-b flex flex-wrap items-center justify-between gap-4 bg-card">
        <div className="flex items-center gap-2">
            <Button variant="outline" size="sm" onClick={() => addTable('square')} disabled={!activeRoom}>
                 <Square className="mr-2 h-4 w-4" /> {t('Square Table')}

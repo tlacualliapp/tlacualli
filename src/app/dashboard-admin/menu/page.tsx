@@ -68,7 +68,7 @@ export default function MenuPage() {
         </CardHeader>
       </Card>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Create Recipe Card */}
         <Dialog open={isRecipeModalOpen} onOpenChange={setIsRecipeModalOpen}>
             <Card className="hover:shadow-lg transition-shadow">
@@ -145,5 +145,3 @@ export default function MenuPage() {
     </AdminLayout>
   );
 }
-
-    
