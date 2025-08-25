@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import { AppLayout } from '@/components/layout/app-layout';
+import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
 import {
@@ -32,7 +32,7 @@ interface UserData {
 }
 
 const allModules = [
-  { key: 'dashboard', href: '/dashboard-admin', label: 'Dashboard', icon: Home, color: 'bg-blue-500' },
+  { key: 'dashboard', href: '/dashboard-collaborator', label: 'Dashboard', icon: Home, color: 'bg-blue-500' },
   { key: 'orders', href: '/orders', label: 'Orders', icon: ClipboardList, color: 'bg-yellow-500' },
   { key: 'menu', href: '/dashboard-admin/menu', label: 'Menu & Recipes', icon: Utensils, color: 'bg-red-500' },
   { key: 'staff', href: '/dashboard-admin/employees', label: 'Staff', icon: Users, color: 'bg-teal-500' },
@@ -80,7 +80,10 @@ export default function CollaboratorDashboard() {
     fetchUserData();
   }, [user]);
 
-  const enabledModules = allModules.filter(module => userData?.permissions?.[module.key]);
+  const enabledModules = allModules.filter(module => {
+    if (module.key === 'dashboard') return true;
+    return userData?.permissions?.[module.key];
+  });
 
 
   if (loading || isLoading || !user) {
@@ -92,7 +95,7 @@ export default function CollaboratorDashboard() {
   }
 
   return (
-    <AppLayout>
+    <AdminLayout>
       <Card className="mb-6 bg-card/65 backdrop-blur-lg">
         <CardHeader>
             <CardTitle className="text-3xl font-bold font-headline">{t('Collaborator Dashboard')}</CardTitle>
@@ -132,6 +135,6 @@ export default function CollaboratorDashboard() {
         </Card>
       )}
 
-    </AppLayout>
+    </AdminLayout>
   );
 }

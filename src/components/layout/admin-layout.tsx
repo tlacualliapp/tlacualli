@@ -106,21 +106,20 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           if (userSnap.exists()) {
             const userData = userSnap.data();
             const profile = userData.perfil;
-            let dynamicNavItems = [...allNavItems];
-
+            
             if (profile === '1') { // Admin
               setDashboardUrl('/dashboard-admin');
               setNavItems(allNavItems);
             } else if (profile === '2') { // Collaborator
               setDashboardUrl('/dashboard-collaborator');
               const allowedItems = allNavItems.filter(item => {
-                 // Collaborators see their own dashboard link
                  if (item.key === 'dashboard') return true;
                  return userData.permissions && userData.permissions[item.key]
               });
               
-              // Update dashboard href for collaborators
-              dynamicNavItems = allowedItems.map(item => item.key === 'dashboard' ? {...item, href: '/dashboard-collaborator'} : item);
+              const dynamicNavItems = allowedItems.map(item => 
+                item.key === 'dashboard' ? {...item, href: '/dashboard-collaborator'} : item
+              );
               setNavItems(dynamicNavItems);
             } else { // Fallback
               setNavItems([]);
