@@ -49,7 +49,7 @@ export default function OrdersPage() {
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [userAssignments, setUserAssignments] = useState<UserAssignments | null>(null);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
   
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -63,6 +63,12 @@ export default function OrdersPage() {
   const [elapsedTimes, setElapsedTimes] = useState<{ [orderId: string]: string }>({});
   const [activeSubAccountId, setActiveSubAccountId] = useState<string>('main');
 
+  useEffect(() => {
+    if (!i18n.language) {
+      i18n.changeLanguage('es');
+    }
+  }, [i18n]);
+  
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');

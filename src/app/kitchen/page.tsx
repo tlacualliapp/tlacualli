@@ -27,11 +27,17 @@ interface InventoryUpdate {
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!i18n.language) {
+      i18n.changeLanguage('es');
+    }
+  }, [i18n]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -250,4 +256,3 @@ export default function KitchenPage() {
     </AdminLayout>
   );
 }
-
