@@ -87,12 +87,12 @@ function MenuDisplay() {
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
-        <div className="p-4 border-b">
-            <h1 className="text-2xl font-bold text-center">{restaurantName}</h1>
+    <div className="bg-card/80 backdrop-blur-lg rounded-3xl shadow-lg h-full overflow-hidden flex flex-col text-card-foreground">
+        <div className="p-4 border-b border-white/10">
+            <h1 className="text-2xl font-bold text-center font-headline">{restaurantName}</h1>
         </div>
       {categories.length > 0 ? (
-        <Tabs defaultValue={categories[0].id} className="flex-grow flex flex-col">
+        <Tabs defaultValue={categories[0].id} className="flex-grow flex flex-col font-body">
           <div className="p-4">
             <TabsList className="grid w-full grid-cols-4">
               {categories.map(cat => (
@@ -103,7 +103,7 @@ function MenuDisplay() {
           <div className="flex-grow overflow-y-auto px-4 pb-4">
             {categories.map(cat => (
               <TabsContent key={cat.id} value={cat.id} className="mt-0">
-                 <h2 className="text-2xl font-bold mb-4">{cat.name}</h2>
+                 <h2 className="text-2xl font-bold mb-4 font-headline">{cat.name}</h2>
                  <div className="space-y-4">
                     {menuItems.filter(item => item.categoryId === cat.id).map(item => (
                         <Card key={item.id} className="bg-transparent border-0 shadow-none">
