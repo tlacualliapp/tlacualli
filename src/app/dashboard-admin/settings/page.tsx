@@ -80,6 +80,10 @@ export default function SettingsPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fileType: 'logo' | 'icon') => {
       const file = e.target.files?.[0];
       if (file) {
+          if (!file.type.startsWith('image/')) {
+              toast({ variant: 'destructive', title: t('Invalid File Type'), description: t('Please select an image file.') });
+              return;
+          }
           if (file.size > 1024 * 1024) { // 1MB
               toast({ variant: 'destructive', title: t('File too large'), description: t('Please select an image smaller than 1MB.') });
               return;
@@ -103,7 +107,7 @@ export default function SettingsPage() {
           const updateData: { logoUrl?: string, iconUrl?: string } = {};
 
           if (logoFile) {
-              const logoRef = ref(storage, `restaurants/${restaurantId}/logo/${logoFile.name}`);
+              const logoRef = ref(storage, `restaurantes/${restaurantId}/logos/${logoFile.name}`);
               uploadPromises.push(
                   uploadBytes(logoRef, logoFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
                       updateData.logoUrl = url;
@@ -112,7 +116,7 @@ export default function SettingsPage() {
           }
 
           if (iconFile) {
-              const iconRef = ref(storage, `restaurants/${restaurantId}/icon/${iconFile.name}`);
+              const iconRef = ref(storage, `restaurantes/${restaurantId}/icons/${iconFile.name}`);
               uploadPromises.push(
                   uploadBytes(iconRef, iconFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
                       updateData.iconUrl = url;
@@ -125,6 +129,8 @@ export default function SettingsPage() {
           if (Object.keys(updateData).length > 0) {
               const restaurantRef = doc(db, 'restaurantes', restaurantId);
               await updateDoc(restaurantRef, updateData);
+              if (updateData.logoUrl) setRestaurant(prev => prev ? { ...prev, logoUrl: updateData.logoUrl } : null);
+              if (updateData.iconUrl) setRestaurant(prev => prev ? { ...prev, iconUrl: updateData.iconUrl } : null);
           }
 
           toast({ title: t('Upload successful'), description: t('Your images have been updated.') });
@@ -258,5 +264,3 @@ export default function SettingsPage() {
     </AdminLayout>
   );
 }
-
-    
