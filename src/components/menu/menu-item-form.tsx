@@ -239,6 +239,8 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       
       const menuItemData = {
         ...formData,
+        price: Number(formData.price) || 0,
+        preparationTime: Number(formData.preparationTime) || 0,
         imageUrl,
         updatedAt: serverTimestamp(),
       };
@@ -448,4 +450,5 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       </Dialog>
     </>
   );
-}
+
+    
