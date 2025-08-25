@@ -228,7 +228,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     setIsLoading(true);
 
     try {
-      let imageUrl = menuItemToEdit?.imageUrl || '';
+      let imageUrl = formData.imageUrl || '';
       
       if (imageFile) {
         const imageRef = ref(storage, `restaurantes/${restaurantId}/menuItems/${imageFile.name}`);
