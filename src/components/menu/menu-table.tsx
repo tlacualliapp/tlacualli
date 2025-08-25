@@ -136,7 +136,7 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
   return (
     <>
       <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('Edit Menu Item')}</DialogTitle>
             <DialogDescription>{t('Modify the dish details.')}</DialogDescription>
