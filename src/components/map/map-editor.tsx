@@ -95,7 +95,7 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
   };
 
   const moveTable = async (id: string, left: number, top: number) => {
-    if (view !== 'admin') return; // Prevent moving in operational view
+    if (view !== 'admin' || !activeRoom) return;
     const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`, id);
     await updateDoc(tableRef, { left, top });
   };
