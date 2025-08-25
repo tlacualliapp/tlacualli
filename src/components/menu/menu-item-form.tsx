@@ -76,18 +76,41 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   const isEditMode = !!menuItemToEdit;
 
   const [formData, setFormData] = useState({
-    name: menuItemToEdit?.name || '',
-    description: menuItemToEdit?.description || '',
-    price: menuItemToEdit?.price || 0,
-    recipeId: menuItemToEdit?.recipeId || '',
-    inventoryItemId: menuItemToEdit?.inventoryItemId || '',
-    categoryId: menuItemToEdit?.categoryId || '',
-    imageUrl: menuItemToEdit?.imageUrl || '',
-    preparationResponsible: menuItemToEdit?.preparationResponsible || '',
-    preparationTime: menuItemToEdit?.preparationTime || 0,
-    status: menuItemToEdit?.status || 'active',
+    name: '',
+    description: '',
+    price: 0,
+    recipeId: '',
+    inventoryItemId: '',
+    categoryId: '',
+    imageUrl: '',
+    preparationResponsible: '',
+    preparationTime: 0,
+    status: 'active',
   });
 
+  useEffect(() => {
+    if (menuItemToEdit) {
+      setFormData({
+        name: menuItemToEdit.name || '',
+        description: menuItemToEdit.description || '',
+        price: menuItemToEdit.price || 0,
+        recipeId: menuItemToEdit.recipeId || '',
+        inventoryItemId: menuItemToEdit.inventoryItemId || '',
+        categoryId: menuItemToEdit.categoryId || '',
+        imageUrl: menuItemToEdit.imageUrl || '',
+        preparationResponsible: menuItemToEdit.preparationResponsible || '',
+        preparationTime: menuItemToEdit.preparationTime || 0,
+        status: menuItemToEdit.status || 'active',
+      });
+    } else {
+        setFormData({
+            name: '', description: '', price: 0, recipeId: '', inventoryItemId: '',
+            categoryId: '', imageUrl: '', preparationResponsible: '',
+            preparationTime: 0, status: 'active',
+        });
+    }
+  }, [menuItemToEdit]);
+  
   useEffect(() => {
     if (!restaurantId) return;
 
@@ -121,23 +144,6 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       unsubResponsibles();
     };
   }, [restaurantId]);
-  
-  useEffect(() => {
-    if (menuItemToEdit) {
-      setFormData({
-        name: menuItemToEdit.name || '',
-        description: menuItemToEdit.description || '',
-        price: menuItemToEdit.price || 0,
-        recipeId: menuItemToEdit.recipeId || '',
-        inventoryItemId: menuItemToEdit.inventoryItemId || '',
-        categoryId: menuItemToEdit.categoryId || '',
-        imageUrl: menuItemToEdit.imageUrl || '',
-        preparationResponsible: menuItemToEdit.preparationResponsible || '',
-        preparationTime: menuItemToEdit.preparationTime || 0,
-        status: menuItemToEdit.status || 'active',
-      });
-    }
-  }, [menuItemToEdit]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -232,7 +238,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       let imageUrl = formData.imageUrl || '';
       
       if (imageFile) {
-        const imageRef = ref(storage, `restaurantes/${restaurantId}/menuItems/${imageFile.name}`);
+        const imageRef = ref(storage, `restaurantes/${restaurantId}/menuItems/${Date.now()}_${imageFile.name}`);
         const snapshot = await uploadBytes(imageRef, imageFile);
         imageUrl = await getDownloadURL(snapshot.ref);
       }
@@ -255,20 +261,6 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         toast({ title: t("Menu Item Added"), description: t("The new item has been added to the menu.") });
       }
       onSuccess?.();
-      // Reset form state
-      setFormData({
-        name: '',
-        description: '',
-        price: 0,
-        recipeId: '',
-        inventoryItemId: '',
-        categoryId: '',
-        imageUrl: '',
-        preparationResponsible: '',
-        preparationTime: 0,
-        status: 'active',
-      })
-      setImageFile(null);
     } catch (error) {
       console.error("Error saving menu item:", error);
       toast({ variant: "destructive", title: t("Save Error"), description: t("Could not save the menu item information.") });
@@ -393,7 +385,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         
         <div className="space-y-2">
           <Label htmlFor="imageFile">{t('Image (Optional)')}</Label>
-          <Input id="imageFile" name="imageFile" type="file" onChange={handleFileChange} className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
+          <Input id="imageFile" name="imageFile" type="file" onChange={handleFileChange} accept="image/*" className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
           {imageFile && <p className="text-sm text-muted-foreground">{t('Selected')}: {imageFile.name}</p>}
         </div>
         
