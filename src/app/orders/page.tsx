@@ -126,37 +126,44 @@ export default function OrdersPage() {
     return () => unsubscribeOrders();
   }, [restaurantId]);
 
-  // Effect to fetch rooms and tables
-    useEffect(() => {
-        if (!restaurantId) return;
-        setIsLoading(true);
+  // Effect to fetch rooms
+  useEffect(() => {
+    if (!restaurantId) return;
+    setIsLoading(true);
+    const roomsRef = collection(db, `restaurantes/${restaurantId}/rooms`);
+    const unsubscribeRooms = onSnapshot(roomsRef, (snapshot) => {
+        const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)).sort((a, b) => a.name.localeCompare(b.name));
+        setRooms(roomsData);
+        if (roomsData.length > 0) {
+            setIsLoading(false);
+        } else {
+            setIsLoading(false);
+        }
+    });
 
-        const roomsRef = collection(db, `restaurantes/${restaurantId}/rooms`);
-        const unsubscribeRooms = onSnapshot(roomsRef, (snapshot) => {
-            const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)).sort((a, b) => a.name.localeCompare(b.name));
-            setRooms(roomsData);
+    return () => unsubscribeRooms();
+  }, [restaurantId]);
 
-            const tableUnsubscribes = roomsData.map(room => {
-                const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
-                return onSnapshot(tablesRef, (tableSnapshot) => {
-                    const tablesData = tableSnapshot.docs.map(tableDoc => ({
-                        id: tableDoc.id,
-                        roomId: room.id,
-                        ...tableDoc.data()
-                    } as Table));
-                    setTablesByRoom(prev => ({ ...prev, [room.id]: tablesData }));
-                });
-            });
+  // Effect to fetch tables for each room and listen for real-time updates
+  useEffect(() => {
+    if (rooms.length === 0) return;
 
-            if (roomsData.length > 0) {
-                 setIsLoading(false);
-            }
-
-            return () => tableUnsubscribes.forEach(unsub => unsub());
+    const unsubscribes = rooms.map(room => {
+        const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
+        return onSnapshot(tablesRef, (tableSnapshot) => {
+            const tablesData = tableSnapshot.docs.map(tableDoc => ({
+                id: tableDoc.id,
+                roomId: room.id,
+                ...tableDoc.data()
+            } as Table));
+            setTablesByRoom(prev => ({ ...prev, [room.id]: tablesData }));
         });
+    });
 
-        return () => unsubscribeRooms();
-    }, [restaurantId]);
+    // Cleanup function to unsubscribe from all listeners
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [rooms, restaurantId]);
+
 
    useEffect(() => {
     const timerInterval = setInterval(() => {
@@ -530,5 +537,3 @@ export default function OrdersPage() {
     </AdminLayout>
   );
 }
-
-    
