@@ -104,7 +104,7 @@ export default function MenuPage() {
                     </DialogTrigger>
                 </CardContent>
             </Card>
-             <DialogContent className="sm:max-w-2xl">
+             <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{t('Create Menu Item')}</DialogTitle>
                     <DialogDescription>{t('Add a new dish to your menu, linking it to a recipe.')}</DialogDescription>
