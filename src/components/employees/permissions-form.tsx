@@ -29,7 +29,6 @@ const allModules = [
   { key: 'staff', label: 'Staff', adminOnly: true },
   { key: 'inventory', label: 'Inventory', adminOnly: false },
   { key: 'kitchen', label: 'Kitchen', adminOnly: false },
-  { key: 'deliveries', label: 'Deliveries', adminOnly: false },
   { key: 'reports', label: 'Reports', adminOnly: true },
   { key: 'map', label: 'Digital Map', adminOnly: false },
   { key: 'settings', label: 'Settings', adminOnly: true },
