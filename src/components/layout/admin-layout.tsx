@@ -82,11 +82,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [navItems, setNavItems] = useState(allNavItems);
+  const [dashboardUrl, setDashboardUrl] = useState('/login');
 
    useEffect(() => {
     const fetchPermissions = async () => {
       if (user) {
-        // Find user document by uid first
         let userDocRef;
         const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
         const querySnapshot = await getDocs(q);
@@ -94,7 +94,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         if (!querySnapshot.empty) {
           userDocRef = querySnapshot.docs[0].ref;
         } else {
-          // Fallback for users who might not have UID stored (e.g. older records)
           const legacyQ = query(collection(db, "usuarios"), where("email", "==", user.email));
           const legacySnapshot = await getDocs(legacyQ);
           if(!legacySnapshot.empty) {
@@ -106,14 +105,26 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           const userSnap = await getDoc(userDocRef);
           if (userSnap.exists()) {
             const userData = userSnap.data();
-            // Administrator (Profile 1) has all permissions
-            if (userData.perfil === '1') {
+            const profile = userData.perfil;
+            let dynamicNavItems = [...allNavItems];
+
+            if (profile === '1') { // Admin
+              setDashboardUrl('/dashboard-admin');
               setNavItems(allNavItems);
-            } else if (userData.permissions) {
-              const allowedItems = allNavItems.filter(item => userData.permissions[item.key]);
-              setNavItems(allowedItems);
-            } else {
-              setNavItems([]); // No permissions set, show nothing
+            } else if (profile === '2') { // Collaborator
+              setDashboardUrl('/dashboard-collaborator');
+              const allowedItems = allNavItems.filter(item => {
+                 // Collaborators see their own dashboard link
+                 if (item.key === 'dashboard') return true;
+                 return userData.permissions && userData.permissions[item.key]
+              });
+              
+              // Update dashboard href for collaborators
+              dynamicNavItems = allowedItems.map(item => item.key === 'dashboard' ? {...item, href: '/dashboard-collaborator'} : item);
+              setNavItems(dynamicNavItems);
+            } else { // Fallback
+              setNavItems([]);
+              setDashboardUrl('/login');
             }
           }
         }
@@ -181,7 +192,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card/65 backdrop-blur-lg px-4 md:px-6 z-20">
         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
           <Link
-            href="/dashboard-admin"
+            href={dashboardUrl}
             className="flex items-center gap-2 text-lg font-semibold md:text-base"
           >
             <TacoIcon className="h-8 w-8 text-primary" />
@@ -215,7 +226,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             <SheetTitle className="sr-only">{t('Menu')}</SheetTitle>
             <nav className="grid gap-6 text-lg font-medium">
               <Link
-                href="/dashboard-admin"
+                href={dashboardUrl}
                 className="flex items-center gap-2 text-lg font-semibold"
               >
                 <TacoIcon className="h-6 w-6 text-primary" />
