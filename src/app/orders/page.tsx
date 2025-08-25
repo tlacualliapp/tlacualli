@@ -49,7 +49,7 @@ export default function OrdersPage() {
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [userAssignments, setUserAssignments] = useState<UserAssignments | null>(null);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
   
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -62,6 +62,14 @@ export default function OrdersPage() {
   const [view, setView] = useState<'table_map' | 'menu' | 'order_summary'>('table_map');
   const [elapsedTimes, setElapsedTimes] = useState<{ [orderId: string]: string }>({});
   const [activeSubAccountId, setActiveSubAccountId] = useState<string>('main');
+
+  useEffect(() => {
+    // This is a temporary fix to ensure the page loads in spanish by default
+    const lang = i18n.language;
+    if (lang !== 'es' && !localStorage.getItem('i18nextLng')) {
+        i18n.changeLanguage('es');
+    }
+  }, [i18n]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -491,8 +499,8 @@ export default function OrdersPage() {
                                 if (filteredTables.length === 0 && room.id !== 'takeout') return <TabsContent key={room.id} value={room.id}></TabsContent>;
 
                                 return (
-                                <TabsContent key={room.id} value={room.id} className="flex-grow bg-muted/50 rounded-b-lg overflow-auto p-4">
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                <TabsContent key={room.id} value={room.id} className="flex-grow bg-muted/50 rounded-b-lg overflow-auto relative">
+                                    <div className="absolute inset-0">
                                         {filteredTables.map(table => (
                                             <TableItem 
                                                 key={table.id}
