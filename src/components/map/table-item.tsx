@@ -126,45 +126,34 @@ const TableView: React.FC<Omit<TableItemProps, 'left' | 'top'>> = (props) => {
     );
 }
 
-const DraggableTableItem: React.FC<TableItemProps> = (props) => {
-    const { left, top } = props;
-    const [{ isDragging }, drag] = useDrag(() => ({
-        type: ItemTypes.TABLE,
-        item: { id: props.id, left: props.left, top: props.top },
-        collect: (monitor) => ({
-            isDragging: monitor.isDragging(),
-        }),
-        canDrag: !props.isTakeout
-    }), [props.id, left, top, props.isTakeout]);
-
-    const style: React.CSSProperties = {
-        position: 'absolute',
-        left,
-        top,
-        opacity: isDragging ? 0.5 : 1,
-        cursor: props.isTakeout ? 'default' : 'move',
-    };
-
-    return (
-        <div ref={drag} style={style}>
-            <TableView {...props} />
-        </div>
-    );
-};
-
-const NonDraggableTableItem: React.FC<TableItemProps> = (props) => {
-  return (
-    <div>
-        <TableView {...props} />
-    </div>
-  )
-}
-
-
 export const TableItem: React.FC<TableItemProps> = (props) => {
-  if (props.view === 'admin') {
-    return <DraggableTableItem {...props} />;
+  const { left, top, view, isTakeout } = props;
+
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: ItemTypes.TABLE,
+    item: { id: props.id, left: props.left, top: props.top },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+    canDrag: view === 'admin' && !isTakeout,
+  }), [props.id, left, top, view, isTakeout]);
+
+  const style: React.CSSProperties = {
+    opacity: isDragging ? 0.5 : 1,
+    cursor: view === 'admin' && !isTakeout ? 'move' : 'pointer',
+  };
+
+  // For non-takeout items in the map, position them absolutely.
+  // Takeout items will be positioned by their container's grid/flex layout.
+  if (!isTakeout) {
+    style.position = 'absolute';
+    style.left = left;
+    style.top = top;
   }
 
-  return <NonDraggableTableItem {...props} />
+  return (
+    <div ref={drag} style={style}>
+      <TableView {...props} />
+    </div>
+  );
 };
