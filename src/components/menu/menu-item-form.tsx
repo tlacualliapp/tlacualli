@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, PlusCircle, ChevronsUpDown, Check } from 'lucide-react';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs, onSnapshot } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { useTranslation } from 'react-i18next';
@@ -71,6 +72,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newResponsibleName, setNewResponsibleName] = useState('');
   const [isComboboxOpen, setIsComboboxOpen] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const isEditMode = !!menuItemToEdit;
 
   const [formData, setFormData] = useState({
@@ -161,6 +163,22 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        if (!file.type.startsWith('image/')) {
+            toast({ variant: 'destructive', title: t('Invalid File Type'), description: t('Please select an image file.') });
+            return;
+        }
+        if (file.size > 1024 * 1024) { // 1MB
+            toast({ variant: 'destructive', title: t('File too large'), description: t('Please select an image smaller than 1MB.') });
+            return;
+        }
+        setImageFile(file);
+    }
+  };
+
+
   const handleInventoryItemSelect = (value: string) => {
     const selectedItem = inventoryItems.find(item => item.id === value);
     setFormData(prev => ({
@@ -210,8 +228,17 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     setIsLoading(true);
 
     try {
+      let imageUrl = menuItemToEdit?.imageUrl || '';
+      
+      if (imageFile) {
+        const imageRef = ref(storage, `restaurantes/${restaurantId}/menuItems/${imageFile.name}`);
+        const snapshot = await uploadBytes(imageRef, imageFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      }
+      
       const menuItemData = {
         ...formData,
+        imageUrl,
         updatedAt: serverTimestamp(),
       };
 
@@ -238,6 +265,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         preparationTime: 0,
         status: 'active',
       })
+      setImageFile(null);
     } catch (error) {
       console.error("Error saving menu item:", error);
       toast({ variant: "destructive", title: t("Save Error"), description: t("Could not save the menu item information.") });
@@ -361,8 +389,9 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="imageUrl">{t('Image (Optional)')}</Label>
-          <Input id="imageUrl" name="imageUrl" type="file" className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
+          <Label htmlFor="imageFile">{t('Image (Optional)')}</Label>
+          <Input id="imageFile" name="imageFile" type="file" onChange={handleFileChange} className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
+          {imageFile && <p className="text-sm text-muted-foreground">{t('Selected')}: {imageFile.name}</p>}
         </div>
         
         <div className="flex justify-end pt-2">
