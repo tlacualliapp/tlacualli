@@ -126,38 +126,40 @@ export default function OrdersPage() {
     return () => unsubscribeOrders();
   }, [restaurantId]);
 
-  // Effect to fetch rooms and listen for real-time updates on their tables
+  // Effect to fetch rooms and then listen for table updates
   useEffect(() => {
     if (!restaurantId) return;
     setIsLoading(true);
 
-    const roomsRef = collection(db, `restaurantes/${restaurantId}/rooms`);
-    const unsubscribeRooms = onSnapshot(roomsRef, (snapshot) => {
-        const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)).sort((a, b) => a.name.localeCompare(b.name));
-        setRooms(roomsData);
-
-        const unsubscribes: (() => void)[] = [];
-        roomsData.forEach(room => {
-            const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
-            const unsubscribeTable = onSnapshot(tablesRef, (tableSnapshot) => {
-                const tablesData = tableSnapshot.docs.map(tableDoc => ({
-                    id: tableDoc.id,
-                    roomId: room.id,
-                    ...tableDoc.data()
-                } as Table));
-                
-                setTablesByRoom(prev => ({ ...prev, [room.id]: tablesData }));
-            });
-            unsubscribes.push(unsubscribeTable);
-        });
-
-        setIsLoading(false);
-        // Return a cleanup function that unsubscribes from all table listeners
-        return () => unsubscribes.forEach(unsub => unsub());
+    const roomsQuery = query(collection(db, `restaurantes/${restaurantId}/rooms`));
+    const unsubscribeRooms = onSnapshot(roomsQuery, (snapshot) => {
+      const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)).sort((a, b) => a.name.localeCompare(b.name));
+      setRooms(roomsData);
+      setIsLoading(false);
     });
 
     return () => unsubscribeRooms();
   }, [restaurantId]);
+
+  // Effect to listen to tables in all fetched rooms
+  useEffect(() => {
+    if (rooms.length === 0) return;
+
+    const allUnsubscribes = rooms.map(room => {
+      const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
+      return onSnapshot(tablesRef, (tableSnapshot) => {
+        const tablesData = tableSnapshot.docs.map(tableDoc => ({
+            id: tableDoc.id,
+            roomId: room.id,
+            ...tableDoc.data()
+        } as Table));
+        
+        setTablesByRoom(prev => ({ ...prev, [room.id]: tablesData }));
+      });
+    });
+
+    return () => allUnsubscribes.forEach(unsub => unsub());
+  }, [rooms, restaurantId]);
 
 
    useEffect(() => {
@@ -493,8 +495,6 @@ export default function OrdersPage() {
                                     userAssignments?.tables.length ? userAssignments.tables.includes(table.id) : true
                                 );
 
-                                if (filteredTables.length === 0 && room.id !== 'takeout') return <TabsContent key={room.id} value={room.id}></TabsContent>;
-
                                 return (
                                 <TabsContent key={room.id} value={room.id} className="flex-grow bg-muted/50 rounded-b-lg overflow-auto relative w-full h-full">
                                     {(tablesByRoom[room.id] || []).map(table => (
@@ -508,7 +508,7 @@ export default function OrdersPage() {
                                             onEdit={() => {}}
                                         />
                                     ))}
-                                    {(tablesByRoom[room.id] || []).length === 0 && (
+                                    {filteredTables.length === 0 && (
                                         <div className="flex items-center justify-center h-full text-muted-foreground">
                                             <p>{t('No tables assigned to you in this area.')}</p>
                                         </div>
