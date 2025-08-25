@@ -115,62 +115,6 @@ export default function CollaboratorDashboard() {
     );
   }
 
-  const renderModuleCard = (item: typeof allModules[0]) => {
-     if (item.key === 'menu-clientes') {
-      return (
-        <Dialog open={isMenuModalOpen} onOpenChange={setIsMenuModalOpen}>
-          <DialogTrigger asChild>
-             <Card className={`hover:scale-105 transition-transform duration-200 ease-in-out group ${item.color} text-white overflow-hidden cursor-pointer`}>
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                        <span>{t(item.label)}</span>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center justify-center p-6">
-                    <item.icon className="h-16 w-16 text-white/80 group-hover:scale-110 transition-transform duration-200 ease-in-out" strokeWidth={1.5}/>
-                </CardContent>
-            </Card>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t('Menu Options')}</DialogTitle>
-              <DialogDescription>{t('Choose an action for the customer menu.')}</DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-              <Button className="w-full" onClick={() => router.push(item.href)}>
-                <ArrowRight className="mr-2" /> {t('Go to Menu')}
-              </Button>
-              <Button className="w-full" variant="outline" onClick={handleGenerateQR}>
-                <QrCode className="mr-2" /> {t('Generate QR Code')}
-              </Button>
-              {qrCodeDataUrl && (
-                <div className="text-center p-4 border rounded-md">
-                   <Image src={qrCodeDataUrl} alt="Menu QR Code" width={300} height={300} className="mx-auto"/>
-                   <p className="text-sm text-muted-foreground mt-2">{t('Scan this code to view the menu.')}</p>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )
-     }
-
-      return (
-        <Link href={item.href} key={item.href} className={!userData?.restauranteId && item.key === 'menu-clientes' ? 'pointer-events-none' : ''}>
-            <Card className={`hover:scale-105 transition-transform duration-200 ease-in-out group ${item.color} text-white overflow-hidden`}>
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                        <span>{t(item.label)}</span>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center justify-center p-6">
-                    <item.icon className="h-16 w-16 text-white/80 group-hover:scale-110 transition-transform duration-200 ease-in-out" strokeWidth={1.5}/>
-                </CardContent>
-            </Card>
-        </Link>
-    )
-  }
-
   return (
     <AdminLayout>
       <Card className="mb-6 bg-card/65 backdrop-blur-lg">
@@ -187,7 +131,60 @@ export default function CollaboratorDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {enabledModules.map((item) => renderModuleCard(item))}
+                {enabledModules.map((item) => {
+                  if (item.key === 'menu-clientes') {
+                    return (
+                      <Dialog key={item.href} open={isMenuModalOpen} onOpenChange={setIsMenuModalOpen}>
+                        <DialogTrigger asChild>
+                          <Card className={`hover:scale-105 transition-transform duration-200 ease-in-out group ${item.color} text-white overflow-hidden cursor-pointer`}>
+                              <CardHeader>
+                                  <CardTitle className="flex items-center justify-between">
+                                      <span>{t(item.label)}</span>
+                                  </CardTitle>
+                              </CardHeader>
+                              <CardContent className="flex items-center justify-center p-6">
+                                  <item.icon className="h-16 w-16 text-white/80 group-hover:scale-110 transition-transform duration-200 ease-in-out" strokeWidth={1.5}/>
+                              </CardContent>
+                          </Card>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>{t('Menu Options')}</DialogTitle>
+                            <DialogDescription>{t('Choose an action for the customer menu.')}</DialogDescription>
+                          </DialogHeader>
+                          <div className="py-4 space-y-4">
+                            <Button className="w-full" onClick={() => router.push(item.href)}>
+                              <ArrowRight className="mr-2" /> {t('Go to Menu')}
+                            </Button>
+                            <Button className="w-full" variant="outline" onClick={handleGenerateQR}>
+                              <QrCode className="mr-2" /> {t('Generate QR Code')}
+                            </Button>
+                            {qrCodeDataUrl && (
+                              <div className="text-center p-4 border rounded-md">
+                                <Image src={qrCodeDataUrl} alt="Menu QR Code" width={300} height={300} className="mx-auto"/>
+                                <p className="text-sm text-muted-foreground mt-2">{t('Scan this code to view the menu.')}</p>
+                              </div>
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    );
+                  }
+                  return (
+                    <Link href={item.href} key={item.href} className={!userData?.restauranteId && item.key === 'menu-clientes' ? 'pointer-events-none' : ''}>
+                        <Card className={`hover:scale-105 transition-transform duration-200 ease-in-out group ${item.color} text-white overflow-hidden`}>
+                            <CardHeader>
+                                <CardTitle className="flex items-center justify-between">
+                                    <span>{t(item.label)}</span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex items-center justify-center p-6">
+                                <item.icon className="h-16 w-16 text-white/80 group-hover:scale-110 transition-transform duration-200 ease-in-out" strokeWidth={1.5}/>
+                            </CardContent>
+                        </Card>
+                    </Link>
+                  );
+                })}
               </div>
             </CardContent>
         </Card>
