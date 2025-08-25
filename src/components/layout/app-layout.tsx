@@ -14,7 +14,8 @@ import {
   Laptop,
   Languages,
   KeyRound,
-  Loader2
+  Loader2,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,6 +47,7 @@ import { useTranslation } from 'react-i18next';
 import { auth } from '@/lib/firebase';
 import { updatePassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard-am', label: 'Dashboard', icon: Home },
@@ -215,9 +217,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
                     <DropdownMenuItem onClick={() => changeLanguage('en')}>
+                       <Check className={cn("mr-2 h-4 w-4", i18n.language === 'en' ? 'opacity-100' : 'opacity-0')} />
                       <span>English</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => changeLanguage('es')}>
+                       <Check className={cn("mr-2 h-4 w-4", i18n.language === 'es' ? 'opacity-100' : 'opacity-0')} />
                       <span>Español</span>
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>

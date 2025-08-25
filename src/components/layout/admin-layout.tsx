@@ -23,7 +23,8 @@ import {
   BarChart,
   Map,
   Utensils,
-  Settings
+  Settings,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -57,6 +58,7 @@ import { updatePassword } from 'firebase/auth';
 import { doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const allNavItems = [
   { key: 'dashboard', href: '/dashboard-admin', label: 'Dashboard', icon: Home },
@@ -289,9 +291,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
                     <DropdownMenuItem onClick={() => changeLanguage('en')}>
+                      <Check className={cn("mr-2 h-4 w-4", i18n.language === 'en' ? 'opacity-100' : 'opacity-0')} />
                       <span>English</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => changeLanguage('es')}>
+                       <Check className={cn("mr-2 h-4 w-4", i18n.language === 'es' ? 'opacity-100' : 'opacity-0')} />
                       <span>Español</span>
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
