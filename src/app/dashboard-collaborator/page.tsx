@@ -20,6 +20,7 @@ import {
   Utensils,
   Settings,
   Home,
+  BookOpen,
 } from 'lucide-react';
 
 interface UserPermissions {
@@ -29,20 +30,8 @@ interface UserPermissions {
 interface UserData {
   nombre: string;
   permissions?: UserPermissions;
+  restauranteId?: string;
 }
-
-const allModules = [
-  { key: 'dashboard', href: '/dashboard-collaborator', label: 'Dashboard', icon: Home, color: 'bg-blue-500' },
-  { key: 'orders', href: '/orders', label: 'Orders', icon: ClipboardList, color: 'bg-yellow-500' },
-  { key: 'menu', href: '/dashboard-admin/menu', label: 'Menu & Recipes', icon: Utensils, color: 'bg-red-500' },
-  { key: 'staff', href: '/dashboard-admin/employees', label: 'Staff', icon: Users, color: 'bg-teal-500' },
-  { key: 'inventory', href: '/dashboard-admin/inventory', label: 'Inventory', icon: Package, color: 'bg-orange-500' },
-  { key: 'kitchen', href: '/kitchen', label: 'Kitchen', icon: ChefHat, color: 'bg-gray-500' },
-  { key: 'reports', href: '/dashboard-admin/reports', label: 'Reports', icon: BarChart, color: 'bg-green-500' },
-  { key: 'map', href: '/dashboard-admin/map', label: 'Digital Map', icon: Map, color: 'bg-purple-500' },
-  { key: 'settings', href: '/dashboard-admin/settings', label: 'Settings', icon: Settings, color: 'bg-slate-600' },
-];
-
 
 export default function CollaboratorDashboard() {
   const { t } = useTranslation();
@@ -79,9 +68,22 @@ export default function CollaboratorDashboard() {
     };
     fetchUserData();
   }, [user]);
+  
+  const allModules = [
+    { key: 'dashboard', href: '/dashboard-collaborator', label: 'Dashboard', icon: Home, color: 'bg-blue-500' },
+    { key: 'orders', href: '/orders', label: 'Orders', icon: ClipboardList, color: 'bg-yellow-500' },
+    { key: 'menu', href: '/dashboard-admin/menu', label: 'Menu & Recipes', icon: Utensils, color: 'bg-red-500' },
+    { key: 'staff', href: '/dashboard-admin/employees', label: 'Staff', icon: Users, color: 'bg-teal-500' },
+    { key: 'inventory', href: '/dashboard-admin/inventory', label: 'Inventory', icon: Package, color: 'bg-orange-500' },
+    { key: 'kitchen', href: '/kitchen', label: 'Kitchen', icon: ChefHat, color: 'bg-gray-500' },
+    { key: 'reports', href: '/dashboard-admin/reports', label: 'Reports', icon: BarChart, color: 'bg-green-500' },
+    { key: 'map', href: '/dashboard-admin/map', label: 'Digital Map', icon: Map, color: 'bg-purple-500' },
+    { key: 'menu-clientes', href: `/menu-read?restaurantId=${userData?.restauranteId}`, label: 'Menu Clientes', icon: BookOpen, color: 'bg-pink-500' },
+    { key: 'settings', href: '/dashboard-admin/settings', label: 'Settings', icon: Settings, color: 'bg-slate-600' },
+  ];
 
   const enabledModules = allModules.filter(module => {
-    if (module.key === 'dashboard') return true;
+    if (module.key === 'dashboard' || module.key === 'menu-clientes') return true;
     return userData?.permissions?.[module.key];
   });
 
@@ -111,7 +113,7 @@ export default function CollaboratorDashboard() {
             <CardContent>
               <div className="grid gap-4 md:gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {enabledModules.map((item) => (
-                    <Link href={item.href} key={item.href}>
+                    <Link href={item.href} key={item.href} className={!userData?.restauranteId && item.key === 'menu-clientes' ? 'pointer-events-none' : ''}>
                         <Card className={`hover:scale-105 transition-transform duration-200 ease-in-out group ${item.color} text-white overflow-hidden`}>
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between">

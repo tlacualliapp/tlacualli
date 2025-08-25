@@ -1,9 +1,10 @@
 
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
@@ -13,35 +14,51 @@ import {
   Package,
   ClipboardList,
   ChefHat,
-  Truck,
   BarChart,
   Map,
   Utensils,
   Settings,
   Loader2,
+  BookOpen,
 } from 'lucide-react';
-
-const modules = [
-  { href: '/orders', icon: ClipboardList, label: 'Orders', color: 'bg-yellow-500' },
-  { href: '/dashboard-admin/menu', icon: Utensils, label: 'Menu & Recipes', color: 'bg-red-500' },
-  { href: '/dashboard-admin/employees', icon: Users, label: 'Staff', color: 'bg-teal-500' },
-  { href: '/dashboard-admin/inventory', icon: Package, label: 'Inventory', color: 'bg-orange-500' },
-  { href: '/kitchen', icon: ChefHat, label: 'Kitchen', color: 'bg-gray-500' },
-  { href: '/dashboard-admin/reports', icon: BarChart, label: 'Reports', color: 'bg-green-500' },
-  { href: '/dashboard-admin/map', icon: Map, label: 'Digital Map', color: 'bg-purple-500' },
-  { href: '/dashboard-admin/settings', icon: Settings, label: 'Settings', color: 'bg-slate-600' },
-];
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
+  
+  useEffect(() => {
+    const fetchRestaurantId = async () => {
+      if (user) {
+        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          setRestaurantId(userData.restauranteId);
+        }
+      }
+    };
+    fetchRestaurantId();
+  }, [user]);
+
+  const modules = [
+    { href: '/orders', icon: ClipboardList, label: 'Orders', color: 'bg-yellow-500' },
+    { href: '/dashboard-admin/menu', icon: Utensils, label: 'Menu & Recipes', color: 'bg-red-500' },
+    { href: '/dashboard-admin/employees', icon: Users, label: 'Staff', color: 'bg-teal-500' },
+    { href: '/dashboard-admin/inventory', icon: Package, label: 'Inventory', color: 'bg-orange-500' },
+    { href: '/kitchen', icon: ChefHat, label: 'Kitchen', color: 'bg-gray-500' },
+    { href: '/dashboard-admin/reports', icon: BarChart, label: 'Reports', color: 'bg-green-500' },
+    { href: '/dashboard-admin/map', icon: Map, label: 'Digital Map', color: 'bg-purple-500' },
+    { href: `/menu-read?restaurantId=${restaurantId}`, icon: BookOpen, label: 'Menu Clientes', color: 'bg-pink-500' },
+    { href: '/dashboard-admin/settings', icon: Settings, label: 'Settings', color: 'bg-slate-600' },
+  ];
 
   if (loading || !user) {
     return (
@@ -66,7 +83,7 @@ export default function AdminDashboard() {
         <CardContent>
           <div className="grid gap-4 md:gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {modules.map((item) => (
-                <Link href={item.href} key={item.href}>
+                <Link href={item.href} key={item.href} className={!restaurantId && item.label === 'Menu Clientes' ? 'pointer-events-none' : ''}>
                     <Card className={`hover:scale-105 transition-transform duration-200 ease-in-out group ${item.color} text-white overflow-hidden`}>
                         <CardHeader>
                             <CardTitle className="flex items-center justify-between">
@@ -85,5 +102,3 @@ export default function AdminDashboard() {
     </AdminLayout>
   );
 }
-
-    
