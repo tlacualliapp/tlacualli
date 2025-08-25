@@ -46,7 +46,6 @@ import { useTranslation } from 'react-i18next';
 import { auth } from '@/lib/firebase';
 import { updatePassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import '@/app/i18n'; 
 
 const navItems = [
   { href: '/dashboard-am', label: 'Dashboard', icon: Home },

@@ -57,7 +57,6 @@ import { updatePassword } from 'firebase/auth';
 import { doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useToast } from '@/hooks/use-toast';
-import '@/app/i18n'; 
 
 const allNavItems = [
   { key: 'dashboard', href: '/dashboard-admin', label: 'Dashboard', icon: Home },
