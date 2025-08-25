@@ -8,7 +8,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, Timestamp, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { TableItem, Table } from '@/components/map/table-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -81,14 +81,14 @@ export default function OrdersPage() {
     const fetchUserData = async () => {
       if (user) {
         const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
-        const querySnapshot = await q.get();
+        const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
           const userData = querySnapshot.docs[0].data();
           setRestaurantId(userData.restauranteId);
           setUserAssignments(userData.assignments || { tables: [] });
         } else {
             const legacyQ = query(collection(db, "usuarios"), where("email", "==", user.email));
-            const legacySnapshot = await legacyQ.get();
+            const legacySnapshot = await getDocs(legacyQ);
             if(!legacySnapshot.empty) {
                 const legacyUserData = legacySnapshot.docs[0].data();
                 setRestaurantId(legacyUserData.restauranteId);
