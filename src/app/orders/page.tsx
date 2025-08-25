@@ -18,6 +18,8 @@ import { MenuSelection } from '@/components/orders/menu-selection';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getNextTakeoutId } from '@/lib/counters';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 
 
 interface Room {
@@ -434,99 +436,101 @@ export default function OrdersPage() {
 
 
   return (
-    <AdminLayout>
-      <div className="grid gap-6 lg:grid-cols-3 h-full">
-        <div className="lg:col-span-2">
-            <Card className="h-full">
-                 <CardHeader className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
-                    <div>
-                      <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
-                          <ClipboardList className="h-8 w-8" /> {t('Order Management')}
-                      </CardTitle>
-                      <CardDescription>
-                          {t('Select a table to start an order or manage an existing one.')}
-                      </CardDescription>
-                    </div>
-                     <Button variant="outline" onClick={handleTakeoutOrder} className="w-full md:w-auto">
-                        <ShoppingBag className="mr-2 h-4 w-4" />
-                        {t('Register Takeout Order')}
-                    </Button>
-                  </CardHeader>
-                <CardContent className="h-[calc(100vh-220px)]">
-                    {isLoading ? (
-                        <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
-                    ) : (
-                        <Tabs defaultValue={(rooms.find(r => (tablesByRoom[r.id] || []).length > 0) || rooms[0])?.id || 'takeout'} className="h-full flex flex-col">
-                            <TabsList>
-                                 <TabsTrigger value="takeout">{t('Takeout')}</TabsTrigger>
-                                {rooms.map(room => {
-                                   const filteredTables = (tablesByRoom[room.id] || []).filter(table =>
-                                        userAssignments?.tables.length ? userAssignments.tables.includes(table.id) : true
-                                    );
-                                    return filteredTables.length > 0 ? (
-                                        <TabsTrigger key={room.id} value={room.id}>{room.name}</TabsTrigger>
-                                    ) : null;
-                                })}
-                            </TabsList>
+    <DndProvider backend={HTML5Backend}>
+        <AdminLayout>
+        <div className="grid gap-6 lg:grid-cols-3 h-full">
+            <div className="lg:col-span-2">
+                <Card className="h-full">
+                    <CardHeader className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
+                        <div>
+                        <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
+                            <ClipboardList className="h-8 w-8" /> {t('Order Management')}
+                        </CardTitle>
+                        <CardDescription>
+                            {t('Select a table to start an order or manage an existing one.')}
+                        </CardDescription>
+                        </div>
+                        <Button variant="outline" onClick={handleTakeoutOrder} className="w-full md:w-auto">
+                            <ShoppingBag className="mr-2 h-4 w-4" />
+                            {t('Register Takeout Order')}
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="h-[calc(100vh-220px)]">
+                        {isLoading ? (
+                            <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                        ) : (
+                            <Tabs defaultValue={(rooms.find(r => (tablesByRoom[r.id] || []).length > 0) || rooms[0])?.id || 'takeout'} className="h-full flex flex-col">
+                                <TabsList>
+                                    <TabsTrigger value="takeout">{t('Takeout')}</TabsTrigger>
+                                    {rooms.map(room => {
+                                    const filteredTables = (tablesByRoom[room.id] || []).filter(table =>
+                                            userAssignments?.tables.length ? userAssignments.tables.includes(table.id) : true
+                                        );
+                                        return filteredTables.length > 0 ? (
+                                            <TabsTrigger key={room.id} value={room.id}>{room.name}</TabsTrigger>
+                                        ) : null;
+                                    })}
+                                </TabsList>
 
-                            <TabsContent value="takeout" className="flex-grow bg-muted/50 rounded-b-lg overflow-auto p-4">
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                                    {takeoutOrders.map(order => (
-                                         <TableItem 
-                                            key={order.id}
-                                            {...getTableWithStatus(order)}
-                                            onClick={() => handleTableClick(order)}
-                                            isSelected={selectedTable?.id === order.id}
-                                            view="operational"
-                                            onDelete={() => {}} 
-                                            onEdit={() => {}}
-                                        />
-                                    ))}
-                                </div>
-                                {takeoutOrders.length === 0 && (
-                                     <div className="flex items-center justify-center h-full text-muted-foreground">
-                                        <p>{t('No active takeout orders.')}</p>
+                                <TabsContent value="takeout" className="flex-grow bg-muted/50 rounded-b-lg overflow-auto p-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                        {takeoutOrders.map(order => (
+                                            <TableItem 
+                                                key={order.id}
+                                                {...getTableWithStatus(order)}
+                                                onClick={() => handleTableClick(order)}
+                                                isSelected={selectedTable?.id === order.id}
+                                                view="operational"
+                                                onDelete={() => {}} 
+                                                onEdit={() => {}}
+                                            />
+                                        ))}
                                     </div>
-                                )}
-                            </TabsContent>
-
-                            {rooms.map(room => {
-                                const filteredTables = (tablesByRoom[room.id] || []).filter(table =>
-                                    userAssignments?.tables.length ? userAssignments.tables.includes(table.id) : true
-                                );
-
-                                return (
-                                <TabsContent key={room.id} value={room.id} className="flex-grow bg-muted/50 rounded-b-lg overflow-auto relative w-full h-full">
-                                    {(tablesByRoom[room.id] || []).map(table => (
-                                        <TableItem 
-                                            key={table.id}
-                                            {...getTableWithStatus(table)}
-                                            onClick={() => handleTableClick(table)}
-                                            isSelected={selectedTable?.id === table.id}
-                                            view="operational"
-                                            onDelete={() => {}} 
-                                            onEdit={() => {}}
-                                        />
-                                    ))}
-                                    {filteredTables.length === 0 && (
+                                    {takeoutOrders.length === 0 && (
                                         <div className="flex items-center justify-center h-full text-muted-foreground">
-                                            <p>{t('No tables assigned to you in this area.')}</p>
+                                            <p>{t('No active takeout orders.')}</p>
                                         </div>
                                     )}
                                 </TabsContent>
-                                )
-                            })}
-                        </Tabs>
-                    )}
-                </CardContent>
-            </Card>
+
+                                {rooms.map(room => {
+                                    const filteredTables = (tablesByRoom[room.id] || []).filter(table =>
+                                        userAssignments?.tables.length ? userAssignments.tables.includes(table.id) : true
+                                    );
+
+                                    return (
+                                    <TabsContent key={room.id} value={room.id} className="flex-grow bg-muted/50 rounded-b-lg overflow-auto relative w-full h-full">
+                                        {(tablesByRoom[room.id] || []).map(table => (
+                                            <TableItem 
+                                                key={table.id}
+                                                {...getTableWithStatus(table)}
+                                                onClick={() => handleTableClick(table)}
+                                                isSelected={selectedTable?.id === table.id}
+                                                view="operational"
+                                                onDelete={() => {}} 
+                                                onEdit={() => {}}
+                                            />
+                                        ))}
+                                        {filteredTables.length === 0 && (
+                                            <div className="flex items-center justify-center h-full text-muted-foreground">
+                                                <p>{t('No tables assigned to you in this area.')}</p>
+                                            </div>
+                                        )}
+                                    </TabsContent>
+                                    )
+                                })}
+                            </Tabs>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+            <div className="lg:col-span-1">
+                <Card className="h-full">
+                    {renderRightPanel()}
+                </Card>
+            </div>
         </div>
-        <div className="lg:col-span-1">
-            <Card className="h-full">
-                {renderRightPanel()}
-            </Card>
-        </div>
-      </div>
-    </AdminLayout>
+        </AdminLayout>
+    </DndProvider>
   );
 }
