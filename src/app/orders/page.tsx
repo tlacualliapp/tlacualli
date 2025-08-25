@@ -8,7 +8,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { TableItem, Table } from '@/components/map/table-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -81,14 +81,14 @@ export default function OrdersPage() {
     const fetchUserData = async () => {
       if (user) {
         const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await q.get();
         if (!querySnapshot.empty) {
           const userData = querySnapshot.docs[0].data();
           setRestaurantId(userData.restauranteId);
           setUserAssignments(userData.assignments || { tables: [] });
         } else {
             const legacyQ = query(collection(db, "usuarios"), where("email", "==", user.email));
-            const legacySnapshot = await getDocs(legacyQ);
+            const legacySnapshot = await legacyQ.get();
             if(!legacySnapshot.empty) {
                 const legacyUserData = legacySnapshot.docs[0].data();
                 setRestaurantId(legacyUserData.restauranteId);
@@ -136,7 +136,6 @@ export default function OrdersPage() {
         const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)).sort((a, b) => a.name.localeCompare(b.name));
         setRooms(roomsData);
 
-        // For each room, set up a listener for its tables
         const unsubscribes: (() => void)[] = [];
         roomsData.forEach(room => {
             const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
@@ -146,7 +145,7 @@ export default function OrdersPage() {
                     roomId: room.id,
                     ...tableDoc.data()
                 } as Table));
-                // Use functional update to ensure we're working with the latest state
+                
                 setTablesByRoom(prev => ({ ...prev, [room.id]: tablesData }));
             });
             unsubscribes.push(unsubscribeTable);
@@ -497,21 +496,19 @@ export default function OrdersPage() {
                                 if (filteredTables.length === 0 && room.id !== 'takeout') return <TabsContent key={room.id} value={room.id}></TabsContent>;
 
                                 return (
-                                <TabsContent key={room.id} value={room.id} className="flex-grow bg-muted/50 rounded-b-lg overflow-auto relative">
-                                    <div className="w-full h-full">
-                                        {filteredTables.map(table => (
-                                            <TableItem 
-                                                key={table.id}
-                                                {...getTableWithStatus(table)}
-                                                onClick={() => handleTableClick(table)}
-                                                isSelected={selectedTable?.id === table.id}
-                                                view="operational"
-                                                onDelete={() => {}} 
-                                                onEdit={() => {}}
-                                            />
-                                        ))}
-                                    </div>
-                                    {filteredTables.length === 0 && (
+                                <TabsContent key={room.id} value={room.id} className="flex-grow bg-muted/50 rounded-b-lg overflow-auto relative w-full h-full">
+                                    {(tablesByRoom[room.id] || []).map(table => (
+                                        <TableItem 
+                                            key={table.id}
+                                            {...getTableWithStatus(table)}
+                                            onClick={() => handleTableClick(table)}
+                                            isSelected={selectedTable?.id === table.id}
+                                            view="operational"
+                                            onDelete={() => {}} 
+                                            onEdit={() => {}}
+                                        />
+                                    ))}
+                                    {(tablesByRoom[room.id] || []).length === 0 && (
                                         <div className="flex items-center justify-center h-full text-muted-foreground">
                                             <p>{t('No tables assigned to you in this area.')}</p>
                                         </div>
@@ -533,5 +530,3 @@ export default function OrdersPage() {
     </AdminLayout>
   );
 }
-
-    
