@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { TacoIcon } from '@/components/icons/logo';
 import { auth, db } from '@/lib/firebase';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import '@/app/i18n';
@@ -32,6 +32,8 @@ export default function LoginPage() {
       setEmail(rememberedEmail);
       setRememberMe(true);
     }
+    // Ensure user is logged out when visiting the login page
+    signOut(auth);
   }, []);
 
 

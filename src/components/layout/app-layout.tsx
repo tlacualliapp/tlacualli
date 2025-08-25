@@ -229,11 +229,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <span>{t('Change Password')}</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/login">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>{t('Log out')}</span>
-                </Link>
+              <DropdownMenuItem onClick={() => auth.signOut()}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>{t('Log out')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
