@@ -184,6 +184,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     setFormData(prev => ({
       ...prev,
       inventoryItemId: value,
+      recipeId: '', // Reset recipe if inventory item is chosen
       name: selectedItem ? selectedItem.name : prev.name
     }));
     setIsComboboxOpen(false);
