@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { AppLayout } from '@/components/layout/app-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BarChart, LineChart, Users, UtensilsCrossed, Loader2 } from 'lucide-react';
 import { DailyAccessChart } from '@/components/dashboard/daily-access-chart';
 import { RestaurantActionsChart } from '@/components/dashboard/restaurant-actions-chart';
@@ -89,12 +89,13 @@ export default function AdminMasterDashboard() {
   return (
     <div className="relative z-10">
       <AppLayout>
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h1 className="text-3xl font-bold font-headline text-gray-800">{t('Master Admin Dashboard')}</h1>
-            <p className="text-gray-600">{t('Welcome to the Tlacualli main control panel.')}</p>
-          </div>
-        </div>
+        <Card className="mb-6 bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+            <CardHeader>
+                <CardTitle className="text-3xl font-bold font-headline">{t('Master Admin Dashboard')}</CardTitle>
+                <CardDescription className="text-gray-600">{t('Welcome to the Tlacualli main control panel.')}</CardDescription>
+            </CardHeader>
+        </Card>
+        
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
