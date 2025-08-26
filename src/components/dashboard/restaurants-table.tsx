@@ -188,7 +188,7 @@ export function RestaurantsTable() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-             <Button onClick={() => router.push('/dashboard-am/restaurants/create')} className="bg-red-600 hover:bg-red-700 text-white">
+             <Button onClick={() => router.push('/dashboard-am/restaurants')} className="bg-red-600 hover:bg-red-700 text-white">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 {t('Register Restaurant')}
             </Button>
