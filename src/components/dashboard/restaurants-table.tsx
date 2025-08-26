@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle, Power, PowerOff } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +46,7 @@ type Restaurant = {
   email: string;
   rfc: string;
   socialReason: string;
+  status: string;
 };
 
 const mexicanStates = [
@@ -72,10 +73,8 @@ export function RestaurantsTable() {
 
   useEffect(() => {
     setIsLoading(true);
-    const q = query(
-      collection(db, "restaurantes"),
-      where("status", "==", "1")
-    );
+    // Fetch all restaurants regardless of status
+    const q = query(collection(db, "restaurantes"));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const restaurantsData = querySnapshot.docs.map(doc => ({
@@ -117,12 +116,11 @@ export function RestaurantsTable() {
   const handleDelete = async (restaurantId: string) => {
     try {
         const restaurantRef = doc(db, "restaurantes", restaurantId);
-        await updateDoc(restaurantRef, {
-            status: "0" // Eliminación lógica
-        });
+        // This is a permanent delete, consider logical delete (status = "deleted")
+        await updateDoc(restaurantRef, { status: "deleted" });
         toast({
             title: t("Restaurant Deleted"),
-            description: t("The restaurant has been marked as inactive."),
+            description: t("The restaurant has been marked as deleted."),
         });
     } catch (error) {
         console.error("Error al eliminar restaurante:", error);
@@ -134,7 +132,28 @@ export function RestaurantsTable() {
     }
   };
 
+  const handleToggleStatus = async (restaurantId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "1" ? "0" : "1";
+    try {
+        const restaurantRef = doc(db, "restaurantes", restaurantId);
+        await updateDoc(restaurantRef, { status: newStatus });
+        toast({
+            title: t("Status Updated"),
+            description: t("The restaurant has been {{status}}.", { status: newStatus === "1" ? t('activated') : t('deactivated')}),
+        });
+    } catch (error) {
+         console.error("Error al actualizar estado:", error);
+        toast({
+            variant: "destructive",
+            title: t("Error"),
+            description: t("Could not update restaurant status."),
+        });
+    }
+  }
+
+
   const filteredData = restaurants.filter(item => {
+    if (item.status === 'deleted') return false; // Hide deleted restaurants
     const searchMatch = (item.restaurantName || '').toLowerCase().includes(searchTerm.toLowerCase());
     const stateMatch = filters.state.size === 0 || filters.state.has(item.state);
     const styleMatch = filters.style.size === 0 || filters.style.has(item.style);
@@ -217,8 +236,8 @@ export function RestaurantsTable() {
             <TableRow className="border-b-gray-200 hover:bg-gray-50">
               <TableHead className="text-gray-700">{t('Name')}</TableHead>
               <TableHead className="text-gray-700">{t('Style')}</TableHead>
-              <TableHead className="text-gray-700">{t('Municipality/City')}</TableHead>
               <TableHead className="text-gray-700">{t('State')}</TableHead>
+              <TableHead className="text-gray-700">{t('Status')}</TableHead>
               <TableHead className="text-right text-gray-700">{t('Actions')}</TableHead>
             </TableRow>
           </TableHeader>
@@ -241,8 +260,12 @@ export function RestaurantsTable() {
                     </Button>
                   </TableCell>
                   <TableCell><Badge variant="secondary" className="bg-red-100 text-red-700">{t(item.style)}</Badge></TableCell>
-                  <TableCell>{item.municipality}</TableCell>
                   <TableCell>{item.state}</TableCell>
+                   <TableCell>
+                    <Badge variant={item.status === '1' ? 'default' : 'secondary'}>
+                      {item.status === '1' ? t('Active') : t('Inactive')}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-right">
                      <AlertDialog>
                         <DropdownMenu>
@@ -258,6 +281,14 @@ export function RestaurantsTable() {
                                 <FilePenLine className="mr-2 h-4 w-4" />
                                 {t('Edit')}
                               </DropdownMenuItem>
+                               <DropdownMenuItem onSelect={() => handleToggleStatus(item.id, item.status)}>
+                                  {item.status === '1' ? (
+                                    <><PowerOff className="mr-2 h-4 w-4 text-destructive" />{t('Deactivate')}</>
+                                  ) : (
+                                    <><Power className="mr-2 h-4 w-4 text-green-500" />{t('Activate')}</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                <AlertDialogTrigger asChild>
                                   <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100" onSelect={(e) => e.preventDefault()}>
                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -270,7 +301,7 @@ export function RestaurantsTable() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    {t('This action will mark the restaurant as inactive. Do you want to continue?')}
+                                    {t('This action will mark the restaurant as deleted and it will no longer appear. Do you want to continue?')}
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

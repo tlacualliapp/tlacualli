@@ -51,7 +51,7 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Query Firestore to check profile and status
+      // 2. Query Firestore to check user profile and status
       const q = query(
         collection(db, "usuarios"), 
         where("email", "==", user.email),
@@ -66,16 +66,24 @@ export default function LoginPage() {
       const userData = querySnapshot.docs[0].data();
       const restaurantId = userData.restauranteId;
       let restaurantName = 'N/A';
-
-      if(restaurantId) {
+      
+      // 3. If user belongs to a restaurant, check restaurant status
+      if (restaurantId) {
         const restaurantRef = doc(db, 'restaurantes', restaurantId);
         const restaurantSnap = await getDoc(restaurantRef);
         if (restaurantSnap.exists()) {
-            restaurantName = restaurantSnap.data().restaurantName || 'Desconocido';
+            const restaurantData = restaurantSnap.data();
+            restaurantName = restaurantData.restaurantName || 'Desconocido';
+            if (restaurantData.status !== "1") {
+                 throw new Error(t("The restaurant this user belongs to is not active."));
+            }
+        } else {
+            throw new Error(t("The associated restaurant could not be found."));
         }
       }
 
-      // 3. Log to Monitor
+
+      // 4. Log to Monitor
        await addDoc(collection(db, "monitor"), {
             accion: "Inicio de sesion",
             usuarioNombre: `${userData.nombre} ${userData.apellidos}`,
@@ -90,7 +98,7 @@ export default function LoginPage() {
         description: t("Welcome back, {{name}}!", { name: userData.nombre }),
       });
 
-      // 4. Redirect based on profile
+      // 5. Redirect based on profile
       if (userData.perfil === 'AM') {
         router.push('/dashboard-am');
       } else if (userData.perfil === 1 || userData.perfil === '1') {
@@ -112,7 +120,7 @@ export default function LoginPage() {
           errorMessage = t("The email or password are incorrect.");
       } else if (error instanceof Error) {
           // Handle custom errors thrown in the try block
-          if (error.message.includes("not active") || error.message.includes("unrecognized")) {
+          if (error.message.includes("not active") || error.message.includes("unrecognized") || error.message.includes("could not be found")) {
             errorMessage = error.message;
           }
       }
