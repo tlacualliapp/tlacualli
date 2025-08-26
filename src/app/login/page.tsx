@@ -106,10 +106,15 @@ export default function LoginPage() {
     } catch (error) {
       console.error("Error en el inicio de sesión:", error);
       let errorMessage = t("Invalid credentials or connection error. Please try again.");
-      if (error instanceof Error && (error.message.includes("not active") || error.message.includes("unrecognized"))) {
-          errorMessage = error.message;
-      } else if ((error as any).code === 'auth/user-not-found' || (error as any).code === 'auth/wrong-password' || (error as any).code === 'auth/invalid-credential') {
+      const errorCode = (error as any).code;
+
+      if (errorCode === 'auth/invalid-credential') {
           errorMessage = t("The email or password are incorrect.");
+      } else if (error instanceof Error) {
+          // Handle custom errors thrown in the try block
+          if (error.message.includes("not active") || error.message.includes("unrecognized")) {
+            errorMessage = error.message;
+          }
       }
       
       toast({
