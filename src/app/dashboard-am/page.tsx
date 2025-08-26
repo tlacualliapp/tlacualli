@@ -12,7 +12,7 @@ import { RestaurantActionsChart } from '@/components/dashboard/restaurant-action
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RestaurantsTable } from '@/components/dashboard/restaurants-table';
 import { MasterUsersTable } from '@/components/dashboard/master-users-table';
-import { collection, query, where, getCountFromServer, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 
 export default function AdminMasterDashboard() {
@@ -26,49 +26,35 @@ export default function AdminMasterDashboard() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+    if (!user) {
       router.push('/login');
+      return;
     }
+
+    const checkAuthorization = async () => {
+      const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const userData = querySnapshot.docs[0].data();
+        if (userData.perfil === 'AM') {
+          setIsAuthorized(true);
+        } else {
+          router.push('/login');
+        }
+      } else {
+        router.push('/login');
+      }
+    };
+    checkAuthorization();
   }, [user, loading, router]);
   
   useEffect(() => {
-    if (!user) return;
-    const fetchInitialCounts = async () => {
-        try {
-            const restaurantsQuery = query(collection(db, "restaurantes"), where("status", "==", "1"));
-            const usersQuery = query(collection(db, "usuarios"), where("status", "==", "1"));
-            
-            const [restaurantsSnapshot, usersSnapshot] = await Promise.all([
-                getDocs(restaurantsQuery),
-                getDocs(usersQuery)
-            ]);
-
-            let adminMasters = 0, admins = 0, collaborators = 0;
-            usersSnapshot.forEach(doc => {
-                const user = doc.data();
-                if (user.perfil === 'AM') adminMasters++;
-                else if (user.perfil === '1') admins++;
-                else if (user.perfil === '2') collaborators++;
-            });
-
-            setStats({
-                restaurants: restaurantsSnapshot.size,
-                adminMasters,
-                admins,
-                collaborators,
-            });
-        } catch (error) {
-            console.error("Error fetching initial stats:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    if (!isAuthorized) return;
     
-    fetchInitialCounts();
-
-    // Listener for real-time updates
     const unsubRestaurants = onSnapshot(query(collection(db, "restaurantes"), where("status", "==", "1")), (snap) => {
         setStats(s => ({...s, restaurants: snap.size}));
     });
@@ -84,13 +70,15 @@ export default function AdminMasterDashboard() {
         setStats(s => ({ ...s, adminMasters, admins, collaborators }));
     });
 
+    setIsLoading(false);
+
     return () => {
       unsubRestaurants();
       unsubUsers();
     }
-  }, [user]);
+  }, [isAuthorized]);
 
- if (loading || !user) {
+ if (loading || isLoading || !isAuthorized) {
     return (
         <div className="flex items-center justify-center h-screen">
             <Loader2 className="h-16 w-16 animate-spin" />
@@ -114,7 +102,7 @@ export default function AdminMasterDashboard() {
               <UtensilsCrossed className="h-6 w-6 text-gray-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-headline">{isLoading ? '...' : stats.restaurants}</div>
+              <div className="text-2xl font-bold font-headline">{stats.restaurants}</div>
             </CardContent>
           </Card>
           <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
@@ -123,7 +111,7 @@ export default function AdminMasterDashboard() {
               <Users className="h-6 w-6 text-gray-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-headline">{isLoading ? '...' : stats.adminMasters}</div>
+              <div className="text-2xl font-bold font-headline">{stats.adminMasters}</div>
             </CardContent>
           </Card>
           <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
@@ -132,7 +120,7 @@ export default function AdminMasterDashboard() {
               <Users className="h-6 w-6 text-gray-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-headline">{isLoading ? '...' : stats.admins}</div>
+              <div className="text-2xl font-bold font-headline">{stats.admins}</div>
             </CardContent>
           </Card>
           <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
@@ -141,7 +129,7 @@ export default function AdminMasterDashboard() {
               <Users className="h-6 w-6 text-gray-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-headline">{isLoading ? '...' : stats.collaborators}</div>
+              <div className="text-2xl font-bold font-headline">{stats.collaborators}</div>
             </CardContent>
           </Card>
         </div>
@@ -187,5 +175,3 @@ export default function AdminMasterDashboard() {
     </div>
   );
 }
-
-    
