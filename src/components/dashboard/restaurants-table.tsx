@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, getDocs, collectionGroup, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDocs, collectionGroup, orderBy, limit, Timestamp, writeBatch, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle, Power, PowerOff, Star, ShieldCheck, Calendar, CreditCard, Clock } from 'lucide-react';
 import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { RestaurantForm } from './restaurant-form';
 import { useTranslation } from 'react-i18next';
@@ -39,6 +39,9 @@ import { Separator } from '../ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { format, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { recursiveDelete } from '@/lib/firestore-utils';
 
 type Restaurant = {
   id: string;
@@ -97,6 +100,9 @@ export function RestaurantsTable() {
   const [accountDetails, setAccountDetails] = useState<AccountDetails | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
+  const [restaurantToMigrate, setRestaurantToMigrate] = useState<Restaurant | null>(null);
+  const [newPlan, setNewPlan] = useState<'esencial' | 'pro' | 'ilimitado'>('esencial');
+  const [isMigrating, setIsMigrating] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -214,6 +220,88 @@ export function RestaurantsTable() {
     }
   }
 
+  const handleMigratePlan = async () => {
+    if (!restaurantToMigrate) return;
+    setIsMigrating(true);
+
+    const fromCollection = 'restaurantes_demo';
+    const toCollection = 'restaurantes';
+    const restaurantId = restaurantToMigrate.id;
+
+    try {
+        const batch = writeBatch(db);
+
+        // 1. Get restaurant data and copy it
+        const fromDocRef = doc(db, fromCollection, restaurantId);
+        const fromDocSnap = await getDoc(fromDocRef);
+        if (!fromDocSnap.exists()) throw new Error("Demo restaurant not found");
+        
+        const restaurantData = fromDocSnap.data();
+        const toDocRef = doc(db, toCollection, restaurantId);
+        batch.set(toDocRef, { ...restaurantData, plan: newPlan });
+
+        // 2. Function to copy subcollections
+        const copySubcollections = async (sourceRef: any, destinationRef: any) => {
+            const subcollections = ['menuCategories', 'menuItems', 'inventoryItems', 'inventoryMovements', 'suppliers', 'recipes', 'orders', 'payments', 'rooms'];
+            for (const sub of subcollections) {
+                const sourceSubRef = collection(sourceRef, sub);
+                const sourceSubSnap = await getDocs(sourceSubRef);
+                sourceSubSnap.forEach(docSnap => {
+                    const destDocRef = doc(destinationRef, sub, docSnap.id);
+                    batch.set(destDocRef, docSnap.data());
+                });
+
+                // Handle nested subcollections (e.g., tables in rooms)
+                if (sub === 'rooms') {
+                    for(const roomDoc of sourceSubSnap.docs) {
+                        const tablesSourceRef = collection(sourceRef, 'rooms', roomDoc.id, 'tables');
+                        const tablesDestRef = doc(destinationRef, 'rooms', roomDoc.id);
+                        const tablesSnap = await getDocs(tablesSourceRef);
+                        tablesSnap.forEach(tableDoc => {
+                            const tableDestRef = doc(tablesDestRef, 'tables', tableDoc.id);
+                            batch.set(tableDestRef, tableDoc.data());
+                        });
+                    }
+                }
+            }
+        };
+
+        await copySubcollections(fromDocRef, toDocRef);
+
+        // 3. Update user plans
+        const usersQuery = query(collection(db, 'usuarios'), where('restauranteId', '==', restaurantId));
+        const usersSnap = await getDocs(usersQuery);
+        usersSnap.forEach(userDoc => {
+            batch.update(userDoc.ref, { plan: newPlan });
+        });
+
+        // 4. Commit all writes
+        await batch.commit();
+
+        // 5. Delete the old document and its subcollections
+        await recursiveDelete(doc(db, fromCollection, restaurantId));
+
+        toast({
+            title: t('Migration Successful'),
+            description: t('{{restaurantName}} has been migrated to {{planName}}.', { restaurantName: restaurantToMigrate.restaurantName, planName: t(planNames[newPlan]) }),
+        });
+
+        // Refresh table data
+        setRestaurants(prev => prev.map(r => r.id === restaurantId ? { ...r, plan: newPlan } : r));
+
+    } catch (error) {
+        console.error("Migration failed:", error);
+        toast({
+            variant: 'destructive',
+            title: t('Migration Failed'),
+            description: t('An error occurred during migration. Check logs for details.'),
+        });
+    } finally {
+        setIsMigrating(false);
+        setRestaurantToMigrate(null);
+    }
+  };
+
 
   const filteredData = restaurants.filter(item => {
     if (item.status === 'deleted') return false;
@@ -304,6 +392,35 @@ export function RestaurantsTable() {
                 />
             </DialogContent>
         </Dialog>
+        
+        <Dialog open={restaurantToMigrate !== null} onOpenChange={(isOpen) => !isOpen && setRestaurantToMigrate(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{t('Migrate Plan for')} {restaurantToMigrate?.restaurantName}</DialogTitle>
+                    <DialogDescription>{t('Select the new plan for this restaurant. This action will move all its data to the production environment.')}</DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <Label htmlFor="new-plan">{t('New Plan')}</Label>
+                    <Select value={newPlan} onValueChange={(value: any) => setNewPlan(value)}>
+                        <SelectTrigger id="new-plan">
+                            <SelectValue placeholder={t('Select a plan')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="esencial">{t('Plan Esencial')}</SelectItem>
+                            <SelectItem value="pro">{t('Plan Pro')}</SelectItem>
+                            <SelectItem value="ilimitado">{t('Plan Ilimitado')}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setRestaurantToMigrate(null)}>{t('Cancel')}</Button>
+                    <Button onClick={handleMigratePlan} disabled={isMigrating}>
+                        {isMigrating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {t('Migrate Now')}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
 
       <div className="rounded-md border border-gray-200">
@@ -379,6 +496,12 @@ export function RestaurantsTable() {
                                         <><Power className="mr-2 h-4 w-4 text-green-500" />{t('Activate')}</>
                                       )}
                                     </DropdownMenuItem>
+                                    {item.plan === 'demo' && (
+                                        <DropdownMenuItem onSelect={() => setRestaurantToMigrate(item)}>
+                                            <Star className="mr-2 h-4 w-4 text-yellow-500" />
+                                            {t('Migrate Plan')}
+                                        </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuSeparator />
                                    <AlertDialogTrigger asChild>
                                       <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100" onSelect={(e) => e.preventDefault()}>
