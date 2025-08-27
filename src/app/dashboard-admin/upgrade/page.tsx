@@ -13,7 +13,7 @@ import { CreditCard, ArrowLeft, Loader2, CheckCircle, ShieldCheck } from 'lucide
 import { useTranslation } from 'react-i18next';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { getCurrentUserData } from '@/lib/users';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -169,7 +169,7 @@ export default function UpgradePage() {
                                         <RadioGroupItem value={plan.id} id={`plan-${plan.id}`} />
                                     </div>
                                     <p className="text-sm text-muted-foreground mt-1">{t(plan.description)}</p>
-                                    <p className="text-2xl font-bold mt-4">${plan.price.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/mes</span></p>
+                                    <p className="text-2xl font-bold mt-4">${plan.price.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/{t('month')}</span></p>
                                 </Label>
                             ))}
                         </RadioGroup>
