@@ -94,15 +94,15 @@ export default function LoginPage() {
                     const daysElapsed = differenceInDays(new Date(), registrationDate);
                     if (daysElapsed > 15) {
                         setDemoModalContent({
-                            title: t('Free Trial Ended'),
-                            description: t('Your 15-day free trial has expired. Please choose a plan to continue using Tlacualli.'),
+                            title: t('Periodo de Prueba Finalizado'),
+                            description: t('Tu periodo de prueba de 15 días ha expirado. Por favor, elige un plan para continuar usando Tlacualli.'),
                             isTrialEnded: true,
                         });
                     } else {
                         const daysLeft = 15 - daysElapsed;
                         setDemoModalContent({
-                            title: t('Welcome to your Demo!'),
-                            description: t('You have {{count}} days left in your free trial. Enjoy!', { count: daysLeft }),
+                            title: t('¡Bienvenido a tu Demo!'),
+                            description: t('Te quedan {{count}} días de tu prueba gratuita. ¡Disfrútalos!', { count: daysLeft }),
                             isTrialEnded: false,
                         });
                     }
@@ -236,7 +236,7 @@ export default function LoginPage() {
             </DialogHeader>
             <DialogFooter>
             <Button onClick={handleModalAction}>
-                {demoModalContent.isTrialEnded ? t('View Plans') : t('Continue to Dashboard')}
+                {demoModalContent.isTrialEnded ? t('Ver Planes') : t('Continuar al Dashboard')}
             </Button>
             </DialogFooter>
         </DialogContent>
