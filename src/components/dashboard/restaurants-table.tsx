@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle, Power, PowerOff, Star, ShieldCheck, Calendar, CreditCard, Clock } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle, Power, PowerOff, Star, ShieldCheck, Calendar, CreditCard, Clock, Send } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +42,8 @@ import { cn } from '@/lib/utils';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { recursiveDelete } from '@/lib/firestore-utils';
+import { sendCustomEmail } from '@/lib/email';
+import { Textarea } from '../ui/textarea';
 
 type Restaurant = {
   id: string;
@@ -101,6 +103,10 @@ export function RestaurantsTable() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
   const [restaurantToMigrate, setRestaurantToMigrate] = useState<Restaurant | null>(null);
+  const [restaurantToEmail, setRestaurantToEmail] = useState<Restaurant | null>(null);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [newPlan, setNewPlan] = useState<'esencial' | 'pro' | 'ilimitado'>('esencial');
   const [isMigrating, setIsMigrating] = useState(false);
   const router = useRouter();
@@ -219,6 +225,34 @@ export function RestaurantsTable() {
         });
     }
   }
+
+  const handleOpenEmailModal = (restaurant: Restaurant) => {
+    setRestaurantToEmail(restaurant);
+    setEmailSubject('');
+    setEmailBody('');
+  };
+
+  const handleSendEmail = async () => {
+    if (!restaurantToEmail || !emailSubject || !emailBody) {
+      toast({ variant: 'destructive', title: t('Error'), description: t('Please fill in all fields.') });
+      return;
+    }
+    setIsSendingEmail(true);
+    try {
+      await sendCustomEmail({
+        to: restaurantToEmail.email,
+        subject: emailSubject,
+        html: `<p>${emailBody.replace(/\n/g, '<br>')}</p>`,
+      });
+      toast({ title: t('Email Sent'), description: t('The email has been sent successfully.') });
+      setRestaurantToEmail(null);
+    } catch (error) {
+      console.error('Error sending email:', error);
+      toast({ variant: 'destructive', title: t('Error'), description: t('Failed to send email.') });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   const handleMigratePlan = async () => {
     if (!restaurantToMigrate) return;
@@ -422,6 +456,32 @@ export function RestaurantsTable() {
             </DialogContent>
         </Dialog>
 
+      <Dialog open={restaurantToEmail !== null} onOpenChange={(isOpen) => !isOpen && setRestaurantToEmail(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('Send Email to')} {restaurantToEmail?.restaurantName}</DialogTitle>
+            <DialogDescription>{t('To')}: {restaurantToEmail?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject">{t('Subject')}</Label>
+              <Input id="subject" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="body">{t('Message')}</Label>
+              <Textarea id="body" value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={10} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRestaurantToEmail(null)}>{t('Cancel')}</Button>
+            <Button onClick={handleSendEmail} disabled={isSendingEmail}>
+              {isSendingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('Send Email')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <div className="rounded-md border">
         <Table>
@@ -485,6 +545,10 @@ export function RestaurantsTable() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
+                                   <DropdownMenuItem className="cursor-pointer" onSelect={() => handleOpenEmailModal(item)}>
+                                    <Send className="mr-2 h-4 w-4" />
+                                    {t('Send Email')}
+                                  </DropdownMenuItem>
                                    <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(item)}>
                                     <FilePenLine className="mr-2 h-4 w-4" />
                                     {t('Edit')}
@@ -547,11 +611,14 @@ export function RestaurantsTable() {
             <>
               <DialogHeader>
                 <DialogTitle className="text-2xl font-headline">{selectedRestaurant.restaurantName}</DialogTitle>
-                <div className="flex items-center gap-2 pt-1">
-                    <Badge variant={selectedRestaurant.status === '1' ? 'default' : 'destructive'} className={cn(selectedRestaurant.status === '1' && 'bg-green-600 hover:bg-green-700')}>
-                        {selectedRestaurant.status === '1' ? t('Active') : t('Inactive')}
-                    </Badge>
-                </div>
+                <DialogDescription>
+                    <div className="flex items-center gap-2 pt-1">
+                        <Badge variant="outline" className="border-primary text-primary">{selectedRestaurant.style}</Badge>
+                        <Badge variant={selectedRestaurant.status === '1' ? 'default' : 'destructive'} className={cn(selectedRestaurant.status === '1' && 'bg-green-600 hover:bg-green-700')}>
+                            {selectedRestaurant.status === '1' ? t('Active') : t('Inactive')}
+                        </Badge>
+                    </div>
+                </DialogDescription>
               </DialogHeader>
               <Separator/>
               <CardContent className="p-0">

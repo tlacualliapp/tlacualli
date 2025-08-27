@@ -10,8 +10,14 @@ interface WelcomeEmailProps {
     password?: string;
 }
 
-export const sendWelcomeEmail = async ({ to, name, username, password }: WelcomeEmailProps) => {
-    const transporter = nodemailer.createTransport({
+interface CustomEmailProps {
+    to: string;
+    subject: string;
+    html: string;
+}
+
+const getTransporter = () => {
+    return nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: Number(process.env.EMAIL_PORT),
       secure: true, // Use true for port 465, false for others
@@ -20,6 +26,10 @@ export const sendWelcomeEmail = async ({ to, name, username, password }: Welcome
         pass: process.env.EMAIL_PASS,
       },
     });
+}
+
+export const sendWelcomeEmail = async ({ to, name, username, password }: WelcomeEmailProps) => {
+    const transporter = getTransporter();
 
     const subject = '¡Bienvenido a Tlacualli App!';
     const html = `
@@ -57,5 +67,21 @@ export const sendWelcomeEmail = async ({ to, name, username, password }: Welcome
         console.error(`Failed to send welcome email to ${to}:`, error);
         // We don't re-throw the error to avoid blocking the user creation process
         // but it should be logged for monitoring.
+    }
+};
+
+export const sendCustomEmail = async ({ to, subject, html }: CustomEmailProps) => {
+    const transporter = getTransporter();
+    try {
+        await transporter.sendMail({
+            from: `"Tlacualli App" <${process.env.EMAIL_USER}>`,
+            to,
+            subject,
+            html,
+        });
+        console.log(`Custom email sent to ${to}`);
+    } catch (error) {
+        console.error(`Failed to send custom email to ${to}:`, error);
+        throw new Error('Failed to send email.');
     }
 };
