@@ -97,8 +97,8 @@ export default function AdminMasterDashboard() {
  }
 
   return (
-    <>
-        <Card className="mb-6 bg-card/65 backdrop-blur-lg">
+    <AppLayout>
+        <Card className="mb-6">
             <CardHeader>
                 <CardTitle className="text-3xl font-bold font-headline">{t('Master Admin Dashboard')}</CardTitle>
                 <CardDescription>{t('Welcome to the Tlacualli main control panel.')}</CardDescription>
@@ -106,7 +106,7 @@ export default function AdminMasterDashboard() {
         </Card>
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="bg-card/65 backdrop-blur-lg">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('Registered Restaurants')}</CardTitle>
               <UtensilsCrossed className="h-6 w-6 text-muted-foreground" />
@@ -115,7 +115,7 @@ export default function AdminMasterDashboard() {
               <div className="text-2xl font-bold font-headline">{stats.restaurants}</div>
             </CardContent>
           </Card>
-          <Card className="bg-card/65 backdrop-blur-lg">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('Master Admin Users')}</CardTitle>
               <Users className="h-6 w-6 text-muted-foreground" />
@@ -124,7 +124,7 @@ export default function AdminMasterDashboard() {
               <div className="text-2xl font-bold font-headline">{stats.adminMasters}</div>
             </CardContent>
           </Card>
-          <Card className="bg-card/65 backdrop-blur-lg">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('Administrator Users')}</CardTitle>
               <Users className="h-6 w-6 text-muted-foreground" />
@@ -133,7 +133,7 @@ export default function AdminMasterDashboard() {
               <div className="text-2xl font-bold font-headline">{stats.admins}</div>
             </CardContent>
           </Card>
-          <Card className="bg-card/65 backdrop-blur-lg">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('Collaborator Users')}</CardTitle>
               <Users className="h-6 w-6 text-muted-foreground" />
@@ -144,7 +144,7 @@ export default function AdminMasterDashboard() {
           </Card>
         </div>
         <div className="grid gap-6 mt-6 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="lg:col-span-4 bg-card/65 backdrop-blur-lg">
+          <Card className="lg:col-span-4">
             <CardHeader>
               <CardTitle className="font-headline flex items-center gap-2">
                 <LineChart className="h-6 w-6" /> {t('Monthly Accesses')}
@@ -154,7 +154,7 @@ export default function AdminMasterDashboard() {
               <DailyAccessChart />
             </CardContent>
           </Card>
-          <Card className="lg:col-span-3 bg-card/65 backdrop-blur-lg">
+          <Card className="lg:col-span-3">
             <CardHeader>
               <CardTitle className="font-headline flex items-center gap-2">
                 <BarChart className="h-6 w-6" /> {t('Actions by Restaurant')}
@@ -165,7 +165,7 @@ export default function AdminMasterDashboard() {
             </CardContent>
           </Card>
         </div>
-        <Card className="mt-6 bg-card/65 backdrop-blur-lg">
+        <Card className="mt-6">
           <CardContent className="p-4 md:p-6">
             <Tabs defaultValue="restaurantes">
               <TabsList>
@@ -181,6 +181,6 @@ export default function AdminMasterDashboard() {
             </Tabs>
           </CardContent>
         </Card>
-    </>
+    </AppLayout>
   );
 }

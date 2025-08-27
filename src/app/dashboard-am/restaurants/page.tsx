@@ -53,8 +53,8 @@ export default function CreateRestaurantPage() {
   }
   
   return (
-    <>
-        <Card className="mb-6 bg-card/65 backdrop-blur-lg">
+    <AppLayout>
+        <Card className="mb-6">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
@@ -69,7 +69,7 @@ export default function CreateRestaurantPage() {
             </CardHeader>
         </Card>
         
-        <Card className="bg-card/65 backdrop-blur-lg">
+        <Card>
             <CardHeader>
                 <CardTitle>{t('Restaurant Information')}</CardTitle>
             </CardHeader>
@@ -77,6 +77,6 @@ export default function CreateRestaurantPage() {
                 <RestaurantForm onSuccess={() => router.push('/dashboard-am')} />
             </CardContent>
         </Card>
-    </>
+    </AppLayout>
   );
 }

@@ -118,8 +118,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       className="relative flex min-h-screen w-full flex-col bg-cover bg-center"
       style={{ backgroundImage: "url('/assets/background.png')" }}
     >
-      <div className="absolute inset-0 bg-black/30 z-0"></div>
-      
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card/65 backdrop-blur-lg px-4 md:px-6 z-20">
         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
           <Link
@@ -257,6 +255,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="flex-1 p-4 sm:px-6 sm:py-8 md:gap-8 md:p-8 relative z-10">
+        <div className="absolute inset-0 bg-black/30 -z-10" />
         {children}
       </main>
 
