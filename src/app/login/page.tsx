@@ -65,12 +65,15 @@ export default function LoginPage() {
 
       const userData = querySnapshot.docs[0].data();
       const restaurantId = userData.restauranteId;
+      const userPlan = userData.plan;
       let restaurantName = 'N/A';
       
       // 3. If user belongs to a restaurant, check restaurant status
       if (restaurantId) {
-        const restaurantRef = doc(db, 'restaurantes', restaurantId);
+        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const restaurantRef = doc(db, collectionName, restaurantId);
         const restaurantSnap = await getDoc(restaurantRef);
+
         if (restaurantSnap.exists()) {
             const restaurantData = restaurantSnap.data();
             restaurantName = restaurantData.restaurantName || 'Desconocido';
