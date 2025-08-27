@@ -5,8 +5,15 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TacoIcon } from '@/components/icons/logo';
-import { ArrowRight, BarChart, ChefHat, ClipboardList, Package, Utensils, Map as MapIcon, Users } from 'lucide-react';
+import { ArrowRight, BarChart, ChefHat, ClipboardList, Package, Utensils, Map as MapIcon, Users, Mail, Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import { useFormState, useFormStatus } from 'react-dom';
+import { sendContactEmail } from '@/app/actions/contact';
+import { useEffect, useRef } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const features = [
   {
@@ -47,7 +54,39 @@ const features = [
   }
 ];
 
+function SubmitButton() {
+    const { pending } = useFormStatus();
+    return (
+        <Button type="submit" size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold" disabled={pending}>
+            {pending ? <Loader2 className="animate-spin" /> : 'Enviar Mensaje'}
+        </Button>
+    );
+}
+
+
 export default function LandingPage() {
+   const initialState = { message: null, errors: null, success: false };
+   const [state, dispatch] = useFormState(sendContactEmail, initialState);
+   const { toast } = useToast();
+   const formRef = useRef<HTMLFormElement>(null);
+
+   useEffect(() => {
+    if (state.message && !state.success) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: state.message,
+      });
+    }
+    if (state.success) {
+      toast({
+        title: '¡Mensaje Enviado!',
+        description: state.message,
+      });
+      formRef.current?.reset();
+    }
+  }, [state, toast]);
+
   return (
     <div className="bg-background text-foreground">
       {/* Header */}
@@ -100,14 +139,14 @@ export default function LandingPage() {
 
         {/* Features Section */}
         <section id="features" className="py-12 md:py-24 bg-gray-50 dark:bg-gray-900/50">
-            <div className="container">
+            <div className="container flex flex-col items-center">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">Todo lo que necesitas, en un solo lugar</h2>
                     <p className="mt-4 max-w-2xl mx-auto text-muted-foreground font-body">
                         Desde la toma de pedidos hasta el análisis de rentabilidad, Tlacualli te da el control total de tu operación.
                     </p>
                 </div>
-                <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-5xl">
                     {features.map((feature, index) => (
                         <Card key={index} className="bg-card/65 backdrop-blur-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                             <CardContent className="p-6">
@@ -123,11 +162,11 @@ export default function LandingPage() {
 
         {/* Testimonials Section */}
         <section className="py-12 md:py-24">
-            <div className="container">
+            <div className="container flex flex-col items-center">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">Impulsando el éxito de restaurantes como el tuyo</h2>
                 </div>
-                <div className="mt-12 grid gap-8 md:grid-cols-1 lg:grid-cols-2">
+                <div className="mt-12 grid gap-8 md:grid-cols-1 lg:grid-cols-2 max-w-4xl">
                      <Card className="bg-card/65 backdrop-blur-lg">
                         <CardContent className="p-8">
                             <blockquote className="text-lg font-body italic text-foreground">
@@ -153,6 +192,43 @@ export default function LandingPage() {
                 </div>
             </div>
         </section>
+
+        {/* Contact Section */}
+        <section id="contact" className="py-12 md:py-24 bg-gray-50 dark:bg-gray-900/50">
+            <div className="container max-w-3xl">
+                <div className="text-center">
+                    <h2 className="font-headline text-3xl md:text-4xl font-bold">¿Tienes Preguntas?</h2>
+                    <p className="mt-4 max-w-2xl mx-auto text-muted-foreground font-body">
+                        Estamos aquí para ayudarte. Envíanos un mensaje y nuestro equipo se pondrá en contacto contigo a la brevedad.
+                    </p>
+                </div>
+                <Card className="mt-12 bg-card/65 backdrop-blur-lg">
+                    <CardContent className="p-6">
+                        <form ref={formRef} action={dispatch} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Nombre</Label>
+                                    <Input id="name" name="name" placeholder="Tu nombre completo" required />
+                                    {state.errors?.name && <p className="text-sm text-destructive">{state.errors.name[0]}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Correo Electrónico</Label>
+                                    <Input id="email" name="email" type="email" placeholder="tu@correo.com" required />
+                                    {state.errors?.email && <p className="text-sm text-destructive">{state.errors.email[0]}</p>}
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="message">Mensaje</Label>
+                                <Textarea id="message" name="message" placeholder="Escribe tu duda o comentario aquí..." rows={5} required />
+                                {state.errors?.message && <p className="text-sm text-destructive">{state.errors.message[0]}</p>}
+                            </div>
+                             <SubmitButton />
+                        </form>
+                    </CardContent>
+                </Card>
+            </div>
+        </section>
+
 
         {/* CTA Section */}
         <section className="py-12 md:py-24 bg-gray-900 text-white">
