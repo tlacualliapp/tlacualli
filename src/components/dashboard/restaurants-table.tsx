@@ -37,7 +37,8 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 type Restaurant = {
   id: string;
@@ -69,7 +70,16 @@ const mexicanStates = [
   "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas", "CDMX"
 ];
 
-const restaurantStyles = ["Italiano", "Mar y tierra", "Carnes", "Mariscos", "Mexicano", "Japonés", "Otro"];
+const plans = [
+    { id: 'demo', name: 'Demo Gratuita' },
+    { id: 'esencial', name: 'Plan Esencial' },
+    { id: 'pro', name: 'Plan Pro' },
+    { id: 'ilimitado', name: 'Plan Ilimitado' }
+];
+const statuses = [
+    { id: '1', name: 'Active' },
+    { id: '0', name: 'Inactive' }
+];
 
 const planNames = {
     demo: 'Demo Gratuita',
@@ -80,7 +90,7 @@ const planNames = {
 
 export function RestaurantsTable() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({ state: new Set<string>(), style: new Set<string>() });
+  const [filters, setFilters] = useState({ state: new Set<string>(), plan: new Set<string>(), status: new Set<string>() });
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -146,7 +156,7 @@ export function RestaurantsTable() {
   }, [selectedRestaurant, t]);
 
 
-  const handleFilterChange = (type: 'state' | 'style', value: string) => {
+  const handleFilterChange = (type: 'state' | 'plan' | 'status', value: string) => {
     setFilters(prev => {
       const newSet = new Set(prev[type]);
       if (newSet.has(value)) {
@@ -206,11 +216,12 @@ export function RestaurantsTable() {
 
 
   const filteredData = restaurants.filter(item => {
-    if (item.status === 'deleted') return false; // Hide deleted restaurants
+    if (item.status === 'deleted') return false;
     const searchMatch = (item.restaurantName || '').toLowerCase().includes(searchTerm.toLowerCase());
     const stateMatch = filters.state.size === 0 || filters.state.has(item.state);
-    const styleMatch = filters.style.size === 0 || filters.style.has(item.style);
-    return searchMatch && stateMatch && styleMatch;
+    const planMatch = filters.plan.size === 0 || filters.plan.has(item.plan || 'demo');
+    const statusMatch = filters.status.size === 0 || filters.status.has(item.status);
+    return searchMatch && stateMatch && planMatch && statusMatch;
   });
 
   return (
@@ -247,15 +258,27 @@ export function RestaurantsTable() {
                   ))}
                 </div>
                  <DropdownMenuSeparator className="bg-gray-200"/>
-                <DropdownMenuLabel>{t('Filter by Style')}</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('Filter by Plan')}</DropdownMenuLabel>
                  <DropdownMenuSeparator className="bg-gray-200"/>
-                 {restaurantStyles.map(style => (
+                 {plans.map(plan => (
                   <DropdownMenuCheckboxItem
-                    key={style}
-                    checked={filters.style.has(style)}
-                    onCheckedChange={() => handleFilterChange('style', style)}
+                    key={plan.id}
+                    checked={filters.plan.has(plan.id)}
+                    onCheckedChange={() => handleFilterChange('plan', plan.id)}
                   >
-                    {t(style)}
+                    {t(plan.name)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                 <DropdownMenuSeparator className="bg-gray-200"/>
+                <DropdownMenuLabel>{t('Filter by Status')}</DropdownMenuLabel>
+                 <DropdownMenuSeparator className="bg-gray-200"/>
+                 {statuses.map(status => (
+                  <DropdownMenuCheckboxItem
+                    key={status.id}
+                    checked={filters.status.has(status.id)}
+                    onCheckedChange={() => handleFilterChange('status', status.id)}
+                  >
+                    {t(status.name)}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuContent>
@@ -288,8 +311,9 @@ export function RestaurantsTable() {
           <TableHeader>
             <TableRow className="border-b-gray-200 hover:bg-gray-50">
               <TableHead className="text-gray-700">{t('Name')}</TableHead>
-              <TableHead className="text-gray-700">{t('Style')}</TableHead>
               <TableHead className="text-gray-700">{t('State')}</TableHead>
+              <TableHead className="text-gray-700">{t('Plan')}</TableHead>
+              <TableHead className="text-gray-700">{t('Demo Status')}</TableHead>
               <TableHead className="text-gray-700">{t('Status')}</TableHead>
               <TableHead className="text-right text-gray-700">{t('Actions')}</TableHead>
             </TableRow>
@@ -297,7 +321,7 @@ export function RestaurantsTable() {
           <TableBody>
              {isLoading ? (
                 <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                         <div className="flex justify-center items-center p-8">
                             <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
                             <span className="ml-4">{t('Loading restaurants...')}</span>
@@ -305,73 +329,87 @@ export function RestaurantsTable() {
                     </TableCell>
                 </TableRow>
             ) : filteredData.length > 0 ? (
-              filteredData.map(item => (
-                <TableRow key={item.id} className="border-b-gray-200 hover:bg-gray-50">
-                  <TableCell className="font-medium">
-                    <Button variant="link" className="p-0 h-auto text-gray-800 font-medium" onClick={() => setSelectedRestaurant(item)}>
-                      {item.restaurantName}
-                    </Button>
-                    {item.plan === 'demo' && <Badge variant="outline" className="ml-2 border-yellow-400 text-yellow-600"><Star className="h-3 w-3 mr-1"/>Demo</Badge>}
-                  </TableCell>
-                  <TableCell><Badge variant="secondary" className="bg-red-100 text-red-700">{t(item.style)}</Badge></TableCell>
-                  <TableCell>{item.state}</TableCell>
-                   <TableCell>
-                    <Badge variant={item.status === '1' ? 'default' : 'secondary'}>
-                      {item.status === '1' ? t('Active') : t('Inactive')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                     <AlertDialog>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
-                                <span className="sr-only">{t('Open menu')}</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
-                              <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
-                               <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(item)}>
-                                <FilePenLine className="mr-2 h-4 w-4" />
-                                {t('Edit')}
-                              </DropdownMenuItem>
-                               <DropdownMenuItem onSelect={() => handleToggleStatus(item)}>
-                                  {item.status === '1' ? (
-                                    <><PowerOff className="mr-2 h-4 w-4 text-destructive" />{t('Deactivate')}</>
-                                  ) : (
-                                    <><Power className="mr-2 h-4 w-4 text-green-500" />{t('Activate')}</>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                               <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100" onSelect={(e) => e.preventDefault()}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    {t('Delete')}
+              filteredData.map(item => {
+                const daysSinceRegistration = item.fecharegistro ? differenceInDays(new Date(), item.fecharegistro.toDate()) : -1;
+                const isDemoExpired = item.plan === 'demo' && daysSinceRegistration > 15;
+                return (
+                    <TableRow key={item.id} className="border-b-gray-200 hover:bg-gray-50">
+                      <TableCell className="font-medium">
+                        <Button variant="link" className="p-0 h-auto text-gray-800 font-medium" onClick={() => setSelectedRestaurant(item)}>
+                          {item.restaurantName}
+                        </Button>
+                      </TableCell>
+                      <TableCell>{item.state}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn(item.plan === 'demo' ? 'border-yellow-400 text-yellow-600' : 'border-gray-300')}>
+                            {item.plan ? t(planNames[item.plan]) : 'N/A'}
+                        </Badge>
+                      </TableCell>
+                       <TableCell>
+                        {item.plan === 'demo' && daysSinceRegistration >= 0 ? (
+                            <Badge className={isDemoExpired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}>
+                                {isDemoExpired ? t('Expired') : t('Current')} ({daysSinceRegistration} {t('days')})
+                            </Badge>
+                        ) : 'N/A'}
+                      </TableCell>
+                       <TableCell>
+                        <Badge variant={item.status === '1' ? 'default' : 'secondary'} className={cn(item.status === '1' && 'bg-green-600 hover:bg-green-700')}>
+                          {item.status === '1' ? t('Active') : t('Inactive')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                         <AlertDialog>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
+                                    <span className="sr-only">{t('Open menu')}</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
+                                  <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
+                                   <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(item)}>
+                                    <FilePenLine className="mr-2 h-4 w-4" />
+                                    {t('Edit')}
                                   </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    {t('This action will mark the restaurant as deleted and it will no longer appear. Do you want to continue?')}
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(item)} className="bg-red-600 hover:bg-red-700">
-                                    {t('Yes, delete')}
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                </TableRow>
-              ))
+                                   <DropdownMenuItem onSelect={() => handleToggleStatus(item)}>
+                                      {item.status === '1' ? (
+                                        <><PowerOff className="mr-2 h-4 w-4 text-destructive" />{t('Deactivate')}</>
+                                      ) : (
+                                        <><Power className="mr-2 h-4 w-4 text-green-500" />{t('Activate')}</>
+                                      )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                   <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100" onSelect={(e) => e.preventDefault()}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        {t('Delete')}
+                                      </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        {t('This action will mark the restaurant as deleted and it will no longer appear. Do you want to continue?')}
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(item)} className="bg-red-600 hover:bg-red-700">
+                                        {t('Yes, delete')}
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                )
+              })
             ) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={6} className="text-center text-gray-500 py-8">
                         {t('No restaurants found.')}
                     </TableCell>
                 </TableRow>
@@ -387,8 +425,8 @@ export function RestaurantsTable() {
               <DialogHeader>
                 <DialogTitle className="text-2xl font-headline text-gray-900">{selectedRestaurant.restaurantName}</DialogTitle>
                 <div className="flex items-center gap-2 pt-1">
-                  <Badge variant="secondary" className="bg-red-100 text-red-700">{t(selectedRestaurant.style)}</Badge>
-                   <Badge variant={selectedRestaurant.status === '1' ? 'default' : 'destructive'} className="text-sm">
+                    <Badge variant="outline">{t(planNames[selectedRestaurant.plan || 'demo'])}</Badge>
+                    <Badge variant={selectedRestaurant.status === '1' ? 'default' : 'destructive'} className={cn('text-sm', selectedRestaurant.status === '1' && 'bg-green-600 hover:bg-green-700')}>
                         {selectedRestaurant.status === '1' ? t('Active') : t('Inactive')}
                     </Badge>
                 </div>
