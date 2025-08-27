@@ -17,10 +17,9 @@ interface CustomEmailProps {
 }
 
 const getTransporter = () => {
+    // This is the standard and most reliable configuration for Gmail with nodemailer.
     return nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: Number(process.env.EMAIL_PORT),
-      secure: true, // Use true for port 465, false for other ports
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -84,6 +83,10 @@ export const sendCustomEmail = async ({ to, subject, html }: CustomEmailProps) =
         console.log(`Custom email sent to ${to}`);
     } catch (error) {
         console.error(`Failed to send custom email to ${to}:`, error);
-        throw error;
+        let detailedError = (error as Error).message;
+        if (detailedError.includes('Username and Password not accepted')) {
+            detailedError = 'Invalid login. Please verify that the App Password in your .env file is correct and active in your Google Account.';
+        }
+        throw new Error(detailedError);
     }
 };
