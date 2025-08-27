@@ -29,7 +29,7 @@ export default function LoginPage() {
   const { t, i18n } = useTranslation();
 
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
-  const [demoModalContent, setDemoModalContent] = useState({ title: '', description: '', isTrialEnded: false });
+  const [demoModalContent, setDemoModalContent] = useState({ title: '', description: '', isTrialEnded: false, userProfile: '' });
 
 
   useEffect(() => {
@@ -97,6 +97,7 @@ export default function LoginPage() {
                             title: t('Periodo de Prueba Finalizado'),
                             description: t('Tu periodo de prueba de 15 días ha expirado. Por favor, elige un plan para continuar usando Tlacualli.'),
                             isTrialEnded: true,
+                            userProfile: userData.perfil,
                         });
                     } else {
                         const daysLeft = 15 - daysElapsed;
@@ -104,6 +105,7 @@ export default function LoginPage() {
                             title: t('¡Bienvenido a tu Demo!'),
                             description: t('Te quedan {{count}} días de tu prueba gratuita. ¡Disfrútalos!', { count: daysLeft }),
                             isTrialEnded: false,
+                            userProfile: userData.perfil,
                         });
                     }
                     setIsDemoModalOpen(true);
@@ -205,7 +207,11 @@ export default function LoginPage() {
   const handleModalAction = () => {
     setIsDemoModalOpen(false);
     if (demoModalContent.isTrialEnded) {
-        router.push('/planes');
+        if (demoModalContent.userProfile === '1') {
+            router.push('/dashboard-admin/upgrade');
+        } else {
+            router.push('/planes');
+        }
     } else {
         // Find the profile and redirect
         const user = auth.currentUser;
