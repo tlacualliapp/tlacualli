@@ -8,6 +8,7 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
+    lng: 'es', // Set Spanish as the default language
     supportedLngs: ['en', 'es'],
     fallbackLng: 'es',
     debug: true,
@@ -18,7 +19,8 @@ i18n
       useSuspense: false,
     },
     detection: {
-      order: ['querystring', 'cookie', 'localStorage', 'navigator', 'htmlTag', 'path', 'subdomain'],
+      // Start by checking user's saved preference, then fall back
+      order: ['localStorage', 'cookie', 'querystring', 'navigator', 'htmlTag', 'path', 'subdomain'],
     }
   });
 
