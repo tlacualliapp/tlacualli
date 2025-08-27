@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, orderBy } from 'firebase/firestore';
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -29,7 +29,8 @@ export function DailyAccessChart() {
   useEffect(() => {
     const q = query(
       collection(db, 'monitor'),
-      where('accion', '==', 'Inicio de sesión')
+      where('accion', '==', 'Inicio de sesión'),
+      orderBy('fecha', 'asc') // Order by date to process chronologically
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -59,8 +60,7 @@ export function DailyAccessChart() {
                 key
             }
         })
-        .sort((a,b) => a.key.localeCompare(b.key))
-        .slice(-6); // Get last 6 months
+        .sort((a,b) => a.key.localeCompare(b.key)); // Sort by YYYY-MM key
 
       setChartData(formattedData);
       setIsLoading(false);
