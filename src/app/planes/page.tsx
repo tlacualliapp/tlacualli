@@ -106,9 +106,9 @@ export default function PricingPage() {
         {/* Hero Section */}
         <section className="relative h-[60vh] min-h-[500px] w-full">
             <Image 
-                src="https://picsum.photos/1200/800"
-                alt="Interior de un restaurante elegante" 
-                layout="fill"
+                src="/assets/banner_tlacualli.png" 
+                alt="Restaurante" 
+                fill
                 objectFit="cover"
                 quality={85}
                 className="brightness-50"
