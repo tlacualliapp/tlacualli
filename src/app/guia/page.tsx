@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TacoIcon } from '@/components/icons/logo';
-import { ArrowLeft, Package, Utensils, BookOpen, Users, Map as MapIcon, ClipboardList, Truck, BarChart } from 'lucide-react';
+import { ArrowLeft, Package, Utensils, BookOpen, Users, Map as MapIcon, ClipboardList, Truck, BarChart, QrCode } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -57,6 +57,12 @@ const steps = [
         title: 'Paso 8: La inteligencia a tu servicio: Reportes y análisis de negocio',
         description: 'Obtén una visión completa de la salud de tu negocio. El módulo de Reportes te muestra el desempeño y movimiento de tu restaurante con un solo vistazo. Y lo mejor de todo: nuestra inteligencia artificial analiza tus métricas para ofrecerte recomendaciones personalizadas que te ayudarán a ser más eficiente y rentable.',
         color: 'text-green-500',
+    },
+    {
+        icon: QrCode,
+        title: 'Paso 9: Tu Menú Digital al Alcance de Todos',
+        description: 'Ofrece una experiencia moderna a tus clientes. Genera tu propio menú digital en tiempo real y compártelo al instante. Puedes imprimir códigos QR para cada mesa, permitiendo que tus comensales accedan al menú actualizado directamente desde sus dispositivos móviles.',
+        color: 'text-cyan-500',
     }
 ];
 
