@@ -24,7 +24,8 @@ import {
   Map,
   Utensils,
   Settings,
-  Check
+  Check,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -69,6 +70,7 @@ const allNavItems = [
   { key: 'kitchen', href: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { key: 'reports', href: '/dashboard-admin/reports', label: 'Reports', icon: BarChart },
   { key: 'map', href: '/dashboard-admin/map', label: 'Digital Map', icon: Map },
+  { key: 'billing', href: '/dashboard-admin/billing', label: 'Billing', icon: FileText },
   { key: 'settings', href: '/dashboard-admin/settings', label: 'Settings', icon: Settings },
 ];
 
