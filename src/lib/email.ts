@@ -20,11 +20,13 @@ const getTransporter = () => {
     return nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: Number(process.env.EMAIL_PORT),
-      secure: true, // Use true for port 465, false for others
+      secure: true, // true for 465, false for other ports
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      connectionTimeout: 10000, // 10 seconds
+      socketTimeout: 10000, // 10 seconds
     });
 }
 
