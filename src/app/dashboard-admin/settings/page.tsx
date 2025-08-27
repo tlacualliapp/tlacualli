@@ -114,9 +114,10 @@ export default function SettingsPage() {
       try {
           const uploadPromises: Promise<void>[] = [];
           const updateData: { logoUrl?: string, iconUrl?: string } = {};
+          const storagePath = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
           if (logoFile) {
-              const logoRef = ref(storage, `restaurantes/${restaurantId}/logos/${logoFile.name}`);
+              const logoRef = ref(storage, `${storagePath}/${restaurantId}/logos/${logoFile.name}`);
               uploadPromises.push(
                   uploadBytes(logoRef, logoFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
                       updateData.logoUrl = url;
@@ -125,7 +126,7 @@ export default function SettingsPage() {
           }
 
           if (iconFile) {
-              const iconRef = ref(storage, `restaurantes/${restaurantId}/icons/${iconFile.name}`);
+              const iconRef = ref(storage, `${storagePath}/${restaurantId}/icons/${iconFile.name}`);
               uploadPromises.push(
                   uploadBytes(iconRef, iconFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
                       updateData.iconUrl = url;
