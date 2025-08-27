@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, getDocs, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDocs, collectionGroup, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -28,12 +28,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle, Power, PowerOff, Star } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle, Power, PowerOff, Star, ShieldCheck, Calendar, CreditCard, Clock } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { RestaurantForm } from './restaurant-form';
 import { useTranslation } from 'react-i18next';
+import { Card, CardContent } from '../ui/card';
+import { Separator } from '../ui/separator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { format } from 'date-fns';
 
 type Restaurant = {
   id: string;
@@ -48,7 +52,14 @@ type Restaurant = {
   socialReason: string;
   status: string;
   plan?: 'demo' | 'esencial' | 'pro' | 'ilimitado';
+  fecharegistro?: Timestamp;
 };
+
+type AccountDetails = {
+    lastPayment: string;
+    nextPayment: string;
+    registrationDate: string;
+}
 
 const mexicanStates = [
   "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
@@ -60,12 +71,20 @@ const mexicanStates = [
 
 const restaurantStyles = ["Italiano", "Mar y tierra", "Carnes", "Mariscos", "Mexicano", "Japonés", "Otro"];
 
+const planNames = {
+    demo: 'Demo Gratuita',
+    esencial: 'Plan Esencial',
+    pro: 'Plan Pro',
+    ilimitado: 'Plan Ilimitado'
+};
+
 export function RestaurantsTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({ state: new Set<string>(), style: new Set<string>() });
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [accountDetails, setAccountDetails] = useState<AccountDetails | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
   const router = useRouter();
@@ -90,11 +109,42 @@ export function RestaurantsTable() {
 
     fetchRestaurants();
     
-    // Note: onSnapshot for multiple collections is more complex. 
-    // For simplicity, we are fetching once. If real-time is needed,
-    // two separate onSnapshot listeners would be required, similar to the dashboard page.
-
   }, [toast, t]);
+  
+  useEffect(() => {
+    if (!selectedRestaurant) return;
+
+    const fetchAccountDetails = async () => {
+        const collectionName = selectedRestaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const paymentsQuery = query(
+            collection(db, `${collectionName}/${selectedRestaurant.id}/payments`),
+            orderBy('paymentDate', 'desc'),
+            limit(1)
+        );
+
+        const paymentsSnap = await getDocs(paymentsQuery);
+        let lastPayment = t('N/A');
+        let nextPayment = t('N/A');
+        const registrationDate = selectedRestaurant.fecharegistro ? format(selectedRestaurant.fecharegistro.toDate(), 'PPP') : t('N/A');
+        
+        const registrationDateObj = selectedRestaurant.fecharegistro?.toDate();
+
+        if (!paymentsSnap.empty) {
+            const lastPaymentDate = paymentsSnap.docs[0].data().paymentDate.toDate();
+            lastPayment = format(lastPaymentDate, 'PPP');
+            const nextPaymentDate = new Date(lastPaymentDate.setMonth(lastPaymentDate.getMonth() + 1));
+            nextPayment = format(nextPaymentDate, 'PPP');
+        } else if (registrationDateObj) {
+            const nextPaymentDate = new Date(registrationDateObj.setMonth(registrationDateObj.getMonth() + 1));
+            nextPayment = format(nextPaymentDate, 'PPP');
+        }
+
+        setAccountDetails({ lastPayment, nextPayment, registrationDate });
+    };
+
+    fetchAccountDetails();
+  }, [selectedRestaurant, t]);
+
 
   const handleFilterChange = (type: 'state' | 'style', value: string) => {
     setFilters(prev => {
@@ -336,47 +386,91 @@ export function RestaurantsTable() {
             <>
               <DialogHeader>
                 <DialogTitle className="text-2xl font-headline text-gray-900">{selectedRestaurant.restaurantName}</DialogTitle>
-                <div className="pt-1">
+                <div className="flex items-center gap-2 pt-1">
                   <Badge variant="secondary" className="bg-red-100 text-red-700">{t(selectedRestaurant.style)}</Badge>
+                   <Badge variant={selectedRestaurant.status === '1' ? 'default' : 'destructive'} className="text-sm">
+                        {selectedRestaurant.status === '1' ? t('Active') : t('Inactive')}
+                    </Badge>
                 </div>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="flex items-start gap-4">
-                  <Building className="h-5 w-5 text-gray-600 mt-1" />
-                  <div>
-                    <p className="font-semibold text-gray-700">{t('Social Reason')}</p>
-                    <p className="text-gray-600">{selectedRestaurant.socialReason}</p>
+              <Separator/>
+              <CardContent className="p-0">
+                  <h3 className="text-sm font-medium text-gray-500 mb-4">{t('Contact Information')}</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <Building className="h-4 w-4 text-gray-500 mt-1 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-sm text-gray-700">{selectedRestaurant.socialReason}</p>
+                        <p className="text-xs text-gray-500">{t('Social Reason')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Hash className="h-4 w-4 text-gray-500 mt-1 shrink-0" />
+                       <div>
+                        <p className="font-semibold text-sm text-gray-700">{selectedRestaurant.rfc}</p>
+                        <p className="text-xs text-gray-500">{t('RFC')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Mail className="h-4 w-4 text-gray-500 mt-1 shrink-0" />
+                       <div>
+                        <p className="font-semibold text-sm text-gray-700">{selectedRestaurant.email}</p>
+                        <p className="text-xs text-gray-500">{t('Email')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Phone className="h-4 w-4 text-gray-500 mt-1 shrink-0" />
+                       <div>
+                        <p className="font-semibold text-sm text-gray-700">{selectedRestaurant.phone}</p>
+                        <p className="text-xs text-gray-500">{t('Phone')}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <Building className="h-5 w-5 text-gray-600 mt-1" />
-                  <div>
-                    <p className="font-semibold text-gray-700">{t('Address')}</p>
-                    <p className="text-gray-600">{selectedRestaurant.address}, {selectedRestaurant.municipality}, {selectedRestaurant.state}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Phone className="h-5 w-5 text-gray-600" />
-                  <div>
-                    <p className="font-semibold text-gray-700">{t('Phone')}</p>
-                    <p className="text-gray-600">{selectedRestaurant.phone}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Mail className="h-5 w-5 text-gray-600" />
-                  <div>
-                    <p className="font-semibold text-gray-700">{t('Email')}</p>
-                    <p className="text-gray-600">{selectedRestaurant.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Hash className="h-5 w-5 text-gray-600" />
-                  <div>
-                    <p className="font-semibold text-gray-700">{t('RFC')}</p>
-                    <p className="text-gray-600">{selectedRestaurant.rfc}</p>
-                  </div>
-                </div>
-              </div>
+              </CardContent>
+              <Separator />
+               <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger className="text-base font-semibold">{t('Plan & Billing')}</AccordionTrigger>
+                        <AccordionContent>
+                           {accountDetails ? (
+                                <div className="space-y-3 pt-2">
+                                     <div className="flex items-center gap-3">
+                                        <ShieldCheck className="h-4 w-4 text-gray-500 shrink-0" />
+                                        <div>
+                                            <p className="font-semibold text-sm text-gray-700">{t(planNames[selectedRestaurant.plan || 'demo'])}</p>
+                                            <p className="text-xs text-gray-500">{t('Current Plan')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Calendar className="h-4 w-4 text-gray-500 shrink-0" />
+                                        <div>
+                                            <p className="font-semibold text-sm text-gray-700">{accountDetails.registrationDate}</p>
+                                            <p className="text-xs text-gray-500">{t('Registration Date')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <CreditCard className="h-4 w-4 text-gray-500 shrink-0" />
+                                        <div>
+                                            <p className="font-semibold text-sm text-gray-700">{accountDetails.lastPayment}</p>
+                                            <p className="text-xs text-gray-500">{t('Last Payment')}</p>
+                                        </div>
+                                    </div>
+                                     <div className="flex items-center gap-3">
+                                        <Clock className="h-4 w-4 text-gray-500 shrink-0" />
+                                        <div>
+                                            <p className="font-semibold text-sm text-gray-700">{accountDetails.nextPayment}</p>
+                                            <p className="text-xs text-gray-500">{t('Next Payment')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center p-4">
+                                    <Loader2 className="h-5 w-5 animate-spin"/>
+                                </div>
+                            )}
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
             </>
           )}
         </DialogContent>
