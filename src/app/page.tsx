@@ -59,7 +59,7 @@ export default function LandingPage() {
           </Link>
           <nav className="ml-auto flex items-center gap-4">
             <Button variant="ghost" asChild>
-                <Link href="/tarifas">Tarifas</Link>
+                <Link href="/planes">Planes</Link>
             </Button>            
             <Button className="bg-accent hover:bg-accent/90">
                 <Link href="/login">Acceso a Usuarios</Link>
