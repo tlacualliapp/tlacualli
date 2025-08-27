@@ -43,7 +43,7 @@ export default function RegisterPage() {
                  <CardDescription className="text-gray-600">{t('Take the first step to elevate your restaurant.')}</CardDescription>
             </CardHeader>
             <CardContent>
-                <RestaurantForm onSuccess={() => router.push('/login')} />
+                <RestaurantForm onSuccess={() => router.push('/login')} source="register" />
             </CardContent>
         </Card>
       </div>

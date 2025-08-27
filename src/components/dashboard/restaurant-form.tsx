@@ -32,6 +32,7 @@ interface Restaurant {
 interface RestaurantFormProps {
   onSuccess?: () => void;
   restaurantToEdit?: Restaurant | null;
+  source?: 'register' | 'admin';
 }
 
 const mexicanStates = [
@@ -44,7 +45,7 @@ const mexicanStates = [
 
 const restaurantStyles = ["Italiano", "Mar y tierra", "Carnes", "Mariscos", "Mexicano", "Japonés", "Otro"];
 
-export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormProps) {
+export function RestaurantForm({ onSuccess, restaurantToEdit, source = 'admin' }: RestaurantFormProps) {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const formRef = useRef<HTMLFormElement>(null);
@@ -112,18 +113,25 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
             });
           } else {
              // Modo Creación
-            const restaurantData = {
+            const isDemo = source === 'register';
+            const restaurantCollectionName = isDemo ? 'restaurantes_demo' : 'restaurantes';
+
+            const restaurantData: any = {
               ...formData,
               status: "1",
               fecharegistro: serverTimestamp()
             };
 
-            const restaurantRef = await addDoc(collection(db, "restaurantes"), restaurantData);
+            if (isDemo) {
+                restaurantData.plan = 'demo';
+            }
+
+            const restaurantRef = await addDoc(collection(db, restaurantCollectionName), restaurantData);
             
             const userCredential = await createUserWithEmailAndPassword(auth, email, phone);
             const user = userCredential.user;
 
-            await addDoc(collection(db, "usuarios"), {
+            const userData: any = {
                 uid: user.uid,
                 nombre: "Admin",
                 apellidos: restaurantName,
@@ -133,7 +141,13 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
                 fecharegistro: serverTimestamp(),
                 email,
                 telefono: phone
-            });
+            };
+
+            if (isDemo) {
+                userData.plan = 'demo';
+            }
+
+            await addDoc(collection(db, "usuarios"), userData);
             
             toast({
               title: t("Registration Successful"),
