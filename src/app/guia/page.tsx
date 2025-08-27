@@ -72,12 +72,10 @@ export default function GuiaPage() {
                         <TacoIcon className="h-8 w-8 text-primary" />
                         <span className="font-headline text-xl">Tlacualli</span>
                     </Link>
-                    <nav className="ml-auto flex items-center gap-4">
-                        <Button variant="ghost" asChild>
-                            <Link href="/planes">Planes</Link>
-                        </Button>            
-                        <Button className="bg-accent hover:bg-accent/90">
-                            <Link href="/login">Acceso a Usuarios</Link>
+                    <nav className="ml-auto">
+                        <Button variant="outline" size="sm" onClick={() => router.back()}>
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Volver
                         </Button>
                     </nav>
                 </div>
@@ -108,10 +106,6 @@ export default function GuiaPage() {
                 {/* Steps Section */}
                 <section id="steps" className="py-12 md:py-24 bg-gray-50 dark:bg-gray-900/50">
                     <div className="container max-w-4xl">
-                        <Button variant="outline" size="sm" className="mb-8" onClick={() => router.back()}>
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Volver
-                        </Button>
                         <div className="space-y-12">
                             {steps.map((step, index) => (
                                 <Card key={index} className="bg-card/65 backdrop-blur-lg shadow-lg overflow-hidden flex flex-col md:flex-row items-center group transition-all duration-300 hover:border-primary">
