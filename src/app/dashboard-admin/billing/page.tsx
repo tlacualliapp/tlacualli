@@ -15,6 +15,7 @@ import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { getCurrentUserData } from '@/lib/users';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface Restaurant {
   id: string;
@@ -54,6 +55,7 @@ export default function BillingPage() {
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentsLoading, setIsPaymentsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -108,7 +110,7 @@ export default function BillingPage() {
     });
 
     return () => unsubscribe();
-  }, [restaurant, t]);
+  }, [restaurant, t, toast]);
 
   if (loading || isLoading) {
     return (
@@ -182,7 +184,7 @@ export default function BillingPage() {
                     </div>
                 </CardContent>
                 <CardHeader>
-                     <Button className="w-full md:w-auto" onClick={() => router.push('/planes')}>
+                     <Button className="w-full md:w-auto" onClick={() => router.push('/dashboard-admin/upgrade')}>
                         {t('Upgrade or Change Plan')} <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                 </CardHeader>
@@ -257,5 +259,3 @@ export default function BillingPage() {
     </AdminLayout>
   );
 }
-
-    
