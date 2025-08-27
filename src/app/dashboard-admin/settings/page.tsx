@@ -63,21 +63,19 @@ export default function SettingsPage() {
       if (user) {
         setIsLoading(true);
         const userData = await getCurrentUserData();
-        if (userData) {
+        if (userData && userData.restauranteId && userData.plan) {
           const id = userData.restauranteId;
           const plan = userData.plan;
           setRestaurantId(id);
           setUserPlan(plan);
 
-          if (id) {
-            const collectionName = plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-            const restaurantRef = doc(db, collectionName, id);
-            const restaurantSnap = await getDoc(restaurantRef);
-            if (restaurantSnap.exists()) {
-              const data = { id: restaurantSnap.id, ...restaurantSnap.data() } as Restaurant;
-              setRestaurant(data);
-              setIva(data.iva || 16); // Default to 16 if not set
-            }
+          const collectionName = plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+          const restaurantRef = doc(db, collectionName, id);
+          const restaurantSnap = await getDoc(restaurantRef);
+          if (restaurantSnap.exists()) {
+            const data = { id: restaurantSnap.id, ...restaurantSnap.data() } as Restaurant;
+            setRestaurant(data);
+            setIva(data.iva || 16); // Default to 16 if not set
           }
         }
         setIsLoading(false);
@@ -107,7 +105,10 @@ export default function SettingsPage() {
         toast({ variant: 'destructive', title: t('No file selected'), description: t('Please select a file to upload.') });
         return;
     }
-    if (!restaurantId || !userPlan) return;
+    if (!restaurantId || !userPlan) {
+        toast({ variant: 'destructive', title: t('Error'), description: t('Could not find restaurant information.') });
+        return;
+    };
 
     setIsUploading(true);
     
@@ -154,7 +155,10 @@ export default function SettingsPage() {
   };
 
   const handleSaveIva = async () => {
-    if (!restaurantId || !userPlan) return;
+    if (!restaurantId || !userPlan) {
+      toast({ variant: 'destructive', title: t('Error'), description: t('Could not find restaurant information.') });
+      return;
+    };
     setIsSavingIva(true);
     try {
         const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
