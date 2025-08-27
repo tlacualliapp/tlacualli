@@ -27,7 +27,8 @@ import {
   Check,
   ShieldAlert,
   FileText,
-  Shield
+  Shield,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -76,6 +77,7 @@ const allNavItems = [
   { key: 'map', href: '/dashboard-admin/map', label: 'Digital Map', icon: Map },
   { key: 'billing', href: '/dashboard-admin/billing', label: 'Billing', icon: InvoiceIcon },
   { key: 'settings', href: '/dashboard-admin/settings', label: 'Settings', icon: Settings },
+  { key: 'guia', href: '/guia', label: 'Guía', icon: HelpCircle },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -127,7 +129,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             } else if (profile === '2') { // Collaborator
               setDashboardUrl('/dashboard-collaborator');
               const allowedItems = allNavItems.filter(item => {
-                 if (item.key === 'dashboard') return true;
+                 if (item.key === 'dashboard' || item.key === 'guia') return true;
                  return userData.permissions && userData.permissions[item.key]
               });
               
