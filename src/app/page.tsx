@@ -142,8 +142,8 @@ export default function LandingPage() {
                                 “Los reportes con IA son simplemente increíbles. Hemos ajustado nuestro menú basándonos en los datos y vimos un aumento del 20% en la rentabilidad. Totalmente recomendado.”
                             </blockquote>
                             <footer className="mt-4">
-                                <p className="font-headline font-semibold">Carlos Villanueva</p>
-                                <p className="text-muted-foreground">Dueño, Fuego & Mar</p>
+                                <p className="font-headline font-semibold">Eduardo Bárcenas</p>
+                                <p className="text-muted-foreground">Dueño, El Grill del Compaye</p>
                             </footer>
                         </CardContent>
                     </Card>
