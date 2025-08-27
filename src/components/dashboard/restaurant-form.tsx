@@ -236,9 +236,9 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
 
             {!isEditMode && (
                 <div className="flex items-center space-x-2 pt-2">
-                    <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(!!checked)} />
+                    <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(!!checked)} required />
                     <Label htmlFor="terms" className="text-sm font-normal">
-                        {t('I accept the')} <Link href="/terminos-condiciones" target="_blank" className="underline hover:text-primary">{t('Terms and Conditions')}</Link> {t('and the')} <Link href="/aviso-privacidad" target="_blank" className="underline hover:text-primary">{t('Privacy Policy')}</Link>.
+                        Acepto los <Link href="/terminos-condiciones" target="_blank" className="underline hover:text-primary">Términos y Condiciones</Link> y el <Link href="/aviso-privacidad" target="_blank" className="underline hover:text-primary">Aviso de Privacidad</Link>.
                     </Label>
                 </div>
             )}
