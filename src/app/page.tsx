@@ -7,9 +7,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { TacoIcon } from '@/components/icons/logo';
 import { ArrowRight, BarChart, ChefHat, ClipboardList, Package, Utensils, Map as MapIcon, Users, Mail, Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useEffect, useRef } from 'react';
+import { useFormStatus } from 'react-dom';
 import { sendContactEmail } from '@/app/actions/contact';
-import { useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,7 +66,7 @@ function SubmitButton() {
 
 export default function LandingPage() {
    const initialState = { message: null, errors: null, success: false };
-   const [state, dispatch] = useFormState(sendContactEmail, initialState);
+   const [state, dispatch] = useActionState(sendContactEmail, initialState);
    const { toast } = useToast();
    const formRef = useRef<HTMLFormElement>(null);
 
