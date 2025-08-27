@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDocs, collectionGroup } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle, Power, PowerOff } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, FilePenLine, Trash2, Building, Mail, Phone, Hash, Loader2, PlusCircle, Power, PowerOff, Star } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +47,7 @@ type Restaurant = {
   rfc: string;
   socialReason: string;
   status: string;
+  plan?: 'demo' | 'esencial' | 'pro' | 'ilimitado';
 };
 
 const mexicanStates = [
@@ -73,27 +74,26 @@ export function RestaurantsTable() {
 
   useEffect(() => {
     setIsLoading(true);
-    // Fetch all restaurants regardless of status
-    const q = query(collection(db, "restaurantes"));
+    
+    const fetchRestaurants = async () => {
+        const prodQuery = query(collection(db, "restaurantes"));
+        const demoQuery = query(collection(db, "restaurantes_demo"));
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const restaurantsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Restaurant));
-      setRestaurants(restaurantsData);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Error fetching restaurants:", error);
-      setIsLoading(false);
-      toast({
-        variant: "destructive",
-        title: t("Error"),
-        description: t("Could not load restaurants.")
-      })
-    });
+        const [prodSnap, demoSnap] = await Promise.all([getDocs(prodQuery), getDocs(demoQuery)]);
 
-    return () => unsubscribe();
+        const prodRestaurants = prodSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Restaurant));
+        const demoRestaurants = demoSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Restaurant));
+
+        setRestaurants([...prodRestaurants, ...demoRestaurants]);
+        setIsLoading(false);
+    };
+
+    fetchRestaurants();
+    
+    // Note: onSnapshot for multiple collections is more complex. 
+    // For simplicity, we are fetching once. If real-time is needed,
+    // two separate onSnapshot listeners would be required, similar to the dashboard page.
+
   }, [toast, t]);
 
   const handleFilterChange = (type: 'state' | 'style', value: string) => {
@@ -113,15 +113,16 @@ export function RestaurantsTable() {
     setIsFormModalOpen(true);
   };
 
-  const handleDelete = async (restaurantId: string) => {
+  const handleDelete = async (restaurant: Restaurant) => {
     try {
-        const restaurantRef = doc(db, "restaurantes", restaurantId);
-        // This is a permanent delete, consider logical delete (status = "deleted")
+        const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const restaurantRef = doc(db, collectionName, restaurant.id);
         await updateDoc(restaurantRef, { status: "deleted" });
         toast({
             title: t("Restaurant Deleted"),
             description: t("The restaurant has been marked as deleted."),
         });
+         setRestaurants(prev => prev.filter(r => r.id !== restaurant.id));
     } catch (error) {
         console.error("Error al eliminar restaurante:", error);
         toast({
@@ -132,15 +133,17 @@ export function RestaurantsTable() {
     }
   };
 
-  const handleToggleStatus = async (restaurantId: string, currentStatus: string) => {
-    const newStatus = currentStatus === "1" ? "0" : "1";
+  const handleToggleStatus = async (restaurant: Restaurant) => {
+    const newStatus = restaurant.status === "1" ? "0" : "1";
     try {
-        const restaurantRef = doc(db, "restaurantes", restaurantId);
+        const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const restaurantRef = doc(db, collectionName, restaurant.id);
         await updateDoc(restaurantRef, { status: newStatus });
         toast({
             title: t("Status Updated"),
             description: t("The restaurant has been {{status}}.", { status: newStatus === "1" ? t('activated') : t('deactivated')}),
         });
+        setRestaurants(prev => prev.map(r => r.id === restaurant.id ? {...r, status: newStatus} : r));
     } catch (error) {
          console.error("Error al actualizar estado:", error);
         toast({
@@ -258,6 +261,7 @@ export function RestaurantsTable() {
                     <Button variant="link" className="p-0 h-auto text-gray-800 font-medium" onClick={() => setSelectedRestaurant(item)}>
                       {item.restaurantName}
                     </Button>
+                    {item.plan === 'demo' && <Badge variant="outline" className="ml-2 border-yellow-400 text-yellow-600"><Star className="h-3 w-3 mr-1"/>Demo</Badge>}
                   </TableCell>
                   <TableCell><Badge variant="secondary" className="bg-red-100 text-red-700">{t(item.style)}</Badge></TableCell>
                   <TableCell>{item.state}</TableCell>
@@ -281,7 +285,7 @@ export function RestaurantsTable() {
                                 <FilePenLine className="mr-2 h-4 w-4" />
                                 {t('Edit')}
                               </DropdownMenuItem>
-                               <DropdownMenuItem onSelect={() => handleToggleStatus(item.id, item.status)}>
+                               <DropdownMenuItem onSelect={() => handleToggleStatus(item)}>
                                   {item.status === '1' ? (
                                     <><PowerOff className="mr-2 h-4 w-4 text-destructive" />{t('Deactivate')}</>
                                   ) : (
@@ -306,7 +310,7 @@ export function RestaurantsTable() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700">
+                                <AlertDialogAction onClick={() => handleDelete(item)} className="bg-red-600 hover:bg-red-700">
                                     {t('Yes, delete')}
                                 </AlertDialogAction>
                             </AlertDialogFooter>

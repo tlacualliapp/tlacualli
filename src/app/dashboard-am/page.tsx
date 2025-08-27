@@ -55,8 +55,17 @@ export default function AdminMasterDashboard() {
   useEffect(() => {
     if (!isAuthorized) return;
     
-    const unsubRestaurants = onSnapshot(query(collection(db, "restaurantes"), where("status", "==", "1")), (snap) => {
-        setStats(s => ({...s, restaurants: snap.size}));
+    let prodCount = 0;
+    let demoCount = 0;
+
+    const unsubRestaurantsProd = onSnapshot(query(collection(db, "restaurantes"), where("status", "==", "1")), (snap) => {
+        prodCount = snap.size;
+        setStats(s => ({...s, restaurants: prodCount + demoCount }));
+    });
+
+    const unsubRestaurantsDemo = onSnapshot(query(collection(db, "restaurantes_demo"), where("status", "==", "1")), (snap) => {
+        demoCount = snap.size;
+        setStats(s => ({...s, restaurants: prodCount + demoCount }));
     });
     
     const unsubUsers = onSnapshot(query(collection(db, "usuarios"), where("status", "==", "1")), (snap) => {
@@ -73,7 +82,8 @@ export default function AdminMasterDashboard() {
     setIsLoading(false);
 
     return () => {
-      unsubRestaurants();
+      unsubRestaurantsProd();
+      unsubRestaurantsDemo();
       unsubUsers();
     }
   }, [isAuthorized]);

@@ -29,10 +29,15 @@ export function RestaurantActionsChart() {
         setIsLoading(true);
         try {
             // 1. Get all restaurants to map IDs to names
-            const restaurantsRef = collection(db, 'restaurantes');
-            const restaurantsSnap = await getDocs(restaurantsRef);
+            const prodRestaurantsRef = collection(db, 'restaurantes');
+            const demoRestaurantsRef = collection(db, 'restaurantes_demo');
+            const [prodSnap, demoSnap] = await Promise.all([getDocs(prodRestaurantsRef), getDocs(demoRestaurantsRef)]);
+            
             const restaurantNames: { [id: string]: string } = {};
-            restaurantsSnap.forEach(doc => {
+            prodSnap.forEach(doc => {
+                restaurantNames[doc.id] = doc.data().restaurantName || t('Unknown');
+            });
+            demoSnap.forEach(doc => {
                 restaurantNames[doc.id] = doc.data().restaurantName || t('Unknown');
             });
 
