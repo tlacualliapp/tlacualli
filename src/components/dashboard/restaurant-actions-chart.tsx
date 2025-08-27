@@ -82,7 +82,7 @@ export function RestaurantActionsChart() {
   if (isLoading) {
     return (
       <div className="h-[300px] w-full flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -90,7 +90,7 @@ export function RestaurantActionsChart() {
   if (chartData.length === 0) {
     return (
        <div className="h-[300px] w-full flex justify-center items-center">
-        <p className="text-gray-500">{t('No action data to display.')}</p>
+        <p className="text-muted-foreground">{t('No action data to display.')}</p>
       </div>
     )
   }

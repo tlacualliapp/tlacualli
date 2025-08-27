@@ -112,12 +112,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div 
-        className="relative flex min-h-screen w-full flex-col bg-cover bg-center"
-        style={{ backgroundImage: "url('/assets/background.png')" }}
-    >
-      <div className="absolute inset-0 bg-black/10"></div>
-      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card/80 backdrop-blur-lg px-4 md:px-6 z-20">
+    <div className="flex min-h-screen w-full flex-col bg-muted/40">
+      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 z-20">
         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
           <Link
             href="/dashboard-am"
@@ -130,9 +126,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`transition-colors hover:text-foreground ${
+              className={cn(
+                'transition-colors hover:text-foreground',
                 pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
-              }`}
+              )}
             >
               {t(item.label)}
             </Link>
@@ -163,11 +160,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-4 rounded-xl px-3 py-2 ${
-                    pathname === item.href
-                      ? 'bg-muted text-foreground'
-                      : 'text-muted-foreground'
-                  } transition-all hover:text-foreground`}
+                  className={cn(
+                    'flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground transition-all hover:text-foreground',
+                    pathname === item.href && 'bg-muted text-foreground'
+                  )}
                 >
                   <item.icon className="h-5 w-5" />
                   {t(item.label)}
@@ -240,7 +236,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </DropdownMenu>
         </div>
       </header>
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 relative z-10">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         {children}
       </main>
 

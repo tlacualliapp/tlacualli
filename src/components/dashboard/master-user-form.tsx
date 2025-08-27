@@ -129,22 +129,22 @@ export function MasterUserForm({ onSuccess, userToEdit }: MasterUserFormProps) {
     <form onSubmit={handleSubmit} className="grid gap-4 py-4">
         <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="nombre" className="text-gray-700">{t('First Name(s)')}</Label>
-              <Input id="nombre" name="nombre" defaultValue={userToEdit?.nombre} placeholder={t("e.g., Juan")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+              <Label htmlFor="nombre">{t('First Name(s)')}</Label>
+              <Input id="nombre" name="nombre" defaultValue={userToEdit?.nombre} placeholder={t("e.g., Juan")} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="apellidos" className="text-gray-700">{t('Last Names')}</Label>
-              <Input id="apellidos" name="apellidos" defaultValue={userToEdit?.apellidos} placeholder={t("e.g., Pérez García")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+              <Label htmlFor="apellidos">{t('Last Names')}</Label>
+              <Input id="apellidos" name="apellidos" defaultValue={userToEdit?.apellidos} placeholder={t("e.g., Pérez García")} required />
             </div>
         </div>
          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="telefono" className="text-gray-700">{isEditMode ? t('Phone') : t('Phone (will be the password)')}</Label>
-              <Input id="telefono" name="telefono" type="tel" defaultValue={userToEdit?.telefono} placeholder={t('Minimum 6 digits')} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+              <Label htmlFor="telefono">{isEditMode ? t('Phone') : t('Phone (will be the password)')}</Label>
+              <Input id="telefono" name="telefono" type="tel" defaultValue={userToEdit?.telefono} placeholder={t('Minimum 6 digits')} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700">{t('Email')}</Label>
-              <Input id="email" name="email" type="email" defaultValue={userToEdit?.email} placeholder={t("e.g., user@email.com")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required disabled={isEditMode} />
+              <Label htmlFor="email">{t('Email')}</Label>
+              <Input id="email" name="email" type="email" defaultValue={userToEdit?.email} placeholder={t("e.g., user@email.com")} required disabled={isEditMode} />
             </div>
         </div>
 
@@ -158,7 +158,7 @@ export function MasterUserForm({ onSuccess, userToEdit }: MasterUserFormProps) {
         )}
 
         <div className="flex justify-end pt-2">
-            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4" disabled={isLoading || !termsAccepted}>
+            <Button type="submit" disabled={isLoading || !termsAccepted}>
                 {isLoading ? <Loader2 className="animate-spin" /> : isEditMode ? t('Save Changes') : t('Register Master User')}
             </Button>
         </div>

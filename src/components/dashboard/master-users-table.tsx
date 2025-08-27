@@ -124,12 +124,12 @@ export function MasterUsersTable() {
     <div className="space-y-4 pt-4">
       <div className="flex justify-between items-center gap-4">
         <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder={t("Search by name or email...")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full"
+            className="pl-10 rounded-full"
           />
         </div>
         <Button onClick={handleAddNew}>
@@ -150,14 +150,14 @@ export function MasterUsersTable() {
             </DialogContent>
         </Dialog>
 
-      <div className="rounded-md border border-gray-200">
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
-            <TableRow className="border-b-gray-200 hover:bg-gray-50">
-              <TableHead className="text-gray-700">{t('Username')}</TableHead>
-              <TableHead className="text-gray-700">{t('Email')}</TableHead>
-              <TableHead className="text-gray-700">{t('Registration Date')}</TableHead>
-              <TableHead className="text-right text-gray-700">{t('Actions')}</TableHead>
+            <TableRow>
+              <TableHead>{t('Username')}</TableHead>
+              <TableHead>{t('Email')}</TableHead>
+              <TableHead>{t('Registration Date')}</TableHead>
+              <TableHead className="text-right">{t('Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -165,14 +165,14 @@ export function MasterUsersTable() {
                 <TableRow>
                     <TableCell colSpan={4} className="text-center">
                         <div className="flex justify-center items-center p-8">
-                            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                             <span className="ml-4">{t('Loading users...')}</span>
                         </div>
                     </TableCell>
                 </TableRow>
             ) : filteredData.length > 0 ? (
                 filteredData.map(user => (
-                  <TableRow key={user.id} className="border-b-gray-200 hover:bg-gray-50">
+                  <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.nombre} {user.apellidos}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.registered}</TableCell>
@@ -180,19 +180,19 @@ export function MasterUsersTable() {
                         <AlertDialog>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
                                     <span className="sr-only">{t('Open menu')}</span>
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
+                                <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
                                    <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(user)}>
                                     <FilePenLine className="mr-2 h-4 w-4" />
                                     {t('Edit')}
                                   </DropdownMenuItem>
                                   <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100" onSelect={(e) => e.preventDefault()}>
+                                    <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
                                       <Trash2 className="mr-2 h-4 w-4" />
                                       {t('Delete')}
                                     </DropdownMenuItem>
@@ -208,7 +208,7 @@ export function MasterUsersTable() {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(user.id)} className="bg-red-600 hover:bg-red-700">
+                                    <AlertDialogAction onClick={() => handleDelete(user.id)} className="bg-destructive hover:bg-destructive/90">
                                         {t('Yes, delete')}
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
@@ -219,7 +219,7 @@ export function MasterUsersTable() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                         {t('No master users found.')}
                     </TableCell>
                 </TableRow>

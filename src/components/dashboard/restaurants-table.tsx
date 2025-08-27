@@ -316,24 +316,24 @@ export function RestaurantsTable() {
     <div className="space-y-4 pt-4">
       <div className="flex justify-between items-center gap-4">
         <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder={t("Search by name...")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full"
+            className="pl-10 rounded-full"
           />
         </div>
         <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="ml-auto bg-white/50 border-gray-300 hover:bg-gray-100">
+                <Button variant="outline" className="ml-auto">
                   <Filter className="mr-2 h-4 w-4" /> {t('Filters')}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-white text-gray-800 border-gray-200">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>{t('Filter by State')}</DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-gray-200"/>
+                <DropdownMenuSeparator/>
                 <div className="max-h-60 overflow-y-auto">
                   {mexicanStates.map(state => (
                     <DropdownMenuCheckboxItem
@@ -345,9 +345,9 @@ export function RestaurantsTable() {
                     </DropdownMenuCheckboxItem>
                   ))}
                 </div>
-                 <DropdownMenuSeparator className="bg-gray-200"/>
+                 <DropdownMenuSeparator/>
                 <DropdownMenuLabel>{t('Filter by Plan')}</DropdownMenuLabel>
-                 <DropdownMenuSeparator className="bg-gray-200"/>
+                 <DropdownMenuSeparator/>
                  {plans.map(plan => (
                   <DropdownMenuCheckboxItem
                     key={plan.id}
@@ -357,9 +357,9 @@ export function RestaurantsTable() {
                     {t(plan.name)}
                   </DropdownMenuCheckboxItem>
                 ))}
-                 <DropdownMenuSeparator className="bg-gray-200"/>
+                 <DropdownMenuSeparator/>
                 <DropdownMenuLabel>{t('Filter by Status')}</DropdownMenuLabel>
-                 <DropdownMenuSeparator className="bg-gray-200"/>
+                 <DropdownMenuSeparator/>
                  {statuses.map(status => (
                   <DropdownMenuCheckboxItem
                     key={status.id}
@@ -371,7 +371,7 @@ export function RestaurantsTable() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-             <Button onClick={() => router.push('/dashboard-am/restaurants')} className="bg-red-600 hover:bg-red-700 text-white">
+             <Button onClick={() => router.push('/dashboard-am/restaurants')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 {t('Register Restaurant')}
             </Button>
@@ -423,16 +423,16 @@ export function RestaurantsTable() {
         </Dialog>
 
 
-      <div className="rounded-md border border-gray-200">
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
-            <TableRow className="border-b-gray-200 hover:bg-gray-50">
-              <TableHead className="text-gray-700">{t('Name')}</TableHead>
-              <TableHead className="text-gray-700">{t('State')}</TableHead>
-              <TableHead className="text-gray-700">{t('Plan')}</TableHead>
-              <TableHead className="text-gray-700">{t('Demo Status')}</TableHead>
-              <TableHead className="text-gray-700">{t('Status')}</TableHead>
-              <TableHead className="text-right text-gray-700">{t('Actions')}</TableHead>
+            <TableRow>
+              <TableHead>{t('Name')}</TableHead>
+              <TableHead>{t('State')}</TableHead>
+              <TableHead>{t('Plan')}</TableHead>
+              <TableHead>{t('Demo Status')}</TableHead>
+              <TableHead>{t('Status')}</TableHead>
+              <TableHead className="text-right">{t('Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -440,7 +440,7 @@ export function RestaurantsTable() {
                 <TableRow>
                     <TableCell colSpan={6} className="text-center">
                         <div className="flex justify-center items-center p-8">
-                            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                             <span className="ml-4">{t('Loading restaurants...')}</span>
                         </div>
                     </TableCell>
@@ -450,15 +450,15 @@ export function RestaurantsTable() {
                 const daysSinceRegistration = item.fecharegistro ? differenceInDays(new Date(), item.fecharegistro.toDate()) : -1;
                 const isDemoExpired = item.plan === 'demo' && daysSinceRegistration > 15;
                 return (
-                    <TableRow key={item.id} className="border-b-gray-200 hover:bg-gray-50">
+                    <TableRow key={item.id}>
                       <TableCell className="font-medium">
-                        <Button variant="link" className="p-0 h-auto text-gray-800 font-medium" onClick={() => setSelectedRestaurant(item)}>
+                        <Button variant="link" className="p-0 h-auto font-medium" onClick={() => setSelectedRestaurant(item)}>
                           {item.restaurantName}
                         </Button>
                       </TableCell>
                       <TableCell>{item.state}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={cn(item.plan === 'demo' ? 'border-yellow-400 text-yellow-600' : 'border-gray-300')}>
+                        <Badge variant="outline" className={cn(item.plan === 'demo' ? 'border-yellow-400 text-yellow-600' : 'border-border')}>
                             {item.plan ? t(planNames[item.plan]) : 'N/A'}
                         </Badge>
                       </TableCell>
@@ -478,12 +478,12 @@ export function RestaurantsTable() {
                          <AlertDialog>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
                                     <span className="sr-only">{t('Open menu')}</span>
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-white text-gray-800 border-gray-200">
+                                <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
                                    <DropdownMenuItem className="cursor-pointer" onSelect={() => handleEdit(item)}>
                                     <FilePenLine className="mr-2 h-4 w-4" />
@@ -504,7 +504,7 @@ export function RestaurantsTable() {
                                     )}
                                     <DropdownMenuSeparator />
                                    <AlertDialogTrigger asChild>
-                                      <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-100" onSelect={(e) => e.preventDefault()}>
+                                      <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
                                         <Trash2 className="mr-2 h-4 w-4" />
                                         {t('Delete')}
                                       </DropdownMenuItem>
@@ -520,7 +520,7 @@ export function RestaurantsTable() {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(item)} className="bg-red-600 hover:bg-red-700">
+                                    <AlertDialogAction onClick={() => handleDelete(item)} className="bg-destructive hover:bg-destructive/90">
                                         {t('Yes, delete')}
                                     </AlertDialogAction>
                                 </AlertDialogFooter>
@@ -532,7 +532,7 @@ export function RestaurantsTable() {
               })
             ) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                         {t('No restaurants found.')}
                     </TableCell>
                 </TableRow>
@@ -542,48 +542,47 @@ export function RestaurantsTable() {
       </div>
 
       <Dialog open={selectedRestaurant !== null} onOpenChange={(isOpen) => !isOpen && setSelectedRestaurant(null)}>
-        <DialogContent className="sm:max-w-lg bg-white text-gray-800">
+        <DialogContent className="sm:max-w-lg">
           {selectedRestaurant && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl font-headline text-gray-900">{selectedRestaurant.restaurantName}</DialogTitle>
+                <DialogTitle className="text-2xl font-headline">{selectedRestaurant.restaurantName}</DialogTitle>
                 <div className="flex items-center gap-2 pt-1">
-                    <Badge variant="outline">{t(planNames[selectedRestaurant.plan || 'demo'])}</Badge>
-                    <Badge variant={selectedRestaurant.status === '1' ? 'default' : 'destructive'} className={cn('text-sm', selectedRestaurant.status === '1' && 'bg-green-600 hover:bg-green-700')}>
+                    <Badge variant={selectedRestaurant.status === '1' ? 'default' : 'destructive'} className={cn(selectedRestaurant.status === '1' && 'bg-green-600 hover:bg-green-700')}>
                         {selectedRestaurant.status === '1' ? t('Active') : t('Inactive')}
                     </Badge>
                 </div>
               </DialogHeader>
               <Separator/>
               <CardContent className="p-0">
-                  <h3 className="text-sm font-medium text-gray-500 mb-4">{t('Contact Information')}</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('Contact Information')}</h3>
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <Building className="h-4 w-4 text-gray-500 mt-1 shrink-0" />
+                      <Building className="h-4 w-4 text-muted-foreground mt-1 shrink-0" />
                       <div>
-                        <p className="font-semibold text-sm text-gray-700">{selectedRestaurant.socialReason}</p>
-                        <p className="text-xs text-gray-500">{t('Social Reason')}</p>
+                        <p className="font-semibold text-sm">{selectedRestaurant.socialReason}</p>
+                        <p className="text-xs text-muted-foreground">{t('Social Reason')}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Hash className="h-4 w-4 text-gray-500 mt-1 shrink-0" />
+                      <Hash className="h-4 w-4 text-muted-foreground mt-1 shrink-0" />
                        <div>
-                        <p className="font-semibold text-sm text-gray-700">{selectedRestaurant.rfc}</p>
-                        <p className="text-xs text-gray-500">{t('RFC')}</p>
+                        <p className="font-semibold text-sm">{selectedRestaurant.rfc}</p>
+                        <p className="text-xs text-muted-foreground">{t('RFC')}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Mail className="h-4 w-4 text-gray-500 mt-1 shrink-0" />
+                      <Mail className="h-4 w-4 text-muted-foreground mt-1 shrink-0" />
                        <div>
-                        <p className="font-semibold text-sm text-gray-700">{selectedRestaurant.email}</p>
-                        <p className="text-xs text-gray-500">{t('Email')}</p>
+                        <p className="font-semibold text-sm">{selectedRestaurant.email}</p>
+                        <p className="text-xs text-muted-foreground">{t('Email')}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Phone className="h-4 w-4 text-gray-500 mt-1 shrink-0" />
+                      <Phone className="h-4 w-4 text-muted-foreground mt-1 shrink-0" />
                        <div>
-                        <p className="font-semibold text-sm text-gray-700">{selectedRestaurant.phone}</p>
-                        <p className="text-xs text-gray-500">{t('Phone')}</p>
+                        <p className="font-semibold text-sm">{selectedRestaurant.phone}</p>
+                        <p className="text-xs text-muted-foreground">{t('Phone')}</p>
                       </div>
                     </div>
                   </div>
@@ -596,31 +595,31 @@ export function RestaurantsTable() {
                            {accountDetails ? (
                                 <div className="space-y-3 pt-2">
                                      <div className="flex items-center gap-3">
-                                        <ShieldCheck className="h-4 w-4 text-gray-500 shrink-0" />
+                                        <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
                                         <div>
-                                            <p className="font-semibold text-sm text-gray-700">{t(planNames[selectedRestaurant.plan || 'demo'])}</p>
-                                            <p className="text-xs text-gray-500">{t('Current Plan')}</p>
+                                            <p className="font-semibold text-sm">{t(planNames[selectedRestaurant.plan || 'demo'])}</p>
+                                            <p className="text-xs text-muted-foreground">{t('Current Plan')}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <Calendar className="h-4 w-4 text-gray-500 shrink-0" />
+                                        <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                                         <div>
-                                            <p className="font-semibold text-sm text-gray-700">{accountDetails.registrationDate}</p>
-                                            <p className="text-xs text-gray-500">{t('Registration Date')}</p>
+                                            <p className="font-semibold text-sm">{accountDetails.registrationDate}</p>
+                                            <p className="text-xs text-muted-foreground">{t('Registration Date')}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <CreditCard className="h-4 w-4 text-gray-500 shrink-0" />
+                                        <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
                                         <div>
-                                            <p className="font-semibold text-sm text-gray-700">{accountDetails.lastPayment}</p>
-                                            <p className="text-xs text-gray-500">{t('Last Payment')}</p>
+                                            <p className="font-semibold text-sm">{accountDetails.lastPayment}</p>
+                                            <p className="text-xs text-muted-foreground">{t('Last Payment')}</p>
                                         </div>
                                     </div>
                                      <div className="flex items-center gap-3">
-                                        <Clock className="h-4 w-4 text-gray-500 shrink-0" />
+                                        <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
                                         <div>
-                                            <p className="font-semibold text-sm text-gray-700">{accountDetails.nextPayment}</p>
-                                            <p className="text-xs text-gray-500">{t('Next Payment')}</p>
+                                            <p className="font-semibold text-sm">{accountDetails.nextPayment}</p>
+                                            <p className="text-xs text-muted-foreground">{t('Next Payment')}</p>
                                         </div>
                                     </div>
                                 </div>

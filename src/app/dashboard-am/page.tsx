@@ -99,45 +99,45 @@ export default function AdminMasterDashboard() {
   return (
     <div className="relative z-10">
       <AppLayout>
-        <Card className="mb-6 bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+        <Card className="mb-6">
             <CardHeader>
                 <CardTitle className="text-3xl font-bold font-headline">{t('Master Admin Dashboard')}</CardTitle>
-                <CardDescription className="text-gray-600">{t('Welcome to the Tlacualli main control panel.')}</CardDescription>
+                <CardDescription>{t('Welcome to the Tlacualli main control panel.')}</CardDescription>
             </CardHeader>
         </Card>
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('Registered Restaurants')}</CardTitle>
-              <UtensilsCrossed className="h-6 w-6 text-gray-600" />
+              <UtensilsCrossed className="h-6 w-6 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold font-headline">{stats.restaurants}</div>
             </CardContent>
           </Card>
-          <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('Master Admin Users')}</CardTitle>
-              <Users className="h-6 w-6 text-gray-600" />
+              <Users className="h-6 w-6 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold font-headline">{stats.adminMasters}</div>
             </CardContent>
           </Card>
-          <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('Administrator Users')}</CardTitle>
-              <Users className="h-6 w-6 text-gray-600" />
+              <Users className="h-6 w-6 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold font-headline">{stats.admins}</div>
             </CardContent>
           </Card>
-          <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('Collaborator Users')}</CardTitle>
-              <Users className="h-6 w-6 text-gray-600" />
+              <Users className="h-6 w-6 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold font-headline">{stats.collaborators}</div>
@@ -145,7 +145,7 @@ export default function AdminMasterDashboard() {
           </Card>
         </div>
         <div className="grid gap-6 mt-6 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="lg:col-span-4 bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+          <Card className="lg:col-span-4">
             <CardHeader>
               <CardTitle className="font-headline flex items-center gap-2">
                 <LineChart className="h-6 w-6" /> {t('Monthly Accesses')}
@@ -155,7 +155,7 @@ export default function AdminMasterDashboard() {
               <DailyAccessChart />
             </CardContent>
           </Card>
-          <Card className="lg:col-span-3 bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+          <Card className="lg:col-span-3">
             <CardHeader>
               <CardTitle className="font-headline flex items-center gap-2">
                 <BarChart className="h-6 w-6" /> {t('Actions by Restaurant')}
@@ -166,10 +166,10 @@ export default function AdminMasterDashboard() {
             </CardContent>
           </Card>
         </div>
-        <Card className="mt-6 bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+        <Card className="mt-6">
           <CardContent className="p-4 md:p-6">
             <Tabs defaultValue="restaurantes">
-              <TabsList className="bg-gray-200 text-gray-700">
+              <TabsList>
                 <TabsTrigger value="restaurantes">{t('Restaurants')}</TabsTrigger>
                 <TabsTrigger value="usuarios">{t('Master Users')}</TabsTrigger>
               </TabsList>

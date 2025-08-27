@@ -194,18 +194,18 @@ export function RestaurantForm({ onSuccess, restaurantToEdit, source = 'admin' }
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto p-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="restaurantName" className="text-gray-700">{t('Restaurant Name')}</Label>
-                    <Input id="restaurantName" name="restaurantName" value={formData.restaurantName} onChange={handleInputChange} placeholder={t("e.g., Tacos El Sol")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                    <Label htmlFor="restaurantName">{t('Restaurant Name')}</Label>
+                    <Input id="restaurantName" name="restaurantName" value={formData.restaurantName} onChange={handleInputChange} placeholder={t("e.g., Tacos El Sol")} required />
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="socialReason" className="text-gray-700">{t('Social Reason')}</Label>
-                    <Input id="socialReason" name="socialReason" value={formData.socialReason} onChange={handleInputChange} placeholder={t("e.g., Tacos El Sol S.A. de C.V.")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                    <Label htmlFor="socialReason">{t('Social Reason')}</Label>
+                    <Input id="socialReason" name="socialReason" value={formData.socialReason} onChange={handleInputChange} placeholder={t("e.g., Tacos El Sol S.A. de C.V.")} required />
                 </div>
             </div>
              <div className="space-y-2">
-                <Label htmlFor="style" className="text-gray-700">{t('Style')}</Label>
+                <Label htmlFor="style">{t('Style')}</Label>
                 <Select name="style" value={formData.style} onValueChange={(value) => handleSelectChange('style', value)} required>
-                    <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
+                    <SelectTrigger>
                         <SelectValue placeholder={t("Select a style")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -215,19 +215,19 @@ export function RestaurantForm({ onSuccess, restaurantToEdit, source = 'admin' }
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address" className="text-gray-700">{t('Address')}</Label>
-              <Input id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder={t("e.g., Main St 123, Downtown")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+              <Label htmlFor="address">{t('Address')}</Label>
+              <Input id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder={t("e.g., Main St 123, Downtown")} required />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="municipality" className="text-gray-700">{t('Municipality or City')}</Label>
-                    <Input id="municipality" name="municipality" value={formData.municipality} onChange={handleInputChange} placeholder={t("e.g., Cuauhtémoc")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                    <Label htmlFor="municipality">{t('Municipality or City')}</Label>
+                    <Input id="municipality" name="municipality" value={formData.municipality} onChange={handleInputChange} placeholder={t("e.g., Cuauhtémoc")} required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="state" className="text-gray-700">{t('State')}</Label>
+                    <Label htmlFor="state">{t('State')}</Label>
                     <Select name="state" value={formData.state} onValueChange={(value) => handleSelectChange('state', value)} required>
-                        <SelectTrigger className="bg-white/50 border-gray-300 placeholder:text-gray-500">
+                        <SelectTrigger>
                             <SelectValue placeholder={t("Select a state")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -237,24 +237,24 @@ export function RestaurantForm({ onSuccess, restaurantToEdit, source = 'admin' }
                 </div>
             </div>
 
-            <Separator className="my-4 bg-gray-300" />
+            <Separator className="my-4" />
 
-            <h3 className="text-lg font-semibold text-gray-800">{t('Contact Information (Administrator)')}</h3>
+            <h3 className="text-lg font-semibold">{t('Contact Information (Administrator)')}</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-gray-700">{isEditMode ? t('Phone') : t('Phone (will be the password)')}</Label>
-                    <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder={t("Minimum 6 digits")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                    <Label htmlFor="phone">{isEditMode ? t('Phone') : t('Phone (will be the password)')}</Label>
+                    <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder={t("Minimum 6 digits")} required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="email" className="text-gray-700">{isEditMode ? t('Email') : t('Email (will be the username)')}</Label>
-                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder={t("e.g., admin@tacoselsol.com")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required disabled={isEditMode} />
+                    <Label htmlFor="email">{isEditMode ? t('Email') : t('Email (will be the username)')}</Label>
+                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder={t("e.g., admin@tacoselsol.com")} required disabled={isEditMode} />
                 </div>
             </div>
 
              <div className="space-y-2">
-                <Label htmlFor="rfc" className="text-gray-700">{t('RFC')}</Label>
-                <Input id="rfc" name="rfc" value={formData.rfc} onChange={handleInputChange} placeholder={t("e.g., SOLT850101XXX")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
+                <Label htmlFor="rfc">{t('RFC')}</Label>
+                <Input id="rfc" name="rfc" value={formData.rfc} onChange={handleInputChange} placeholder={t("e.g., SOLT850101XXX")} required />
             </div>
 
             {!isEditMode && (
@@ -267,7 +267,7 @@ export function RestaurantForm({ onSuccess, restaurantToEdit, source = 'admin' }
             )}
             
             <div className="flex justify-end pt-2">
-              <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4" disabled={isLoading || !termsAccepted}>
+              <Button type="submit" disabled={isLoading || !termsAccepted}>
                  {isLoading ? (
                     <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

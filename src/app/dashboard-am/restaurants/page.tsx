@@ -46,7 +46,7 @@ export default function CreateRestaurantPage() {
 
   if (loading || !isAuthorized) {
       return (
-        <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="flex items-center justify-center h-screen bg-background">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
         </div>
       );
@@ -54,13 +54,13 @@ export default function CreateRestaurantPage() {
   
   return (
     <AppLayout>
-        <Card className="mb-6 bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+        <Card className="mb-6">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
                     <UtensilsCrossed className="h-8 w-8" /> {t('Register Restaurant')}
                     </CardTitle>
-                    <CardDescription className="text-gray-600">{t('Add a new restaurant and its administrator to the system.')}</CardDescription>
+                    <CardDescription>{t('Add a new restaurant and its administrator to the system.')}</CardDescription>
                 </div>
                 <Button variant="outline" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -69,7 +69,7 @@ export default function CreateRestaurantPage() {
             </CardHeader>
         </Card>
         
-        <Card className="bg-white/50 backdrop-blur-lg border-white/20 text-gray-800">
+        <Card>
             <CardHeader>
                 <CardTitle>{t('Restaurant Information')}</CardTitle>
             </CardHeader>
