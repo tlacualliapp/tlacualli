@@ -113,7 +113,7 @@ export default function LandingPage() {
             <Image 
                 src="/assets/banner_tlacualli.png" 
                 alt="Restaurante" 
-                layout="fill"
+                fill
                 objectFit="cover"
                 quality={85}
                 className="brightness-50"
@@ -139,14 +139,14 @@ export default function LandingPage() {
 
         {/* Features Section */}
         <section id="features" className="py-12 md:py-24 bg-gray-50 dark:bg-gray-900/50">
-            <div className="container flex flex-col items-center">
+            <div className="container">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">Todo lo que necesitas, en un solo lugar</h2>
                     <p className="mt-4 max-w-2xl mx-auto text-muted-foreground font-body">
                         Desde la toma de pedidos hasta el análisis de rentabilidad, Tlacualli te da el control total de tu operación.
                     </p>
                 </div>
-                <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-5xl">
+                <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
                     {features.map((feature, index) => (
                         <Card key={index} className="bg-card/65 backdrop-blur-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                             <CardContent className="p-6">
@@ -170,11 +170,11 @@ export default function LandingPage() {
 
         {/* Testimonials Section */}
         <section className="py-12 md:py-24">
-            <div className="container flex flex-col items-center">
+            <div className="container">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">Impulsando el éxito de restaurantes como el tuyo</h2>
                 </div>
-                <div className="mt-12 grid gap-8 md:grid-cols-1 lg:grid-cols-2 max-w-4xl">
+                <div className="mt-12 grid gap-8 md:grid-cols-1 lg:grid-cols-2 max-w-4xl mx-auto">
                      <Card className="bg-card/65 backdrop-blur-lg">
                         <CardContent className="p-8">
                             <blockquote className="text-lg font-body italic text-foreground">

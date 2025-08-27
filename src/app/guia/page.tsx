@@ -89,7 +89,7 @@ export default function GuiaPage() {
                     <Image 
                         src="/assets/banner_tlacualli.png" 
                         alt="Restaurante" 
-                        layout="fill"
+                        fill
                         objectFit="cover"
                         quality={85}
                         className="brightness-50"
