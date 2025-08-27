@@ -24,7 +24,7 @@ interface Restaurant {
   phone: string;
   email: string;
   rfc: string;
-  plan?: string;
+  plan: string;
 }
 
 interface AdminRestaurantFormProps {
@@ -84,6 +84,16 @@ export function AdminRestaurantForm({ restaurant, onSuccess }: AdminRestaurantFo
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+
+    if (!restaurant?.plan) {
+        toast({
+            variant: "destructive",
+            title: t("Update Error"),
+            description: t("Restaurant plan is missing. Cannot update."),
+        });
+        setIsLoading(false);
+        return;
+    }
 
     try {
       const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';

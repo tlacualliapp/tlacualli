@@ -33,7 +33,7 @@ interface Restaurant {
   iva?: number;
   logoUrl?: string;
   iconUrl?: string;
-  plan?: string;
+  plan: string;
 }
 
 export default function SettingsPage() {
@@ -70,10 +70,10 @@ export default function SettingsPage() {
             const data = { 
                 id: restaurantSnap.id, 
                 ...restaurantSnap.data(),
-                plan: userData.plan // Ensure plan is correctly set from user data
+                plan: userData.plan
             } as Restaurant;
             setRestaurant(data);
-            setIva(data.iva || 16); // Default to 16 if not set
+            setIva(data.iva || 16); 
           }
         }
         setIsLoading(false);
@@ -103,7 +103,7 @@ export default function SettingsPage() {
         toast({ variant: 'destructive', title: t('No file selected'), description: t('Please select a file to upload.') });
         return;
     }
-    if (!restaurant?.id || !restaurant?.plan) {
+    if (!restaurant?.id || !restaurant.plan) {
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not find restaurant information.') });
         return;
     };
@@ -153,7 +153,7 @@ export default function SettingsPage() {
   };
 
   const handleSaveIva = async () => {
-    if (!restaurant?.id || !restaurant?.plan) {
+    if (!restaurant?.id || !restaurant.plan) {
       toast({ variant: 'destructive', title: t('Error'), description: t('Could not find restaurant information.') });
       return;
     };
