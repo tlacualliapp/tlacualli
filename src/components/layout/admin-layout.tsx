@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LogOut,
   Users,
@@ -24,7 +24,8 @@ import {
   Map,
   Utensils,
   Settings,
-  Check
+  Check,
+  ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -55,11 +56,12 @@ import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '@/lib/firebase';
 import { updatePassword } from 'firebase/auth';
-import { doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, query, collection, where, getDocs, Timestamp } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { InvoiceIcon } from '../icons/invoice';
+import { differenceInDays } from 'date-fns';
 
 const allNavItems = [
   { key: 'dashboard', href: '/dashboard-admin', label: 'Dashboard', icon: Home },
@@ -76,6 +78,7 @@ const allNavItems = [
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [user, loading] = useAuthState(auth);
   const { setTheme } = useTheme();
   const { t, i18n } = useTranslation();
@@ -86,10 +89,13 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [navItems, setNavItems] = useState(allNavItems);
   const [dashboardUrl, setDashboardUrl] = useState('/login');
+  const [isTrialExpired, setIsTrialExpired] = useState(false);
+  const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
 
    useEffect(() => {
-    const fetchPermissions = async () => {
+    const fetchPermissionsAndTrialStatus = async () => {
       if (user) {
+        setIsLoadingPermissions(true);
         let userDocRef;
         const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
         const querySnapshot = await getDocs(q);
@@ -109,7 +115,10 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           if (userSnap.exists()) {
             const userData = userSnap.data();
             const profile = userData.perfil;
+            const userPlan = userData.plan;
+            const restaurantId = userData.restauranteId;
             
+            // --- Navigation Setup ---
             if (profile === '1') { // Admin
               setDashboardUrl('/dashboard-admin');
               setNavItems(allNavItems);
@@ -128,12 +137,30 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               setNavItems([]);
               setDashboardUrl('/login');
             }
+
+            // --- Trial Status Check ---
+            if (userPlan === 'demo' && restaurantId) {
+                const restaurantRef = doc(db, 'restaurantes_demo', restaurantId);
+                const restaurantSnap = await getDoc(restaurantRef);
+                if (restaurantSnap.exists()) {
+                    const restaurantData = restaurantSnap.data();
+                    const registrationDate = restaurantData.fecharegistro?.toDate();
+                    if (registrationDate) {
+                        const daysElapsed = differenceInDays(new Date(), registrationDate);
+                        if (daysElapsed > 15) {
+                            setIsTrialExpired(true);
+                        }
+                    }
+                }
+            }
+
           }
         }
+        setIsLoadingPermissions(false);
       }
     };
     if (!loading) {
-      fetchPermissions();
+      fetchPermissionsAndTrialStatus();
     }
   }, [user, loading]);
 
@@ -185,12 +212,18 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const showTrialExpiredModal = isTrialExpired && !['/dashboard-admin/upgrade', '/dashboard-admin/billing'].includes(pathname);
+
+
   return (
     <div 
       className="relative flex min-h-screen w-full flex-col bg-cover bg-center"
       style={{ backgroundImage: "url('/assets/background.png')" }}
     >
-      <div className="absolute inset-0 bg-black/10"></div>
+      {showTrialExpiredModal && (
+        <div className="fixed inset-0 bg-black/80 z-40" />
+      )}
+
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-card/65 backdrop-blur-lg px-4 md:px-6 z-20">
         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
           <Link
@@ -319,6 +352,26 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 p-4 sm:px-6 sm:py-8 md:gap-8 md:p-8 relative z-10">
         {children}
       </main>
+
+      <Dialog open={showTrialExpiredModal}>
+        <DialogContent onPointerDownOutside={(e) => e.preventDefault()} showCloseButton={false}>
+            <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+                <ShieldAlert className="h-6 w-6 text-destructive" />
+                {t('Periodo de Prueba Finalizado')}
+            </DialogTitle>
+            <DialogDescription>
+                {t('Tu periodo de prueba de 15 días ha expirado. Por favor, elige un plan para continuar usando Tlacualli.')}
+            </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+            <Button onClick={() => router.push('/dashboard-admin/upgrade')} className="w-full">
+                {t('Ver Planes')}
+            </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
