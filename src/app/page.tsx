@@ -139,11 +139,11 @@ export default function LandingPage() {
 
         
         {/* Features Section */}
-        <section id="features" className="py-12 md:py-24">
+        <section id="features" className="py-12 md:py-16">
             <div className="container">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">Todo lo que necesitas, en un solo lugar</h2>
-                    <p className="mt-4 mx-auto text-muted-foreground font-body">
+                    <p className="mt-4 text-muted-foreground font-body">
                         Desde la toma de pedidos hasta el análisis de rentabilidad, Tlacualli te da el control total de tu operación.
                     </p>
                 </div>
@@ -170,12 +170,12 @@ export default function LandingPage() {
         </section>
 
         {/* Testimonials Section */}
-        <section className="py-12 md:py-24">
+        <section className="py-12 md:py-16">
              <div className="container">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">Impulsando el éxito de restaurantes como el tuyo</h2>
                 </div>
-                <div className="mt-12 grid gap-8 md:grid-cols-1 lg:grid-cols-2">
+                <div className="mt-12 grid gap-8 md:grid-cols-1 lg:grid-cols-2 max-w-4xl mx-auto">
                         <Card className="bg-card/65 backdrop-blur-lg">
                         <CardContent className="p-8">
                             <blockquote className="text-lg font-body italic text-foreground">
@@ -203,11 +203,11 @@ export default function LandingPage() {
         </section>
 
         {/* Contact Section */}
-        <section id="contact" className="py-12 md:py-24">
+        <section id="contact" className="py-12 md:py-16">
              <div className="container">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">¿Tienes Preguntas?</h2>
-                    <p className="mt-4 mx-auto text-muted-foreground font-body">
+                    <p className="mt-4 text-muted-foreground font-body">
                         Estamos aquí para ayudarte. Envíanos un mensaje y nuestro equipo se pondrá en contacto contigo a la brevedad.
                     </p>
                 </div>
@@ -241,7 +241,7 @@ export default function LandingPage() {
 
 
         {/* CTA Section */}
-        <section className="py-12 md:py-24 bg-gray-900 text-white">
+        <section className="py-12 md:py-16 bg-gray-900 text-white">
             <div className="container text-center">
                 <h2 className="font-headline text-3xl md:text-4xl font-bold">¿Listo para llevar tu restaurante al siguiente nivel?</h2>
                 <p className="mt-4 max-w-2xl mx-auto text-white/80 font-body">
