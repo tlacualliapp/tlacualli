@@ -147,7 +147,7 @@ export default function LandingPage() {
                         Desde la toma de pedidos hasta el análisis de rentabilidad, Tlacualli te da el control total de tu operación.
                     </p>
                 </div>
-                <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-12 grid max-w-5xl mx-auto gap-8 md:grid-cols-2 lg:grid-cols-3">
                     {features.map((feature, index) => (
                         <Card key={index} className="bg-card/65 backdrop-blur-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                             <CardContent className="p-6">
