@@ -1,7 +1,6 @@
 
 'use server';
 
-import 'dotenv/config';
 import nodemailer from 'nodemailer';
 
 interface WelcomeEmailProps {
