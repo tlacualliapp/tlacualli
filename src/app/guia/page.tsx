@@ -111,8 +111,8 @@ export default function GuiaPage() {
 
                 {/* Steps Section */}
                 <section id="steps" className="py-12 md:py-24 bg-gray-50 dark:bg-gray-900/50">
-                    <div className="container max-w-4xl">
-                        <div className="space-y-12">
+                    <div className="container">
+                        <div className="max-w-4xl mx-auto space-y-12">
                             {steps.map((step, index) => (
                                 <Card key={index} className="bg-card/65 backdrop-blur-lg shadow-lg overflow-hidden flex flex-col md:flex-row items-center group transition-all duration-300 hover:border-primary">
                                     <div className={`p-6 md:p-8 flex-shrink-0 ${step.color}`}>
@@ -130,14 +130,16 @@ export default function GuiaPage() {
                 
                  {/* Final CTA Section */}
                 <section className="py-12 md:py-24 text-center">
-                    <div className="container max-w-3xl">
-                        <h2 className="font-headline text-3xl md:text-4xl font-bold">Lo que Tlacualli App hace por ti</h2>
-                        <p className="mt-4 text-lg text-muted-foreground font-body">
-                           Con todo el tiempo y el control que ganas, ahora puedes dedicarte a lo que realmente amas: crear experiencias inolvidables para tus clientes. De lo demás, Tlacualli App se encarga.
-                        </p>
-                         <p className="mt-6 text-xl font-bold font-headline text-primary">
-                            ¡Bienvenido a la nueva era de la gestión de restaurantes!
-                        </p>
+                    <div className="container">
+                        <div className="max-w-3xl mx-auto">
+                            <h2 className="font-headline text-3xl md:text-4xl font-bold">Lo que Tlacualli App hace por ti</h2>
+                            <p className="mt-4 text-lg text-muted-foreground font-body">
+                               Con todo el tiempo y el control que ganas, ahora puedes dedicarte a lo que realmente amas: crear experiencias inolvidables para tus clientes. De lo demás, Tlacualli App se encarga.
+                            </p>
+                             <p className="mt-6 text-xl font-bold font-headline text-primary">
+                                ¡Bienvenido a la nueva era de la gestión de restaurantes!
+                            </p>
+                        </div>
                     </div>
                 </section>
 

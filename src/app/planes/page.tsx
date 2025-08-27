@@ -144,7 +144,7 @@ export default function PricingPage() {
         {/* Pricing Plans Section */}
         <section id="plans" className="py-12 md:py-24">
             <div className="container">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {plans.map((plan, index) => (
                         <Card key={index} className={`flex flex-col ${plan.isPopular ? 'border-primary border-2 shadow-lg' : ''}`}>
                             {plan.isPopular && <div className="bg-primary text-primary-foreground text-center text-sm font-bold py-1 rounded-t-lg">Más Popular</div>}
@@ -215,42 +215,44 @@ export default function PricingPage() {
 
         {/* Added Value & FAQ Section */}
          <section className="py-12 md:py-24">
-            <div className="container grid md:grid-cols-2 gap-12">
-                <div>
-                     <h2 className="font-headline text-3xl font-bold mb-4">¿Por qué elegir Tlacualli?</h2>
-                     <div className="space-y-6">
-                        <Card className="bg-card/65 backdrop-blur-lg">
-                            <CardContent className="p-6">
-                                <h3 className="font-headline text-xl font-semibold mb-2">Precios sin competencia</h3>
-                                <p className="text-muted-foreground font-body">Ofrecemos las tarifas más competitivas del mercado, dándote acceso a tecnología de punta sin sacrificar tu presupuesto.</p>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-card/65 backdrop-blur-lg">
-                            <CardContent className="p-6">
-                                <h3 className="font-headline text-xl font-semibold mb-2">Fácil de usar</h3>
-                                <p className="text-muted-foreground font-body">Nuestra interfaz es tan intuitiva que no necesitarás capacitación técnica. Empieza a gestionar tu restaurante en minutos.</p>
-                            </CardContent>
-                        </Card>
-                         <Card className="bg-card/65 backdrop-blur-lg">
-                            <CardContent className="p-6">
-                                <h3 className="font-headline text-xl font-semibold mb-2">Sin contratos forzosos</h3>
-                                <p className="text-muted-foreground font-body">Tu libertad es importante. Por eso, puedes cancelar tu suscripción en cualquier momento, sin preguntas ni penalizaciones.</p>
-                            </CardContent>
-                        </Card>
+            <div className="container">
+                <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
+                    <div>
+                         <h2 className="font-headline text-3xl font-bold mb-4">¿Por qué elegir Tlacualli?</h2>
+                         <div className="space-y-6">
+                            <Card className="bg-card/65 backdrop-blur-lg">
+                                <CardContent className="p-6">
+                                    <h3 className="font-headline text-xl font-semibold mb-2">Precios sin competencia</h3>
+                                    <p className="text-muted-foreground font-body">Ofrecemos las tarifas más competitivas del mercado, dándote acceso a tecnología de punta sin sacrificar tu presupuesto.</p>
+                                </CardContent>
+                            </Card>
+                            <Card className="bg-card/65 backdrop-blur-lg">
+                                <CardContent className="p-6">
+                                    <h3 className="font-headline text-xl font-semibold mb-2">Fácil de usar</h3>
+                                    <p className="text-muted-foreground font-body">Nuestra interfaz es tan intuitiva que no necesitarás capacitación técnica. Empieza a gestionar tu restaurante en minutos.</p>
+                                </CardContent>
+                            </Card>
+                             <Card className="bg-card/65 backdrop-blur-lg">
+                                <CardContent className="p-6">
+                                    <h3 className="font-headline text-xl font-semibold mb-2">Sin contratos forzosos</h3>
+                                    <p className="text-muted-foreground font-body">Tu libertad es importante. Por eso, puedes cancelar tu suscripción en cualquier momento, sin preguntas ni penalizaciones.</p>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
-                </div>
-                <div>
-                    <h2 className="font-headline text-3xl font-bold mb-4 flex items-center gap-2"><HelpCircle/> Preguntas Frecuentes</h2>
-                     <Accordion type="single" collapsible className="w-full">
-                        {faqs.map((faq, i) => (
-                           <AccordionItem key={i} value={`item-${i}`}>
-                             <AccordionTrigger className="font-semibold text-left">{faq.question}</AccordionTrigger>
-                             <AccordionContent className="text-muted-foreground">
-                               {faq.answer}
-                             </AccordionContent>
-                           </AccordionItem>
-                        ))}
-                    </Accordion>
+                    <div>
+                        <h2 className="font-headline text-3xl font-bold mb-4 flex items-center gap-2"><HelpCircle/> Preguntas Frecuentes</h2>
+                         <Accordion type="single" collapsible className="w-full">
+                            {faqs.map((faq, i) => (
+                               <AccordionItem key={i} value={`item-${i}`}>
+                                 <AccordionTrigger className="font-semibold text-left">{faq.question}</AccordionTrigger>
+                                 <AccordionContent className="text-muted-foreground">
+                                   {faq.answer}
+                                 </AccordionContent>
+                               </AccordionItem>
+                            ))}
+                        </Accordion>
+                    </div>
                 </div>
             </div>
         </section>
