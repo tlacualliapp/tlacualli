@@ -40,9 +40,9 @@ const planDetails = {
 
 // Dummy data for payment history
 const paymentHistory = [
-  { id: 'pay_1', date: '2024-07-01', amount: 295.00, status: 'Pagado', invoiceId: 'INV-001' },
-  { id: 'pay_2', date: '2024-06-01', amount: 295.00, status: 'Pagado', invoiceId: 'INV-002' },
-  { id: 'pay_3', date: '2024-05-01', amount: 295.00, status: 'Pagado', invoiceId: 'INV-003' },
+  { id: 'pay_1', date: '2024-07-01', amount: 295.00, status: 'Paid', invoiceId: 'INV-001' },
+  { id: 'pay_2', date: '2024-06-01', amount: 295.00, status: 'Paid', invoiceId: 'INV-002' },
+  { id: 'pay_3', date: '2024-05-01', amount: 295.00, status: 'Paid', invoiceId: 'INV-003' },
 ];
 
 
@@ -100,7 +100,7 @@ export default function BillingPage() {
     );
   }
   
-  const currentPlan = planDetails[restaurant.plan] || { name: t('Desconocido'), price: 0 };
+  const currentPlan = planDetails[restaurant.plan] || { name: t('Unknown'), price: 0 };
   const registrationDate = restaurant.fecharegistro?.toDate();
   const nextPaymentDate = registrationDate ? new Date(registrationDate.setMonth(registrationDate.getMonth() + 1)) : new Date();
 
@@ -131,11 +131,11 @@ export default function BillingPage() {
                     <div className="space-y-4">
                         <div>
                             <p className="text-sm text-muted-foreground">{t('Current Plan')}</p>
-                            <p className="text-xl font-bold font-headline text-primary">{currentPlan.name}</p>
+                            <p className="text-xl font-bold font-headline text-primary">{t(currentPlan.name)}</p>
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">{t('Monthly Cost')}</p>
-                            <p className="text-lg font-semibold">${currentPlan.price.toFixed(2)} MXN <span className="text-xs text-muted-foreground">+IVA</span></p>
+                            <p className="text-lg font-semibold">${currentPlan.price.toFixed(2)} MXN <span className="text-xs text-muted-foreground">{t('+IVA')}</span></p>
                         </div>
                     </div>
                      <div className="space-y-4">

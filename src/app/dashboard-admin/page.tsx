@@ -30,6 +30,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Button } from '@/components/ui/button';
 import QRCode from 'qrcode';
 import Image from 'next/image';
+import { InvoiceIcon } from '@/components/icons/invoice';
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
@@ -70,7 +71,7 @@ export default function AdminDashboard() {
     { href: '/dashboard-admin/reports', icon: BarChart, label: 'Reports', color: 'bg-green-500' },
     { href: '/dashboard-admin/map', icon: Map, label: 'Digital Map', color: 'bg-purple-500' },
     { href: `/menu-read?restaurantId=${restaurantId}`, icon: BookOpen, label: 'Menu Clientes', color: 'bg-pink-500' },
-    { href: '/dashboard-admin/billing', icon: FileText, label: 'Billing', color: 'bg-indigo-500' },
+    { href: '/dashboard-admin/billing', icon: InvoiceIcon, label: 'Billing', color: 'bg-indigo-500' },
     { href: '/dashboard-admin/settings', icon: Settings, label: 'Settings', color: 'bg-slate-600' },
   ];
   

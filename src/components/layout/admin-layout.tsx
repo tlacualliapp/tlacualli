@@ -24,8 +24,7 @@ import {
   Map,
   Utensils,
   Settings,
-  Check,
-  FileText
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -60,6 +59,7 @@ import { doc, getDoc, query, collection, where, getDocs } from 'firebase/firesto
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { InvoiceIcon } from '../icons/invoice';
 
 const allNavItems = [
   { key: 'dashboard', href: '/dashboard-admin', label: 'Dashboard', icon: Home },
@@ -70,7 +70,7 @@ const allNavItems = [
   { key: 'kitchen', href: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { key: 'reports', href: '/dashboard-admin/reports', label: 'Reports', icon: BarChart },
   { key: 'map', href: '/dashboard-admin/map', label: 'Digital Map', icon: Map },
-  { key: 'billing', href: '/dashboard-admin/billing', label: 'Billing', icon: FileText },
+  { key: 'billing', href: '/dashboard-admin/billing', label: 'Billing', icon: InvoiceIcon },
   { key: 'settings', href: '/dashboard-admin/settings', label: 'Settings', icon: Settings },
 ];
 
