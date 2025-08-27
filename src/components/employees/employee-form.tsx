@@ -12,6 +12,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { sendWelcomeEmail } from '@/lib/email';
 
 interface Employee {
   id?: string;
@@ -119,6 +120,15 @@ export function EmployeeForm({ restaurantId, onSuccess, employeeToEdit }: Employ
                     perfil,
                     fecharegistro: serverTimestamp()
                 });
+                
+                // 3. Send welcome email
+                await sendWelcomeEmail({
+                    to: email,
+                    name: fullName,
+                    username: email,
+                    password: telefono
+                });
+
 
                 toast({
                   title: t("Employee Registered"),

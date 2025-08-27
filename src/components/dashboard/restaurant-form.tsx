@@ -15,6 +15,7 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/fi
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from '../ui/checkbox';
 import Link from 'next/link';
+import { sendWelcomeEmail } from '@/lib/email';
 
 interface Restaurant {
   id: string;
@@ -130,7 +131,8 @@ export function RestaurantForm({ onSuccess, restaurantToEdit, source = 'admin' }
             
             const userCredential = await createUserWithEmailAndPassword(auth, email, phone);
             const user = userCredential.user;
-
+            const adminName = `Admin ${restaurantName}`;
+            
             const userData: any = {
                 uid: user.uid,
                 nombre: "Admin",
@@ -148,6 +150,13 @@ export function RestaurantForm({ onSuccess, restaurantToEdit, source = 'admin' }
             }
 
             await addDoc(collection(db, "usuarios"), userData);
+
+            await sendWelcomeEmail({
+                to: email,
+                name: adminName,
+                username: email,
+                password: phone
+            });
             
             toast({
               title: t("Registration Successful"),

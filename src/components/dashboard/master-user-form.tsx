@@ -13,6 +13,7 @@ import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/fi
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from '../ui/checkbox';
 import Link from 'next/link';
+import { sendWelcomeEmail } from '@/lib/email';
 
 interface MasterUser {
   id?: string;
@@ -82,6 +83,14 @@ export function MasterUserForm({ onSuccess, userToEdit }: MasterUserFormProps) {
                     status: "1", // status como string
                     perfil: 'AM',
                     fecharegistro: serverTimestamp()
+                });
+
+                // 3. Enviar correo de bienvenida
+                await sendWelcomeEmail({
+                    to: email,
+                    name: fullName,
+                    username: email,
+                    password: telefono
                 });
 
                 toast({
