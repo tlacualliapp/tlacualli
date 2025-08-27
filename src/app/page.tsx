@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TacoIcon } from '@/components/icons/logo';
 import { ArrowRight, BarChart, ChefHat, ClipboardList, Package, Utensils, Map as MapIcon, Users, Mail, Loader2 } from 'lucide-react';
-import Image from 'next/image';
 import { useActionState, useEffect, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
 import { sendContactEmail } from '@/app/actions/contact';
@@ -14,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import Image from 'next/image';
 
 const features = [
   {
