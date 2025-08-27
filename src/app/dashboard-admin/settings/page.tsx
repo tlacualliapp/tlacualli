@@ -11,7 +11,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getRestaurantIdForCurrentUser, getCurrentUserData } from '@/lib/users';
+import { getCurrentUserData } from '@/lib/users';
 import { AdminRestaurantForm } from '@/components/dashboard/admin-restaurant-form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
@@ -103,56 +103,54 @@ export default function SettingsPage() {
   };
 
   const handleImageUpload = async () => {
-      if (!logoFile && !iconFile) {
-          toast({ variant: 'destructive', title: t('No file selected'), description: t('Please select a file to upload.') });
-          return;
-      }
-      if (!restaurantId || !userPlan) return;
+    if (!logoFile && !iconFile) {
+        toast({ variant: 'destructive', title: t('No file selected'), description: t('Please select a file to upload.') });
+        return;
+    }
+    if (!restaurantId || !userPlan) return;
 
-      setIsUploading(true);
-      
-      try {
-          const uploadPromises: Promise<void>[] = [];
-          const updateData: { logoUrl?: string, iconUrl?: string } = {};
-          const storagePath = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    setIsUploading(true);
+    
+    try {
+        const uploadPromises: Promise<void>[] = [];
+        const updateData: { logoUrl?: string, iconUrl?: string } = {};
+        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
-          if (logoFile) {
-              const logoRef = ref(storage, `${storagePath}/${restaurantId}/logos/${logoFile.name}`);
-              uploadPromises.push(
-                  uploadBytes(logoRef, logoFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
-                      updateData.logoUrl = url;
-                  })
-              );
-          }
+        if (logoFile) {
+            const logoRef = ref(storage, `${collectionName}/${restaurantId}/logos/${logoFile.name}`);
+            uploadPromises.push(
+                uploadBytes(logoRef, logoFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
+                    updateData.logoUrl = url;
+                })
+            );
+        }
 
-          if (iconFile) {
-              const iconRef = ref(storage, `${storagePath}/${restaurantId}/icons/${iconFile.name}`);
-              uploadPromises.push(
-                  uploadBytes(iconRef, iconFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
-                      updateData.iconUrl = url;
-                  })
-              );
-          }
+        if (iconFile) {
+            const iconRef = ref(storage, `${collectionName}/${restaurantId}/icons/${iconFile.name}`);
+            uploadPromises.push(
+                uploadBytes(iconRef, iconFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
+                    updateData.iconUrl = url;
+                })
+            );
+        }
 
-          await Promise.all(uploadPromises);
+        await Promise.all(uploadPromises);
 
-          if (Object.keys(updateData).length > 0) {
-              const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-              const restaurantRef = doc(db, collectionName, restaurantId);
-              await updateDoc(restaurantRef, updateData);
-              if (updateData.logoUrl) setRestaurant(prev => prev ? { ...prev, logoUrl: updateData.logoUrl } : null);
-              if (updateData.iconUrl) setRestaurant(prev => prev ? { ...prev, iconUrl: updateData.iconUrl } : null);
-          }
+        if (Object.keys(updateData).length > 0) {
+            const restaurantRef = doc(db, collectionName, restaurantId);
+            await updateDoc(restaurantRef, updateData);
+            setRestaurant(prev => prev ? { ...prev, ...updateData } : null);
+        }
 
-          toast({ title: t('Upload successful'), description: t('Your images have been updated.') });
-          setLogoFile(null);
-          setIconFile(null);
-      } catch (error) {
-          console.error("Error uploading images:", error);
-          toast({ variant: 'destructive', title: t('Upload failed'), description: t('An error occurred while uploading your images.') });
-      } finally {
-          setIsUploading(false);
-      }
+        toast({ title: t('Upload successful'), description: t('Your images have been updated.') });
+        setLogoFile(null);
+        setIconFile(null);
+    } catch (error) {
+        console.error("Error uploading images:", error);
+        toast({ variant: 'destructive', title: t('Upload failed'), description: t('An error occurred while uploading your images.') });
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   const handleSaveIva = async () => {
