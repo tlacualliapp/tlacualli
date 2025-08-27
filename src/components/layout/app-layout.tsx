@@ -15,7 +15,9 @@ import {
   Languages,
   KeyRound,
   Loader2,
-  Check
+  Check,
+  FileText,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -226,6 +228,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <DropdownMenuItem onSelect={() => setIsPasswordModalOpen(true)}>
                 <KeyRound className="mr-2 h-4 w-4" />
                 <span>{t('Change Password')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/terminos-condiciones">
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>{t('Terms and Conditions')}</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/aviso-privacidad">
+                  <Shield className="mr-2 h-4 w-4" />
+                  <span>{t('Privacy Policy')}</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => auth.signOut()}>
