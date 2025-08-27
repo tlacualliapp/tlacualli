@@ -16,11 +16,13 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
+import { getCurrentUserData } from '@/lib/users';
 
 export default function MenuPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<string | null>(null);
   const { t } = useTranslation();
   const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
   const [isMenuItemModalOpen, setIsMenuItemModalOpen] = useState(false);
@@ -32,17 +34,16 @@ export default function MenuPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    const fetchRestaurantId = async () => {
+    const fetchUserData = async () => {
       if (user) {
-        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const userData = querySnapshot.docs[0].data();
+        const userData = await getCurrentUserData();
+        if (userData) {
           setRestaurantId(userData.restauranteId);
+          setUserPlan(userData.plan);
         }
       }
     };
-    fetchRestaurantId();
+    fetchUserData();
   }, [user]);
 
   if (loading || !user) {
@@ -53,7 +54,7 @@ export default function MenuPage() {
     );
   }
 
-  if (!restaurantId) {
+  if (!restaurantId || !userPlan) {
     return <AdminLayout><div>{t('Loading...')}</div></AdminLayout>;
   }
 
@@ -87,7 +88,7 @@ export default function MenuPage() {
                     <DialogTitle>{t('Create New Recipe')}</DialogTitle>
                     <DialogDescription>{t('Define the ingredients and cost for a new dish.')}</DialogDescription>
                 </DialogHeader>
-                <RecipeForm restaurantId={restaurantId} onSuccess={() => setIsRecipeModalOpen(false)} />
+                <RecipeForm restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsRecipeModalOpen(false)} />
             </DialogContent>
         </Dialog>
         
@@ -109,7 +110,7 @@ export default function MenuPage() {
                     <DialogTitle>{t('Create Menu Item')}</DialogTitle>
                     <DialogDescription>{t('Add a new dish to your menu, linking it to a recipe.')}</DialogDescription>
                 </DialogHeader>
-                <MenuItemForm restaurantId={restaurantId} onSuccess={() => setIsMenuItemModalOpen(false)} />
+                <MenuItemForm restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsMenuItemModalOpen(false)} />
             </DialogContent>
         </Dialog>
       </div>
@@ -123,7 +124,7 @@ export default function MenuPage() {
                    <CardDescription>{t('View and manage your current recipes.')}</CardDescription>
               </CardHeader>
               <CardContent>
-                  <RecipesTable restaurantId={restaurantId} />
+                  <RecipesTable restaurantId={restaurantId} userPlan={userPlan} />
               </CardContent>
           </Card>
         </div>
@@ -136,7 +137,7 @@ export default function MenuPage() {
                   <CardDescription>{t('View and manage your current menu dishes.')}</CardDescription>
               </CardHeader>
               <CardContent>
-                  <MenuTable restaurantId={restaurantId} />
+                  <MenuTable restaurantId={restaurantId} userPlan={userPlan} />
               </CardContent>
           </Card>
         </div>

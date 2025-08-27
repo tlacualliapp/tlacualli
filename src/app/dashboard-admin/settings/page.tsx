@@ -11,7 +11,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getRestaurantIdForCurrentUser } from '@/lib/users';
+import { getRestaurantIdForCurrentUser, getCurrentUserData } from '@/lib/users';
 import { AdminRestaurantForm } from '@/components/dashboard/admin-restaurant-form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ interface Restaurant {
   iva?: number;
   logoUrl?: string;
   iconUrl?: string;
+  plan?: string;
 }
 
 export default function SettingsPage() {
@@ -40,6 +41,7 @@ export default function SettingsPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<string | null>(null);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [iva, setIva] = useState<number | string>('');
@@ -60,15 +62,22 @@ export default function SettingsPage() {
     const fetchRestaurantData = async () => {
       if (user) {
         setIsLoading(true);
-        const id = await getRestaurantIdForCurrentUser();
-        setRestaurantId(id);
-        if (id) {
-          const restaurantRef = doc(db, 'restaurantes', id);
-          const restaurantSnap = await getDoc(restaurantRef);
-          if (restaurantSnap.exists()) {
-            const data = { id: restaurantSnap.id, ...restaurantSnap.data() } as Restaurant;
-            setRestaurant(data);
-            setIva(data.iva || 16); // Default to 16 if not set
+        const userData = await getCurrentUserData();
+        if (userData) {
+          const id = userData.restauranteId;
+          const plan = userData.plan;
+          setRestaurantId(id);
+          setUserPlan(plan);
+
+          if (id) {
+            const collectionName = plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+            const restaurantRef = doc(db, collectionName, id);
+            const restaurantSnap = await getDoc(restaurantRef);
+            if (restaurantSnap.exists()) {
+              const data = { id: restaurantSnap.id, ...restaurantSnap.data() } as Restaurant;
+              setRestaurant(data);
+              setIva(data.iva || 16); // Default to 16 if not set
+            }
           }
         }
         setIsLoading(false);
@@ -98,7 +107,7 @@ export default function SettingsPage() {
           toast({ variant: 'destructive', title: t('No file selected'), description: t('Please select a file to upload.') });
           return;
       }
-      if (!restaurantId) return;
+      if (!restaurantId || !userPlan) return;
 
       setIsUploading(true);
       
@@ -127,7 +136,8 @@ export default function SettingsPage() {
           await Promise.all(uploadPromises);
 
           if (Object.keys(updateData).length > 0) {
-              const restaurantRef = doc(db, 'restaurantes', restaurantId);
+              const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+              const restaurantRef = doc(db, collectionName, restaurantId);
               await updateDoc(restaurantRef, updateData);
               if (updateData.logoUrl) setRestaurant(prev => prev ? { ...prev, logoUrl: updateData.logoUrl } : null);
               if (updateData.iconUrl) setRestaurant(prev => prev ? { ...prev, iconUrl: updateData.iconUrl } : null);
@@ -145,10 +155,11 @@ export default function SettingsPage() {
   };
 
   const handleSaveIva = async () => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
     setIsSavingIva(true);
     try {
-        const restaurantRef = doc(db, 'restaurantes', restaurantId);
+        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const restaurantRef = doc(db, collectionName, restaurantId);
         await updateDoc(restaurantRef, { iva: Number(iva) });
         toast({ title: t('IVA Updated'), description: t('The new IVA rate has been saved successfully.') });
     } catch (error) {

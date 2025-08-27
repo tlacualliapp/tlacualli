@@ -24,11 +24,12 @@ interface Supplier {
 
 interface SupplierFormProps {
   restaurantId: string;
+  userPlan: string;
   onSuccess?: () => void;
   supplierToEdit?: Supplier | null;
 }
 
-export function SupplierForm({ restaurantId, onSuccess, supplierToEdit }: SupplierFormProps) {
+export function SupplierForm({ restaurantId, userPlan, onSuccess, supplierToEdit }: SupplierFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const isEditMode = !!supplierToEdit;
@@ -81,12 +82,14 @@ export function SupplierForm({ restaurantId, onSuccess, supplierToEdit }: Suppli
         updatedAt: serverTimestamp(),
       };
 
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+
       if (isEditMode && supplierToEdit?.id) {
-        const supplierRef = doc(db, `restaurantes/${restaurantId}/suppliers`, supplierToEdit.id);
+        const supplierRef = doc(db, `${collectionName}/${restaurantId}/suppliers`, supplierToEdit.id);
         await updateDoc(supplierRef, supplierData);
         toast({ title: t("Update Successful"), description: t("The supplier has been updated.") });
       } else {
-        const collectionRef = collection(db, `restaurantes/${restaurantId}/suppliers`);
+        const collectionRef = collection(db, `${collectionName}/${restaurantId}/suppliers`);
         await addDoc(collectionRef, { ...supplierData, createdAt: serverTimestamp() });
         toast({ title: t("Supplier Added"), description: t("The new supplier has been added.") });
       }

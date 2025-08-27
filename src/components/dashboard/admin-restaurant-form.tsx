@@ -24,6 +24,7 @@ interface Restaurant {
   phone: string;
   email: string;
   rfc: string;
+  plan?: string;
 }
 
 interface AdminRestaurantFormProps {
@@ -85,7 +86,8 @@ export function AdminRestaurantForm({ restaurant, onSuccess }: AdminRestaurantFo
     setIsLoading(true);
 
     try {
-      const restaurantRef = doc(db, "restaurantes", restaurant.id);
+      const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      const restaurantRef = doc(db, collectionName, restaurant.id);
       await updateDoc(restaurantRef, {
         ...formData,
         updatedAt: serverTimestamp(),

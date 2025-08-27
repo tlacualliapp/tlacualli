@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { getRestaurantIdForCurrentUser } from '@/lib/users';
+import { getRestaurantIdForCurrentUser, getCurrentUserData } from '@/lib/users';
 
 interface Employee {
   id: string;
@@ -56,6 +56,7 @@ export default function EmployeesPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<string | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -71,13 +72,16 @@ export default function EmployeesPage() {
   }, [user, loading, router]);
   
   useEffect(() => {
-    const fetchRestaurantId = async () => {
-      const id = await getRestaurantIdForCurrentUser();
-      setRestaurantId(id);
+    const fetchUserData = async () => {
+      if(user) {
+        const userData = await getCurrentUserData();
+        if (userData) {
+          setRestaurantId(userData.restauranteId);
+          setUserPlan(userData.plan);
+        }
+      }
     };
-    if(user) {
-        fetchRestaurantId();
-    }
+    fetchUserData();
   }, [user]);
 
   useEffect(() => {
@@ -117,7 +121,7 @@ export default function EmployeesPage() {
   }, [restaurantId, t, toast]);
 
   const handleAddNew = () => {
-    if (!restaurantId) {
+    if (!restaurantId || !userPlan) {
         toast({ variant: 'destructive', title: t('Error'), description: t('Restaurant information is not available yet. Please try again.') });
         return;
     }
@@ -219,7 +223,7 @@ export default function EmployeesPage() {
                     {employeeToEdit ? t('Modify the employee information.') : t('Add a new employee to your team.')}
                 </DialogDescription>
             </DialogHeader>
-            {restaurantId && <EmployeeForm restaurantId={restaurantId} onSuccess={() => setIsFormModalOpen(false)} employeeToEdit={employeeToEdit} />}
+            {restaurantId && userPlan && <EmployeeForm restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsFormModalOpen(false)} employeeToEdit={employeeToEdit} />}
         </DialogContent>
       </Dialog>
       
@@ -341,5 +345,3 @@ export default function EmployeesPage() {
     </AdminLayout>
   );
 }
-
-    

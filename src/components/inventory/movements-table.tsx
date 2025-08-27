@@ -24,6 +24,7 @@ interface Movement {
 
 interface MovementsTableProps {
   restaurantId: string;
+  userPlan: string;
 }
 
 const MovementIcon = ({ type }: { type: Movement['type'] }) => {
@@ -66,17 +67,18 @@ const MovementIcon = ({ type }: { type: Movement['type'] }) => {
   );
 };
 
-export function MovementsTable({ restaurantId }: MovementsTableProps) {
+export function MovementsTable({ restaurantId, userPlan }: MovementsTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [movements, setMovements] = useState<Movement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
     setIsLoading(true);
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
     const q = query(
-      collection(db, `restaurantes/${restaurantId}/inventoryMovements`),
+      collection(db, `${collectionName}/${restaurantId}/inventoryMovements`),
       orderBy('createdAt', 'desc')
     );
 
@@ -90,7 +92,7 @@ export function MovementsTable({ restaurantId }: MovementsTableProps) {
     });
 
     return () => unsubscribe();
-  }, [restaurantId]);
+  }, [restaurantId, userPlan]);
 
   const filteredData = useMemo(() => movements.filter(movement =>
     movement.itemName.toLowerCase().includes(searchTerm.toLowerCase())

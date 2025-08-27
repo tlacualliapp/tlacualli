@@ -25,9 +25,10 @@ interface Supplier {
 
 interface SuppliersTableProps {
   restaurantId: string;
+  userPlan: string;
 }
 
-export function SuppliersTable({ restaurantId }: SuppliersTableProps) {
+export function SuppliersTable({ restaurantId, userPlan }: SuppliersTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +39,8 @@ export function SuppliersTable({ restaurantId }: SuppliersTableProps) {
 
   useEffect(() => {
     setIsLoading(true);
-    const q = query(collection(db, `restaurantes/${restaurantId}/suppliers`));
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    const q = query(collection(db, `${collectionName}/${restaurantId}/suppliers`));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const suppliersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Supplier));
@@ -50,7 +52,7 @@ export function SuppliersTable({ restaurantId }: SuppliersTableProps) {
     });
 
     return () => unsubscribe();
-  }, [restaurantId]);
+  }, [restaurantId, userPlan]);
 
   const handleEdit = (supplier: Supplier) => {
     setSupplierToEdit(supplier);
@@ -64,7 +66,8 @@ export function SuppliersTable({ restaurantId }: SuppliersTableProps) {
 
   const handleDelete = async (supplierId: string) => {
     try {
-      await deleteDoc(doc(db, `restaurantes/${restaurantId}/suppliers`, supplierId));
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      await deleteDoc(doc(db, `${collectionName}/${restaurantId}/suppliers`, supplierId));
       toast({ title: t("Supplier Deleted"), description: t("The supplier has been removed.") });
     } catch (error) {
       console.error("Error deleting supplier:", error);
@@ -100,7 +103,7 @@ export function SuppliersTable({ restaurantId }: SuppliersTableProps) {
             <DialogTitle>{supplierToEdit ? t('Edit Supplier') : t('Add New Supplier')}</DialogTitle>
             <DialogDescription>{supplierToEdit ? t('Modify the supplier details.') : t('Add a new supplier.')}</DialogDescription>
           </DialogHeader>
-          <SupplierForm restaurantId={restaurantId} onSuccess={() => setIsFormModalOpen(false)} supplierToEdit={supplierToEdit} />
+          <SupplierForm restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsFormModalOpen(false)} supplierToEdit={supplierToEdit} />
         </DialogContent>
       </Dialog>
 

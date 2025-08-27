@@ -14,12 +14,14 @@ import { useRouter } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { getCurrentUserData } from '@/lib/users';
 
 export default function InventoryPage() {
   const { t } = useTranslation();
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<string | null>(null);
   const [stats, setStats] = useState({
     lowStockItems: 0,
     inventoryValue: 0,
@@ -31,24 +33,24 @@ export default function InventoryPage() {
     }
   }, [user, loading, router]);
   
-   useEffect(() => {
-    const fetchRestaurantId = async () => {
+  useEffect(() => {
+    const fetchUserData = async () => {
       if (user) {
-        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const userData = querySnapshot.docs[0].data();
+        const userData = await getCurrentUserData();
+        if (userData) {
           setRestaurantId(userData.restauranteId);
+          setUserPlan(userData.plan);
         }
       }
     };
-    fetchRestaurantId();
+    fetchUserData();
   }, [user]);
 
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
 
-    const itemsQuery = query(collection(db, `restaurantes/${restaurantId}/inventoryItems`));
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    const itemsQuery = query(collection(db, `${collectionName}/${restaurantId}/inventoryItems`));
     
     const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
       let lowStockCount = 0;
@@ -71,7 +73,7 @@ export default function InventoryPage() {
     });
 
     return () => unsubscribe();
-  }, [restaurantId]);
+  }, [restaurantId, userPlan]);
 
  if (loading || !user) {
     return (
@@ -124,13 +126,13 @@ export default function InventoryPage() {
               <TabsTrigger value="history"><History className="mr-2 h-4 w-4"/>{t('Movements')}</TabsTrigger>
             </TabsList>
             <TabsContent value="items">
-              {restaurantId ? <InventoryItemsTable restaurantId={restaurantId} /> : <p>{t('Loading...')}</p>}
+              {restaurantId && userPlan ? <InventoryItemsTable restaurantId={restaurantId} userPlan={userPlan} /> : <p>{t('Loading...')}</p>}
             </TabsContent>
             <TabsContent value="suppliers">
-              {restaurantId ? <SuppliersTable restaurantId={restaurantId} /> : <p>{t('Loading...')}</p>}
+              {restaurantId && userPlan ? <SuppliersTable restaurantId={restaurantId} userPlan={userPlan} /> : <p>{t('Loading...')}</p>}
             </TabsContent>
             <TabsContent value="history">
-              {restaurantId ? <MovementsTable restaurantId={restaurantId} /> : <p>{t('Loading...')}</p>}
+              {restaurantId && userPlan ? <MovementsTable restaurantId={restaurantId} userPlan={userPlan} /> : <p>{t('Loading...')}</p>}
             </TabsContent>
           </Tabs>
         </CardContent>

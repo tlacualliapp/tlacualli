@@ -20,12 +20,13 @@ interface Item {
 
 interface MovementFormProps {
   restaurantId: string;
+  userPlan: string;
   item: Item;
   type: 'entry' | 'exit' | 'adjustment';
   onSuccess?: () => void;
 }
 
-export function MovementForm({ restaurantId, item, type, onSuccess }: MovementFormProps) {
+export function MovementForm({ restaurantId, userPlan, item, type, onSuccess }: MovementFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [quantity, setQuantity] = useState(0);
@@ -42,8 +43,9 @@ export function MovementForm({ restaurantId, item, type, onSuccess }: MovementFo
     setIsLoading(true);
 
     try {
-        const itemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, item.id);
-        const movementRef = collection(db, `restaurantes/${restaurantId}/inventoryMovements`);
+        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const itemRef = doc(db, `${collectionName}/${restaurantId}/inventoryItems`, item.id);
+        const movementRef = collection(db, `${collectionName}/${restaurantId}/inventoryMovements`);
 
         await runTransaction(db, async (transaction) => {
             const itemDoc = await transaction.get(itemRef);

@@ -3,7 +3,17 @@ import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firesto
 import { db } from './firebase';
 import { auth } from './firebase';
 
+interface UserData {
+    restauranteId: string | null;
+    plan: string | null;
+}
+
 export async function getRestaurantIdForCurrentUser(): Promise<string | null> {
+    const userData = await getCurrentUserData();
+    return userData?.restauranteId || null;
+}
+
+export async function getCurrentUserData(): Promise<UserData | null> {
     const user = auth.currentUser;
     if (!user) {
         console.log("No user is currently signed in.");
@@ -16,19 +26,23 @@ export async function getRestaurantIdForCurrentUser(): Promise<string | null> {
 
         if (!querySnapshot.empty) {
             const userData = querySnapshot.docs[0].data();
-            console.log("Found user data:", userData);
-            return userData.restauranteId || null;
+            return {
+                restauranteId: userData.restauranteId || null,
+                plan: userData.plan || null
+            };
         } else {
              const adminQ = query(collection(db, 'usuarios'), where('email', '==', user.email));
              const adminQuerySnapshot = await getDocs(adminQ);
              if(!adminQuerySnapshot.empty){
                 const adminData = adminQuerySnapshot.docs[0].data();
-                console.log("Found admin user data:", adminData);
-                return adminData.restauranteId || null;
+                return {
+                    restauranteId: adminData.restauranteId || null,
+                    plan: adminData.plan || null
+                };
              }
         }
     } catch (error) {
-        console.error("Error fetching restaurant ID for user:", error);
+        console.error("Error fetching user data:", error);
     }
     
     console.log("User document not found or no restaurant ID associated.");

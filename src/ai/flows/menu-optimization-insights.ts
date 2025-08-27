@@ -12,7 +12,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, Timestamp, DocumentData } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, DocumentData, doc, getDoc } from 'firebase/firestore';
 
 
 interface MenuItem {
@@ -93,9 +93,16 @@ const menuOptimizationInsightsFlow = ai.defineFlow(
   async (input) => {
     const { restaurantId, dateRange } = input;
     
+    // Determine if the restaurant is a demo or production one.
+    const prodRestaurantRef = doc(db, 'restaurantes', restaurantId);
+    const demoRestaurantRef = doc(db, 'restaurantes_demo', restaurantId);
+    const prodSnap = await getDoc(prodRestaurantRef);
+    
+    const collectionName = prodSnap.exists() ? 'restaurantes' : 'restaurantes_demo';
+    
     // 1. Fetch all menu items and recipes for cost calculation
-    const menuItemsQuery = getDocs(collection(db, `restaurantes/${restaurantId}/menuItems`));
-    const recipesQuery = getDocs(collection(db, `restaurantes/${restaurantId}/recipes`));
+    const menuItemsQuery = getDocs(collection(db, `${collectionName}/${restaurantId}/menuItems`));
+    const recipesQuery = getDocs(collection(db, `${collectionName}/${restaurantId}/recipes`));
     const [menuItemsSnap, recipesSnap] = await Promise.all([menuItemsQuery, recipesQuery]);
     
     const menuItemsMap = new Map<string, MenuItem>(menuItemsSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as MenuItem]));
@@ -108,7 +115,7 @@ const menuOptimizationInsightsFlow = ai.defineFlow(
     endDate.setHours(23, 59, 59, 999);
 
     const ordersQuery = query(
-        collection(db, `restaurantes/${restaurantId}/orders`),
+        collection(db, `${collectionName}/${restaurantId}/orders`),
         where('createdAt', '>=', Timestamp.fromDate(startDate)),
         where('createdAt', '<=', Timestamp.fromDate(endDate))
     );

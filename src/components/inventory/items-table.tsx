@@ -30,9 +30,10 @@ interface Item {
 
 interface ItemsTableProps {
   restaurantId: string;
+  userPlan: string;
 }
 
-export function InventoryItemsTable({ restaurantId }: ItemsTableProps) {
+export function InventoryItemsTable({ restaurantId, userPlan }: ItemsTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [items, setItems] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +47,8 @@ export function InventoryItemsTable({ restaurantId }: ItemsTableProps) {
 
   useEffect(() => {
     setIsLoading(true);
-    const q = query(collection(db, `restaurantes/${restaurantId}/inventoryItems`));
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    const q = query(collection(db, `${collectionName}/${restaurantId}/inventoryItems`));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const itemsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Item));
@@ -58,7 +60,7 @@ export function InventoryItemsTable({ restaurantId }: ItemsTableProps) {
     });
 
     return () => unsubscribe();
-  }, [restaurantId]);
+  }, [restaurantId, userPlan]);
 
   const handleEdit = (item: Item) => {
     setItemToEdit(item);
@@ -72,7 +74,8 @@ export function InventoryItemsTable({ restaurantId }: ItemsTableProps) {
 
   const handleDelete = async (itemId: string) => {
     try {
-      await deleteDoc(doc(db, `restaurantes/${restaurantId}/inventoryItems`, itemId));
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      await deleteDoc(doc(db, `${collectionName}/${restaurantId}/inventoryItems`, itemId));
       toast({ title: t("Item Deleted"), description: t("The item has been removed from inventory.") });
     } catch (error) {
       console.error("Error deleting item:", error);
@@ -114,7 +117,7 @@ export function InventoryItemsTable({ restaurantId }: ItemsTableProps) {
             <DialogTitle>{itemToEdit ? t('Edit Item') : t('Add New Item')}</DialogTitle>
             <DialogDescription>{itemToEdit ? t('Modify the item details.') : t('Add a new item to your inventory.')}</DialogDescription>
           </DialogHeader>
-          <ItemForm restaurantId={restaurantId} onSuccess={() => setIsFormModalOpen(false)} itemToEdit={itemToEdit} />
+          <ItemForm restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsFormModalOpen(false)} itemToEdit={itemToEdit} />
         </DialogContent>
       </Dialog>
 
@@ -126,6 +129,7 @@ export function InventoryItemsTable({ restaurantId }: ItemsTableProps) {
           {itemForMovement && (
             <MovementForm
               restaurantId={restaurantId}
+              userPlan={userPlan}
               item={itemForMovement}
               type={movementType}
               onSuccess={() => setIsMovementModalOpen(false)}

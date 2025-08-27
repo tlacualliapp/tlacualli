@@ -14,11 +14,13 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useTranslation } from 'react-i18next';
 import { AssignmentManager } from '@/components/map/assignment-manager';
+import { getCurrentUserData } from '@/lib/users';
 
 export default function MapPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<string | null>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -28,17 +30,16 @@ export default function MapPage() {
   }, [user, loading, router]);
   
   useEffect(() => {
-    const fetchRestaurantId = async () => {
+    const fetchUserData = async () => {
       if (user) {
-        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const userData = querySnapshot.docs[0].data();
+        const userData = await getCurrentUserData();
+        if (userData) {
           setRestaurantId(userData.restauranteId);
+          setUserPlan(userData.plan);
         }
       }
     };
-    fetchRestaurantId();
+    fetchUserData();
   }, [user]);
 
   if (loading || !user) {
@@ -67,7 +68,7 @@ export default function MapPage() {
               <Card className="h-full">
                   <CardContent className="p-0 h-[60vh]">
                       <div className="w-full h-full bg-muted/50 border-t relative">
-                          {restaurantId ? <MapEditor restaurantId={restaurantId} /> : <p className="p-4">{t('Loading...')}</p>}
+                          {restaurantId && userPlan ? <MapEditor restaurantId={restaurantId} userPlan={userPlan} /> : <p className="p-4">{t('Loading...')}</p>}
                       </div>
                   </CardContent>
               </Card>
@@ -82,7 +83,7 @@ export default function MapPage() {
                       <CardDescription>{t('Assign employees to specific areas and tables.')}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                      {restaurantId ? <AssignmentManager restaurantId={restaurantId} /> : <p>{t('Loading...')}</p>}
+                      {restaurantId && userPlan ? <AssignmentManager restaurantId={restaurantId} userPlan={userPlan} /> : <p>{t('Loading...')}</p>}
                   </CardContent>
               </Card>
           </div>
@@ -91,5 +92,3 @@ export default function MapPage() {
     </AdminLayout>
   );
 }
-
-    

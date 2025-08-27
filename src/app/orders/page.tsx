@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { getNextTakeoutId } from '@/lib/counters';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { getCurrentUserData } from '@/lib/users';
 
 
 interface Room {
@@ -50,6 +51,7 @@ export default function OrdersPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<string | null>(null);
   const [userAssignments, setUserAssignments] = useState<UserAssignments | null>(null);
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -82,20 +84,11 @@ export default function OrdersPage() {
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
-        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const userData = querySnapshot.docs[0].data();
+        const userData = await getCurrentUserData();
+        if (userData) {
           setRestaurantId(userData.restauranteId);
+          setUserPlan(userData.plan);
           setUserAssignments(userData.assignments || { tables: [] });
-        } else {
-            const legacyQ = query(collection(db, "usuarios"), where("email", "==", user.email));
-            const legacySnapshot = await getDocs(legacyQ);
-            if(!legacySnapshot.empty) {
-                const legacyUserData = legacySnapshot.docs[0].data();
-                setRestaurantId(legacyUserData.restauranteId);
-                setUserAssignments(legacyUserData.assignments || { tables: [] });
-            }
         }
       }
     };
@@ -104,9 +97,10 @@ export default function OrdersPage() {
 
   // Effect to fetch active orders
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
     const ordersQuery = query(
-      collection(db, `restaurantes/${restaurantId}/orders`),
+      collection(db, `${collectionName}/${restaurantId}/orders`),
       where("status", "in", ["open", "preparing", "ready_for_pickup", "served"])
     );
     const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
@@ -126,14 +120,15 @@ export default function OrdersPage() {
         setTakeoutOrders(currentTakeoutOrders);
     });
     return () => unsubscribeOrders();
-  }, [restaurantId]);
+  }, [restaurantId, userPlan]);
 
   // Effect to fetch rooms and then listen for table updates
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
     setIsLoading(true);
 
-    const roomsQuery = query(collection(db, `restaurantes/${restaurantId}/rooms`));
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    const roomsQuery = query(collection(db, `${collectionName}/${restaurantId}/rooms`));
     const unsubscribeRooms = onSnapshot(roomsQuery, (snapshot) => {
       const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)).sort((a, b) => a.name.localeCompare(b.name));
       setRooms(roomsData);
@@ -141,14 +136,15 @@ export default function OrdersPage() {
     });
 
     return () => unsubscribeRooms();
-  }, [restaurantId]);
+  }, [restaurantId, userPlan]);
 
   // Effect to listen to tables in all fetched rooms
   useEffect(() => {
-    if (rooms.length === 0) return;
+    if (rooms.length === 0 || !userPlan) return;
 
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
     const allUnsubscribes = rooms.map(room => {
-      const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`);
+      const tablesRef = collection(db, `${collectionName}/${restaurantId}/rooms/${room.id}/tables`);
       return onSnapshot(tablesRef, (tableSnapshot) => {
         const tablesData = tableSnapshot.docs.map(tableDoc => ({
             id: tableDoc.id,
@@ -161,7 +157,7 @@ export default function OrdersPage() {
     });
 
     return () => allUnsubscribes.forEach(unsub => unsub());
-  }, [rooms, restaurantId]);
+  }, [rooms, restaurantId, userPlan]);
 
 
    useEffect(() => {
@@ -205,8 +201,9 @@ export default function OrdersPage() {
   };
   
    const handleSetTableStatus = async (table: Table, status: 'available' | 'dirty' | 'reserved') => {
-      if (!restaurantId || !table.roomId) return;
-      const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${table.roomId}/tables`, table.id);
+      if (!restaurantId || !table.roomId || !userPlan) return;
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      const tableRef = doc(db, `${collectionName}/${restaurantId}/rooms/${table.roomId}/tables`, table.id);
       try {
         await updateDoc(tableRef, { status });
         toast({ title: t('Status Updated'), description: t('Table {{tableName}} is now {{status}}.', { tableName: table.name, status: t(status) })});
@@ -234,7 +231,7 @@ export default function OrdersPage() {
   };
   
   const handleStartNewOrder = async () => {
-    if (!selectedTable || !restaurantId || selectedTable.isTakeout) return;
+    if (!selectedTable || !restaurantId || selectedTable.isTakeout || !userPlan) return;
     
     const existingOrder = activeOrders.find(o => o.tableId === selectedTable.id);
     if (existingOrder) {
@@ -249,7 +246,8 @@ export default function OrdersPage() {
     }
 
     try {
-        const newOrderRef = await addDoc(collection(db, `restaurantes/${restaurantId}/orders`), {
+        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const newOrderRef = await addDoc(collection(db, `${collectionName}/${restaurantId}/orders`), {
             tableId: selectedTable.id,
             tableName: selectedTable.name,
             restaurantId: restaurantId,
@@ -285,7 +283,7 @@ export default function OrdersPage() {
   }
 
   const handleTakeoutOrder = async () => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
 
     try {
         const newTakeoutId = await getNextTakeoutId(restaurantId);
@@ -302,7 +300,8 @@ export default function OrdersPage() {
             createdBy: user?.uid,
         };
 
-        const docRef = await addDoc(collection(db, `restaurantes/${restaurantId}/orders`), newOrder);
+        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const docRef = await addDoc(collection(db, `${collectionName}/${restaurantId}/orders`), newOrder);
 
         const newTakeoutAsTable: Table = {
             id: docRef.id,
@@ -357,12 +356,12 @@ export default function OrdersPage() {
         );
     }
     
-    if (view === 'menu' && restaurantId && activeOrderId) {
-        return <MenuSelection restaurantId={restaurantId} orderId={activeOrderId} tableName={selectedTable.name} onBack={() => setView('order_summary')} subAccountId={activeSubAccountId} />;
+    if (view === 'menu' && restaurantId && activeOrderId && userPlan) {
+        return <MenuSelection restaurantId={restaurantId} userPlan={userPlan} orderId={activeOrderId} tableName={selectedTable.name} onBack={() => setView('order_summary')} subAccountId={activeSubAccountId} />;
     }
 
-    if (view === 'order_summary' && restaurantId && activeOrderId) {
-        return <OrderDetails restaurantId={restaurantId} orderId={activeOrderId} tableName={selectedTable.name} onAddItems={handleGoToMenu} onOrderClosed={handleOrderClosed} />;
+    if (view === 'order_summary' && restaurantId && activeOrderId && userPlan) {
+        return <OrderDetails restaurantId={restaurantId} userPlan={userPlan} orderId={activeOrderId} tableName={selectedTable.name} onAddItems={handleGoToMenu} onOrderClosed={handleOrderClosed} />;
     }
 
     // Default view for a selected table

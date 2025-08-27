@@ -25,6 +25,7 @@ interface Employee {
 
 interface EmployeeFormProps {
   restaurantId: string;
+  userPlan: string;
   onSuccess?: () => void;
   employeeToEdit?: Employee | null;
 }
@@ -34,7 +35,7 @@ const profiles = [
     { id: '2', name: 'Employee' },
 ];
 
-export function EmployeeForm({ restaurantId, onSuccess, employeeToEdit }: EmployeeFormProps) {
+export function EmployeeForm({ restaurantId, userPlan, onSuccess, employeeToEdit }: EmployeeFormProps) {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const isEditMode = !!employeeToEdit;
@@ -109,7 +110,7 @@ export function EmployeeForm({ restaurantId, onSuccess, employeeToEdit }: Employ
                 const user = userCredential.user;
 
                 // 2. Save user data in Firestore
-                await addDoc(collection(db, "usuarios"), {
+                const userData: any = {
                     uid: user.uid,
                     restauranteId: restaurantId,
                     nombre,
@@ -119,7 +120,13 @@ export function EmployeeForm({ restaurantId, onSuccess, employeeToEdit }: Employ
                     status: "1", // status as string
                     perfil,
                     fecharegistro: serverTimestamp()
-                });
+                };
+
+                if (userPlan === 'demo') {
+                    userData.plan = 'demo';
+                }
+
+                await addDoc(collection(db, "usuarios"), userData);
                 
                 // 3. Send welcome email
                 await sendWelcomeEmail({
