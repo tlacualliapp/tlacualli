@@ -57,7 +57,10 @@ export default function LandingPage() {
             <TacoIcon className="h-8 w-8 text-primary" />
             <span className="font-headline text-xl">Tlacualli</span>
           </Link>
-          <nav className="ml-auto flex items-center gap-4">            
+          <nav className="ml-auto flex items-center gap-4">
+            <Button variant="ghost" asChild>
+                <Link href="/tarifas">Tarifas</Link>
+            </Button>            
             <Button className="bg-accent hover:bg-accent/90">
                 <Link href="/login">Acceso a Usuarios</Link>
             </Button>
