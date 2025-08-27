@@ -20,15 +20,10 @@ export default function TermsAndConditionsPage() {
             <TacoIcon className="h-8 w-8 text-primary" />
             <span className="font-headline text-xl">Tlacualli</span>
           </Link>
-          <nav className="ml-auto flex items-center gap-4">            
-            <Button asChild>
-                <Link href="/login">Acceso a Usuarios</Link>
-            </Button>
-          </nav>
         </div>
       </header>
 
-      <main className="py-12 md:py-16">
+      <main className="py-12 md:py-16 flex items-center justify-center">
         <div className="container">
            <Button variant="outline" size="sm" className="mb-8" onClick={() => router.back()}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
