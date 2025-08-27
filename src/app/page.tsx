@@ -176,7 +176,7 @@ export default function LandingPage() {
             <p>&copy; {new Date().getFullYear()} Tlacualli. Todos los derechos reservados.</p>
             <div className="flex items-center gap-4">
                 <Link href="#" className="hover:text-primary">Términos de Servicio</Link>
-                <Link href="#" className="hover:text-primary">Política de Privacidad</Link>
+                <Link href="/aviso-privacidad" className="hover:text-primary">Aviso de Privacidad</Link>
             </div>
         </div>
       </footer>
