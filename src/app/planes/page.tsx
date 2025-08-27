@@ -107,12 +107,12 @@ export default function PricingPage() {
         <section className="relative h-[60vh] min-h-[500px] w-full">
             <Image 
                 src="https://picsum.photos/1200/800"
-                alt="Chef preparando comida" 
+                alt="Interior de un restaurante elegante" 
                 layout="fill"
                 objectFit="cover"
                 quality={85}
                 className="brightness-50"
-                data-ai-hint="restaurant kitchen"
+                data-ai-hint="restaurant interior"
             />
             <div className="relative z-10 flex h-full flex-col items-center justify-center text-center text-white p-4">
                 <h1 className="font-headline text-5xl md:text-7xl font-extrabold tracking-tight">
