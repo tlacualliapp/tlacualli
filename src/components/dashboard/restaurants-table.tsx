@@ -248,7 +248,7 @@ export function RestaurantsTable() {
       setRestaurantToEmail(null);
     } catch (error) {
       console.error('Error sending email:', error);
-      toast({ variant: 'destructive', title: t('Error'), description: t('Failed to send email.') });
+      toast({ variant: 'destructive', title: t('Error'), description: `${t('Failed to send email.')} ${(error as Error).message}` });
     } finally {
       setIsSendingEmail(false);
     }

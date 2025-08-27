@@ -1,6 +1,6 @@
 
 'use server';
-
+import 'dotenv/config';
 import nodemailer from 'nodemailer';
 
 interface WelcomeEmailProps {
@@ -82,6 +82,6 @@ export const sendCustomEmail = async ({ to, subject, html }: CustomEmailProps) =
         console.log(`Custom email sent to ${to}`);
     } catch (error) {
         console.error(`Failed to send custom email to ${to}:`, error);
-        throw new Error('Failed to send email.');
+        throw error;
     }
 };
