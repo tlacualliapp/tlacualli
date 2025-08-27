@@ -3,16 +3,6 @@
 
 import nodemailer from 'nodemailer';
 
-export const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: Number(process.env.EMAIL_PORT),
-  secure: true, // Use true for port 465, false for others
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 interface WelcomeEmailProps {
     to: string;
     name: string;
@@ -21,6 +11,16 @@ interface WelcomeEmailProps {
 }
 
 export const sendWelcomeEmail = async ({ to, name, username, password }: WelcomeEmailProps) => {
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: Number(process.env.EMAIL_PORT),
+      secure: true, // Use true for port 465, false for others
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
     const subject = '¡Bienvenido a Tlacualli App!';
     const html = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
