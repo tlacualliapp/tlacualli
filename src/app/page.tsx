@@ -175,7 +175,7 @@ export default function LandingPage() {
         <div className="container py-6 flex justify-between items-center text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} Tlacualli. Todos los derechos reservados.</p>
             <div className="flex items-center gap-4">
-                <Link href="#" className="hover:text-primary">Términos de Servicio</Link>
+                <Link href="/terminos-condiciones" className="hover:text-primary">Términos de Servicio</Link>
                 <Link href="/aviso-privacidad" className="hover:text-primary">Aviso de Privacidad</Link>
             </div>
         </div>
