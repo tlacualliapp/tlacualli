@@ -137,9 +137,9 @@ export default function LandingPage() {
             </div>
         </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-12 md:py-24 bg-gray-50 dark:bg-gray-900/50">
-            <div className="container">
+        <div className="container">
+            {/* Features Section */}
+            <section id="features" className="py-12 md:py-24">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">Todo lo que necesitas, en un solo lugar</h2>
                     <p className="mt-4 mx-auto text-muted-foreground font-body">
@@ -165,17 +165,15 @@ export default function LandingPage() {
                         </Link>
                     </Button>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        {/* Testimonials Section */}
-        <section className="py-12 md:py-24">
-            <div className="container max-w-4xl">
+            {/* Testimonials Section */}
+            <section className="py-12 md:py-24">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">Impulsando el éxito de restaurantes como el tuyo</h2>
                 </div>
                 <div className="mt-12 grid gap-8 md:grid-cols-1 lg:grid-cols-2">
-                     <Card className="bg-card/65 backdrop-blur-lg">
+                        <Card className="bg-card/65 backdrop-blur-lg">
                         <CardContent className="p-8">
                             <blockquote className="text-lg font-body italic text-foreground">
                                 “Tlacualli transformó nuestra operación. El mapa de mesas y la gestión de inventario nos han ahorrado horas de trabajo y miles de pesos al mes. Es la herramienta que no sabíamos que necesitábamos.”
@@ -198,19 +196,17 @@ export default function LandingPage() {
                         </CardContent>
                     </Card>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        {/* Contact Section */}
-        <section id="contact" className="py-12 md:py-24 bg-gray-50 dark:bg-gray-900/50">
-            <div className="container max-w-3xl">
+            {/* Contact Section */}
+            <section id="contact" className="py-12 md:py-24">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">¿Tienes Preguntas?</h2>
                     <p className="mt-4 mx-auto text-muted-foreground font-body">
                         Estamos aquí para ayudarte. Envíanos un mensaje y nuestro equipo se pondrá en contacto contigo a la brevedad.
                     </p>
                 </div>
-                <Card className="mt-12 bg-card/65 backdrop-blur-lg">
+                <Card className="mt-12 bg-card/65 backdrop-blur-lg max-w-3xl mx-auto">
                     <CardContent className="p-6">
                         <form ref={formRef} action={dispatch} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -230,12 +226,12 @@ export default function LandingPage() {
                                 <Textarea id="message" name="message" placeholder="Escribe tu duda o comentario aquí..." rows={5} required />
                                 {state.errors?.message && <p className="text-sm text-destructive">{state.errors.message[0]}</p>}
                             </div>
-                             <SubmitButton />
+                                <SubmitButton />
                         </form>
                     </CardContent>
                 </Card>
-            </div>
-        </section>
+            </section>
+        </div>
 
 
         {/* CTA Section */}
