@@ -157,6 +157,14 @@ export default function LandingPage() {
                         </Card>
                     ))}
                 </div>
+                <div className="mt-12 text-center">
+                    <Button size="lg" className="bg-gradient-to-r from-primary to-accent text-primary-foreground font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 animate-pulse" asChild>
+                        <Link href="/guia">
+                            ¿Cómo funciona?
+                            <ArrowRight className="ml-2 h-5 w-5" />
+                        </Link>
+                    </Button>
+                </div>
             </div>
         </section>
 
