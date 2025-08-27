@@ -137,9 +137,10 @@ export default function LandingPage() {
             </div>
         </section>
 
-        <div className="container">
-            {/* Features Section */}
-            <section id="features" className="py-12 md:py-24">
+        
+        {/* Features Section */}
+        <section id="features" className="py-12 md:py-24">
+            <div className="container">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">Todo lo que necesitas, en un solo lugar</h2>
                     <p className="mt-4 mx-auto text-muted-foreground font-body">
@@ -165,10 +166,12 @@ export default function LandingPage() {
                         </Link>
                     </Button>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            {/* Testimonials Section */}
-            <section className="py-12 md:py-24">
+        {/* Testimonials Section */}
+        <section className="py-12 md:py-24">
+             <div className="container">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">Impulsando el éxito de restaurantes como el tuyo</h2>
                 </div>
@@ -196,10 +199,12 @@ export default function LandingPage() {
                         </CardContent>
                     </Card>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            {/* Contact Section */}
-            <section id="contact" className="py-12 md:py-24">
+        {/* Contact Section */}
+        <section id="contact" className="py-12 md:py-24">
+             <div className="container">
                 <div className="text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold">¿Tienes Preguntas?</h2>
                     <p className="mt-4 mx-auto text-muted-foreground font-body">
@@ -230,8 +235,9 @@ export default function LandingPage() {
                         </form>
                     </CardContent>
                 </Card>
-            </section>
-        </div>
+            </div>
+        </section>
+        
 
 
         {/* CTA Section */}
