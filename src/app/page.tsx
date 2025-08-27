@@ -89,7 +89,7 @@ export default function LandingPage() {
                 </p>
                 <div className="mt-8 flex gap-4">
                     <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold" asChild>
-                        <Link href="/register">
+                        <Link href="/planes">
                             Comienza a Crecer (Prueba 30 días)
                             <ArrowRight className="ml-2 h-5 w-5" />
                         </Link>
@@ -163,7 +163,7 @@ export default function LandingPage() {
                 </p>
                 <div className="mt-8">
                     <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold" asChild>
-                       <Link href="/register">
+                       <Link href="/planes">
                             Obtener Acceso Anticipado (Prueba 30 días)
                             <ArrowRight className="ml-2 h-5 w-5" />
                         </Link>
