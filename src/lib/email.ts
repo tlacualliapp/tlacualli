@@ -19,12 +19,12 @@ interface CustomEmailProps {
 
 const getTransporter = () => {
     return nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: Number(process.env.EMAIL_PORT),
+      host: process.env.NEXT_PUBLIC_EMAIL_HOST,
+      port: Number(process.env.NEXT_PUBLIC_EMAIL_PORT),
       secure: true, // Use true for port 465, false for others
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.NEXT_PUBLIC_EMAIL_USER,
+        pass: process.env.NEXT_PUBLIC_EMAIL_PASS,
       },
     });
 }
@@ -58,7 +58,7 @@ export const sendWelcomeEmail = async ({ to, name, username, password }: Welcome
 
     try {
         await transporter.sendMail({
-            from: `"Tlacualli App" <${process.env.EMAIL_USER}>`,
+            from: `"Tlacualli App" <${process.env.NEXT_PUBLIC_EMAIL_USER}>`,
             to,
             subject,
             html,
@@ -75,7 +75,7 @@ export const sendCustomEmail = async ({ to, subject, html }: CustomEmailProps) =
     const transporter = getTransporter();
     try {
         await transporter.sendMail({
-            from: `"Tlacualli App" <${process.env.EMAIL_USER}>`,
+            from: `"Tlacualli App" <${process.env.NEXT_PUBLIC_EMAIL_USER}>`,
             to,
             subject,
             html,
