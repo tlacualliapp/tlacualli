@@ -40,8 +40,6 @@ export default function SettingsPage() {
   const { t } = useTranslation();
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
-  const [restaurantId, setRestaurantId] = useState<string | null>(null);
-  const [userPlan, setUserPlan] = useState<string | null>(null);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [iva, setIva] = useState<number | string>('');
@@ -64,16 +62,16 @@ export default function SettingsPage() {
         setIsLoading(true);
         const userData = await getCurrentUserData();
         if (userData && userData.restauranteId && userData.plan) {
-          const id = userData.restauranteId;
-          const plan = userData.plan;
-          setRestaurantId(id);
-          setUserPlan(plan);
-
-          const collectionName = plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-          const restaurantRef = doc(db, collectionName, id);
+          const collectionName = userData.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+          const restaurantRef = doc(db, collectionName, userData.restauranteId);
           const restaurantSnap = await getDoc(restaurantRef);
+          
           if (restaurantSnap.exists()) {
-            const data = { id: restaurantSnap.id, ...restaurantSnap.data() } as Restaurant;
+            const data = { 
+                id: restaurantSnap.id, 
+                ...restaurantSnap.data(),
+                plan: userData.plan // Ensure plan is correctly set from user data
+            } as Restaurant;
             setRestaurant(data);
             setIva(data.iva || 16); // Default to 16 if not set
           }
@@ -91,8 +89,8 @@ export default function SettingsPage() {
               toast({ variant: 'destructive', title: t('Invalid File Type'), description: t('Please select an image file.') });
               return;
           }
-          if (file.size > 1024 * 1024) { // 1MB
-              toast({ variant: 'destructive', title: t('File too large'), description: t('Please select an image smaller than 1MB.') });
+          if (file.size > 2 * 1024 * 1024) { // 2MB limit
+              toast({ variant: 'destructive', title: t('File too large'), description: t('Please select an image smaller than 2MB.') });
               return;
           }
           if (fileType === 'logo') setLogoFile(file);
@@ -105,7 +103,7 @@ export default function SettingsPage() {
         toast({ variant: 'destructive', title: t('No file selected'), description: t('Please select a file to upload.') });
         return;
     }
-    if (!restaurantId || !userPlan) {
+    if (!restaurant?.id || !restaurant?.plan) {
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not find restaurant information.') });
         return;
     };
@@ -113,12 +111,12 @@ export default function SettingsPage() {
     setIsUploading(true);
     
     try {
+        const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
         const uploadPromises: Promise<void>[] = [];
         const updateData: { logoUrl?: string, iconUrl?: string } = {};
-        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
         if (logoFile) {
-            const logoRef = ref(storage, `${collectionName}/${restaurantId}/logos/${logoFile.name}`);
+            const logoRef = ref(storage, `${collectionName}/${restaurant.id}/logos/${logoFile.name}`);
             uploadPromises.push(
                 uploadBytes(logoRef, logoFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
                     updateData.logoUrl = url;
@@ -127,7 +125,7 @@ export default function SettingsPage() {
         }
 
         if (iconFile) {
-            const iconRef = ref(storage, `${collectionName}/${restaurantId}/icons/${iconFile.name}`);
+            const iconRef = ref(storage, `${collectionName}/${restaurant.id}/icons/${iconFile.name}`);
             uploadPromises.push(
                 uploadBytes(iconRef, iconFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
                     updateData.iconUrl = url;
@@ -138,7 +136,7 @@ export default function SettingsPage() {
         await Promise.all(uploadPromises);
 
         if (Object.keys(updateData).length > 0) {
-            const restaurantRef = doc(db, collectionName, restaurantId);
+            const restaurantRef = doc(db, collectionName, restaurant.id);
             await updateDoc(restaurantRef, updateData);
             setRestaurant(prev => prev ? { ...prev, ...updateData } : null);
         }
@@ -155,14 +153,14 @@ export default function SettingsPage() {
   };
 
   const handleSaveIva = async () => {
-    if (!restaurantId || !userPlan) {
+    if (!restaurant?.id || !restaurant?.plan) {
       toast({ variant: 'destructive', title: t('Error'), description: t('Could not find restaurant information.') });
       return;
     };
     setIsSavingIva(true);
     try {
-        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-        const restaurantRef = doc(db, collectionName, restaurantId);
+        const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const restaurantRef = doc(db, collectionName, restaurant.id);
         await updateDoc(restaurantRef, { iva: Number(iva) });
         toast({ title: t('IVA Updated'), description: t('The new IVA rate has been saved successfully.') });
     } catch (error) {
@@ -225,13 +223,13 @@ export default function SettingsPage() {
                     <AccordionContent>
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
-                                <Label htmlFor="logo">{t('Logo File (max 1MB)')}</Label>
+                                <Label htmlFor="logo">{t('Logo File (max 2MB)')}</Label>
                                 <Input id="logo" type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} />
                                 {logoFile && <p className="text-sm text-muted-foreground">{t('Selected')}: {logoFile.name}</p>}
                                 {restaurant.logoUrl && !logoFile && <img src={restaurant.logoUrl} alt="Current Logo" className="h-16 mt-2"/>}
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="icon">{t('Icon File (max 1MB)')}</Label>
+                                <Label htmlFor="icon">{t('Icon File (max 2MB)')}</Label>
                                 <Input id="icon" type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'icon')}/>
                                 {iconFile && <p className="text-sm text-muted-foreground">{t('Selected')}: {iconFile.name}</p>}
                                 {restaurant.iconUrl && !iconFile && <img src={restaurant.iconUrl} alt="Current Icon" className="h-16 mt-2"/>}
