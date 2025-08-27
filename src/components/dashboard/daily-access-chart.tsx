@@ -29,7 +29,7 @@ export function DailyAccessChart() {
   useEffect(() => {
     const q = query(
       collection(db, 'monitor'),
-      where('accion', '==', 'Inicio de sesión')
+      where('accion', '==', 'Inicio de sesion')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
