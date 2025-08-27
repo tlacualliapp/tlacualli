@@ -29,8 +29,7 @@ export function DailyAccessChart() {
   useEffect(() => {
     const q = query(
       collection(db, 'monitor'),
-      where('accion', '==', 'Inicio de sesión'),
-      orderBy('fecha', 'asc') // Order by date to process chronologically
+      where('accion', '==', 'Inicio de sesión')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
