@@ -12,7 +12,7 @@ import { FileText, Loader2, Calendar, Building, Mail, Phone, Hash, CreditCard, D
 import { useTranslation } from 'react-i18next';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { getCurrentUserData } from '@/lib/users';
 import { format } from 'date-fns';
 
@@ -31,6 +31,14 @@ interface Restaurant {
   fecharegistro: any; // Firestore Timestamp
 }
 
+interface Payment {
+    id: string;
+    paymentDate: Timestamp;
+    totalPaid: number;
+    status: string;
+    invoiceId?: string;
+}
+
 const planDetails = {
     demo: { name: 'Demo Gratuita', price: 0 },
     esencial: { name: 'Plan Esencial', price: 195 },
@@ -38,20 +46,14 @@ const planDetails = {
     ilimitado: { name: 'Plan Ilimitado', price: 595 }
 }
 
-// Dummy data for payment history
-const paymentHistory = [
-  { id: 'pay_1', date: '2024-07-01', amount: 295.00, status: 'Paid', invoiceId: 'INV-001' },
-  { id: 'pay_2', date: '2024-06-01', amount: 295.00, status: 'Paid', invoiceId: 'INV-002' },
-  { id: 'pay_3', date: '2024-05-01', amount: 295.00, status: 'Paid', invoiceId: 'INV-003' },
-];
-
-
 export default function BillingPage() {
   const { t } = useTranslation();
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPaymentsLoading, setIsPaymentsLoading] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -77,6 +79,36 @@ export default function BillingPage() {
     };
     fetchRestaurantData();
   }, [user]);
+
+  useEffect(() => {
+    if (!restaurant) return;
+
+    setIsPaymentsLoading(true);
+    const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    const paymentsQuery = query(collection(db, `${collectionName}/${restaurant.id}/payments`));
+    
+    const unsubscribe = onSnapshot(paymentsQuery, (snapshot) => {
+        const history: Payment[] = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            history.push({
+                id: doc.id,
+                paymentDate: data.paymentDate,
+                totalPaid: data.totalPaid,
+                status: data.status || 'Paid',
+                invoiceId: data.invoiceId || `INV-${doc.id.substring(0,5)}`
+            });
+        });
+        setPaymentHistory(history);
+        setIsPaymentsLoading(false);
+    }, (error) => {
+        console.error("Error fetching payment history:", error);
+        toast({ variant: 'destructive', title: t('Error'), description: t('Could not load payment history.') });
+        setIsPaymentsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [restaurant, t]);
 
   if (loading || isLoading) {
     return (
@@ -171,19 +203,33 @@ export default function BillingPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {paymentHistory.map(payment => (
-                                <TableRow key={payment.id}>
-                                    <TableCell>{payment.date}</TableCell>
-                                    <TableCell>${payment.amount.toFixed(2)}</TableCell>
-                                    <TableCell><Badge variant="secondary" className="bg-green-100 text-green-700">{t(payment.status)}</Badge></TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="outline" size="sm">
-                                            <Download className="mr-2 h-3 w-3" />
-                                            {payment.invoiceId}
-                                        </Button>
+                            {isPaymentsLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center">
+                                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            ) : paymentHistory.length > 0 ? (
+                                paymentHistory.map(payment => (
+                                    <TableRow key={payment.id}>
+                                        <TableCell>{payment.paymentDate ? format(payment.paymentDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                                        <TableCell>${payment.totalPaid.toFixed(2)}</TableCell>
+                                        <TableCell><Badge variant="secondary" className="bg-green-100 text-green-700">{t(payment.status)}</Badge></TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="outline" size="sm">
+                                                <Download className="mr-2 h-3 w-3" />
+                                                {payment.invoiceId}
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                        {t('No payment history found.')}
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -211,3 +257,5 @@ export default function BillingPage() {
     </AdminLayout>
   );
 }
+
+    
