@@ -14,6 +14,9 @@ import { auth, db } from '@/lib/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
+import { differenceInDays } from 'date-fns';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -24,6 +27,10 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+  const [demoModalContent, setDemoModalContent] = useState({ title: '', description: '', isTrialEnded: false });
+
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedEmail');
@@ -80,6 +87,31 @@ export default function LoginPage() {
             if (restaurantData.status !== "1") {
                  throw new Error(t("The restaurant this user belongs to is not active."));
             }
+
+            if (userPlan === 'demo') {
+                const registrationDate = restaurantData.fecharegistro?.toDate();
+                if(registrationDate) {
+                    const daysElapsed = differenceInDays(new Date(), registrationDate);
+                    if (daysElapsed > 15) {
+                        setDemoModalContent({
+                            title: t('Free Trial Ended'),
+                            description: t('Your 15-day free trial has expired. Please choose a plan to continue using Tlacualli.'),
+                            isTrialEnded: true,
+                        });
+                    } else {
+                        const daysLeft = 15 - daysElapsed;
+                        setDemoModalContent({
+                            title: t('Welcome to your Demo!'),
+                            description: t('You have {{count}} days left in your free trial. Enjoy!', { count: daysLeft }),
+                            isTrialEnded: false,
+                        });
+                    }
+                    setIsDemoModalOpen(true);
+                    return; // Stop execution here, let the modal handle redirection
+                }
+            }
+
+
         } else {
             throw new Error(t("The associated restaurant could not be found."));
         }
@@ -170,8 +202,45 @@ export default function LoginPage() {
     }
   };
 
+  const handleModalAction = () => {
+    setIsDemoModalOpen(false);
+    if (demoModalContent.isTrialEnded) {
+        router.push('/planes');
+    } else {
+        // Find the profile and redirect
+        const user = auth.currentUser;
+        if(user) {
+            getDocs(query(collection(db, "usuarios"), where("uid", "==", user.uid))).then(snap => {
+                if(!snap.empty) {
+                    const userData = snap.docs[0].data();
+                     if (userData.perfil === '1') {
+                        router.push('/dashboard-admin');
+                    } else {
+                        // Add other profiles if needed, or a default
+                        router.push('/login'); 
+                    }
+                }
+            });
+        }
+    }
+  };
+
 
   return (
+    <>
+    <Dialog open={isDemoModalOpen} onOpenChange={setIsDemoModalOpen}>
+        <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+            <DialogHeader>
+            <DialogTitle>{demoModalContent.title}</DialogTitle>
+            <DialogDescription>{demoModalContent.description}</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+            <Button onClick={handleModalAction}>
+                {demoModalContent.isTrialEnded ? t('View Plans') : t('Continue to Dashboard')}
+            </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
     <div 
       className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
       style={{ backgroundImage: "url('/assets/background.png')" }}
@@ -237,5 +306,6 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
