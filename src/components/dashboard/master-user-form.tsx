@@ -11,6 +11,8 @@ import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
+import { Checkbox } from '../ui/checkbox';
+import Link from 'next/link';
 
 interface MasterUser {
   id?: string;
@@ -30,6 +32,13 @@ export function MasterUserForm({ onSuccess, userToEdit }: MasterUserFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const isEditMode = !!userToEdit;
     const { t } = useTranslation();
+    const [termsAccepted, setTermsAccepted] = useState(false);
+
+    useEffect(() => {
+        if(isEditMode) {
+            setTermsAccepted(true);
+        }
+    }, [isEditMode]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -129,8 +138,18 @@ export function MasterUserForm({ onSuccess, userToEdit }: MasterUserFormProps) {
               <Input id="email" name="email" type="email" defaultValue={userToEdit?.email} placeholder={t("e.g., user@email.com")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required disabled={isEditMode} />
             </div>
         </div>
+
+        {!isEditMode && (
+            <div className="flex items-center space-x-2 pt-2">
+                <Checkbox id="terms-master" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(!!checked)} required />
+                <Label htmlFor="terms-master" className="text-sm font-normal">
+                    {t('I accept the')} <Link href="/terminos-condiciones" target="_blank" className="underline hover:text-primary">{t('Terms and Conditions')}</Link> {t('and the')} <Link href="/aviso-privacidad" target="_blank" className="underline hover:text-primary">{t('Privacy Policy')}</Link>.
+                </Label>
+            </div>
+        )}
+
         <div className="flex justify-end pt-2">
-            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4" disabled={isLoading}>
+            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4" disabled={isLoading || !termsAccepted}>
                 {isLoading ? <Loader2 className="animate-spin" /> : isEditMode ? t('Save Changes') : t('Register Master User')}
             </Button>
         </div>

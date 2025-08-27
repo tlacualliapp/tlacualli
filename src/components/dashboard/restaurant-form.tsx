@@ -13,6 +13,8 @@ import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
+import { Checkbox } from '../ui/checkbox';
+import Link from 'next/link';
 
 interface Restaurant {
   id: string;
@@ -48,6 +50,7 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
     const formRef = useRef<HTMLFormElement>(null);
     const isEditMode = !!restaurantToEdit;
     const { t } = useTranslation();
+    const [termsAccepted, setTermsAccepted] = useState(false);
     
     const [formData, setFormData] = useState({
         restaurantName: '', socialReason: '', style: '', address: '',
@@ -67,6 +70,7 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
                 email: restaurantToEdit.email || '',
                 rfc: restaurantToEdit.rfc || '',
             });
+            setTermsAccepted(true); // For edit mode, assume they already accepted.
         }
     }, [restaurantToEdit, isEditMode]);
 
@@ -85,6 +89,7 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
             restaurantName: '', socialReason: '', style: '', address: '',
             municipality: '', state: '', phone: '', email: '', rfc: '',
         });
+        setTermsAccepted(false);
     }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -228,9 +233,18 @@ export function RestaurantForm({ onSuccess, restaurantToEdit }: RestaurantFormPr
                 <Label htmlFor="rfc" className="text-gray-700">{t('RFC')}</Label>
                 <Input id="rfc" name="rfc" value={formData.rfc} onChange={handleInputChange} placeholder={t("e.g., SOLT850101XXX")} className="bg-white/50 border-gray-300 placeholder:text-gray-500" required />
             </div>
+
+            {!isEditMode && (
+                <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(!!checked)} />
+                    <Label htmlFor="terms" className="text-sm font-normal">
+                        {t('I accept the')} <Link href="/terminos-condiciones" target="_blank" className="underline hover:text-primary">{t('Terms and Conditions')}</Link> {t('and the')} <Link href="/aviso-privacidad" target="_blank" className="underline hover:text-primary">{t('Privacy Policy')}</Link>.
+                    </Label>
+                </div>
+            )}
             
             <div className="flex justify-end pt-2">
-              <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4" disabled={isLoading}>
+              <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4" disabled={isLoading || !termsAccepted}>
                  {isLoading ? (
                     <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
