@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import QRCode from 'qrcode';
 import Image from 'next/image';
 import { InvoiceIcon } from '@/components/icons/invoice';
+import { HelpCircle } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
@@ -73,6 +74,7 @@ export default function AdminDashboard() {
     { href: `/menu-read?restaurantId=${restaurantId}`, icon: BookOpen, label: 'Menu Clientes', color: 'bg-pink-500' },
     { href: '/dashboard-admin/billing', icon: InvoiceIcon, label: 'Billing', color: 'bg-indigo-500' },
     { href: '/dashboard-admin/settings', icon: Settings, label: 'Settings', color: 'bg-slate-600' },
+    { href: '/guia', icon: HelpCircle, label: 'Guía', color: 'bg-blue-500' }
   ];
   
   const handleGenerateQR = async () => {
@@ -200,3 +202,5 @@ export default function AdminDashboard() {
     </AdminLayout>
   );
 }
+
+    
