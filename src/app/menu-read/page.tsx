@@ -32,6 +32,8 @@ function MenuDisplay() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [restaurantName, setRestaurantName] = useState<string>('');
+  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [iconUrl, setIconUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,11 +44,14 @@ function MenuDisplay() {
       return;
     }
 
-    // Fetch restaurant name
+    // Fetch restaurant name, logo, and icon
     const restaurantRef = doc(db, 'restaurantes', restaurantId);
     getDoc(restaurantRef).then(docSnap => {
         if(docSnap.exists()) {
-            setRestaurantName(docSnap.data().restaurantName || 'Menú');
+            const data = docSnap.data();
+            setRestaurantName(data.restaurantName || 'Menú');
+            setLogoUrl(data.logoUrl || '');
+            setIconUrl(data.iconUrl || '');
         } else {
             setError("Restaurante no encontrado.");
         }
@@ -88,8 +93,20 @@ function MenuDisplay() {
 
   return (
     <div className="bg-card/80 backdrop-blur-lg rounded-3xl shadow-lg h-full overflow-hidden flex flex-col text-card-foreground">
-        <div className="p-4 border-b border-white/10">
-            <h1 className="text-2xl font-bold text-center font-headline">{restaurantName}</h1>
+        <div className="p-4 border-b border-white/10 text-center">
+            {(logoUrl || iconUrl) && (
+              <div className="mb-4 flex justify-center">
+                <Image 
+                  src={logoUrl || iconUrl} 
+                  alt={`${restaurantName} logo`} 
+                  width={120} 
+                  height={120} 
+                  className="max-h-24 w-auto object-contain"
+                  data-ai-hint="logo restaurant"
+                />
+              </div>
+            )}
+            <h1 className="text-2xl font-bold font-headline">{restaurantName}</h1>
         </div>
       {categories.length > 0 ? (
         <Tabs defaultValue={categories[0].id} className="flex-grow flex flex-col font-body">
