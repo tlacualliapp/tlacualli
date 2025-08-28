@@ -23,15 +23,15 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <I18nProvider>
-            <ThemeProvider
-                attribute="class"
-                defaultTheme="light"
-                enableSystem
-                disableTransitionOnChange
-            >
-            {children}
-            <Toaster />
-            </ThemeProvider>
+          <ThemeProvider
+              attribute="class"
+              defaultTheme="light"
+              enableSystem
+              disableTransitionOnChange
+          >
+          {children}
+          <Toaster />
+          </ThemeProvider>
         </I18nProvider>
       </body>
     </html>
