@@ -67,9 +67,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
 
-  const changeLanguage = async (lng: string) => {
-    await i18n.changeLanguage(lng);
-    router.refresh();
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
   };
 
   const handlePasswordChange = async () => {
