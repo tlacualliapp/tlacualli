@@ -99,30 +99,50 @@ export default function SettingsPage() {
   };
 
   const handleImageUpload = async () => {
+    console.log('[DEBUG] handleImageUpload started.');
+    toast({ title: '[DEBUG] 1. Upload Started', description: 'handleImageUpload function called.' });
+
     if (!logoFile && !iconFile) {
+        console.error('[DEBUG] No file selected for upload.');
         toast({ variant: 'destructive', title: t('No file selected'), description: t('Please select a file to upload.') });
         return;
     }
+    console.log('[DEBUG] File selected:', { logoFile: logoFile?.name, iconFile: iconFile?.name });
+    toast({ title: '[DEBUG] 2. File checked', description: 'A file has been selected.' });
+
     if (!restaurant?.id || !restaurant.plan) {
+        console.error('[DEBUG] Restaurant information is missing.', { restaurant });
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not find restaurant information.') });
         return;
     };
+    console.log('[DEBUG] Restaurant info available:', { id: restaurant.id, plan: restaurant.plan });
+    toast({ title: '[DEBUG] 3. Restaurant info checked', description: 'Restaurant data is available.' });
 
     setIsUploading(true);
+    console.log('[DEBUG] isUploading state set to true.');
     
     try {
-        // The Firestore collection depends on the plan (demo or prod)
         const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-        // The storage path is always 'restaurantes'
         const storagePath = `restaurantes/${restaurant.id}`;
+        console.log('[DEBUG] Determined paths:', { collectionName, storagePath });
+        toast({ title: '[DEBUG] 4. Paths Determined', description: `Collection: ${collectionName}, Storage: ${storagePath}`});
+
         
         const uploadPromises: Promise<void>[] = [];
         const updateData: { logoUrl?: string, iconUrl?: string } = {};
 
         if (logoFile) {
             const logoRef = ref(storage, `${storagePath}/logos/${logoFile.name}`);
+            console.log('[DEBUG] Creating logo upload promise.');
+            toast({ title: '[DEBUG] 5a. Logo Promise Created'});
             uploadPromises.push(
-                uploadBytes(logoRef, logoFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
+                uploadBytes(logoRef, logoFile).then(snapshot => {
+                  console.log('[DEBUG] Logo uploaded, getting URL.');
+                  toast({ title: '[DEBUG] 6a. Logo Uploaded' });
+                  return getDownloadURL(snapshot.ref)
+                }).then(url => {
+                    console.log('[DEBUG] Logo URL obtained:', url);
+                    toast({ title: '[DEBUG] 7a. Logo URL ready' });
                     updateData.logoUrl = url;
                 })
             );
@@ -130,28 +150,45 @@ export default function SettingsPage() {
 
         if (iconFile) {
             const iconRef = ref(storage, `${storagePath}/icons/${iconFile.name}`);
+            console.log('[DEBUG] Creating icon upload promise.');
+            toast({ title: '[DEBUG] 5b. Icon Promise Created'});
             uploadPromises.push(
-                uploadBytes(iconRef, iconFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
+                uploadBytes(iconRef, iconFile).then(snapshot => {
+                    console.log('[DEBUG] Icon uploaded, getting URL.');
+                    toast({ title: '[DEBUG] 6b. Icon Uploaded' });
+                    return getDownloadURL(snapshot.ref)
+                }).then(url => {
+                    console.log('[DEBUG] Icon URL obtained:', url);
+                    toast({ title: '[DEBUG] 7b. Icon URL ready' });
                     updateData.iconUrl = url;
                 })
             );
         }
 
+        console.log('[DEBUG] Awaiting all promises.');
+        toast({ title: '[DEBUG] 8. Awaiting Promises' });
         await Promise.all(uploadPromises);
+        console.log('[DEBUG] All promises resolved.');
+        toast({ title: '[DEBUG] 9. Promises Resolved' });
+
 
         if (Object.keys(updateData).length > 0) {
+            console.log('[DEBUG] Updating Firestore document with:', updateData);
+            toast({ title: '[DEBUG] 10. Updating Firestore'});
             const restaurantRef = doc(db, collectionName, restaurant.id);
             await updateDoc(restaurantRef, updateData);
             setRestaurant(prev => prev ? { ...prev, ...updateData } : null);
+            console.log('[DEBUG] Firestore document updated.');
         }
 
         toast({ title: t('Upload successful'), description: t('Your images have been updated.') });
         setLogoFile(null);
         setIconFile(null);
     } catch (error) {
-        console.error("Error uploading images:", error);
-        toast({ variant: 'destructive', title: t('Upload failed'), description: t('An error occurred while uploading your images.') });
+        console.error("[DEBUG] Error uploading images:", error);
+        toast({ variant: 'destructive', title: t('Upload failed'), description: `Error: ${(error as Error).message}` });
     } finally {
+        console.log('[DEBUG] Upload process finished, setting isUploading to false.');
         setIsUploading(false);
     }
   };
