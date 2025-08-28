@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -17,7 +17,8 @@ import {
   Loader2,
   Check,
   FileText,
-  Shield
+  Shield,
+  Building
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,7 +47,9 @@ import { TacoIcon } from '@/components/icons/logo';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { query, collection, where, getDocs, getDoc, doc } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -61,11 +64,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { setTheme } = useTheme();
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
+  const [user] = useAuthState(auth);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [restaurantName, setRestaurantName] = useState('');
 
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user) {
+        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          setUserName(`${userData.nombre || ''} ${userData.apellidos || ''}`);
+        }
+      }
+    };
+    fetchUserData();
+  }, [user]);
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -90,10 +110,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     setIsUpdatingPassword(true);
-    const user = auth.currentUser;
-    if (user) {
+    const currentUser = auth.currentUser;
+    if (currentUser) {
       try {
-        await updatePassword(user, newPassword);
+        await updatePassword(currentUser, newPassword);
         toast({
           title: t('Success'),
           description: t('Password updated successfully.'),
@@ -187,7 +207,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{t('My Account')}</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                <p className="font-semibold">{userName || t('My Account')}</p>
+                 {restaurantName && (
+                  <p className="text-xs text-muted-foreground font-normal flex items-center gap-1">
+                    <Building className="h-3 w-3"/>{restaurantName}
+                  </p>
+                )}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
                <DropdownMenuSub>
                 <DropdownMenuSubTrigger>

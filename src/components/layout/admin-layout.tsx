@@ -28,7 +28,8 @@ import {
   ShieldAlert,
   FileText,
   Shield,
-  HelpCircle
+  HelpCircle,
+  Building
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -95,6 +96,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [dashboardUrl, setDashboardUrl] = useState('/login');
   const [isTrialExpired, setIsTrialExpired] = useState(false);
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
+  const [userName, setUserName] = useState('');
+  const [restaurantName, setRestaurantName] = useState('');
 
    useEffect(() => {
     const fetchPermissionsAndTrialStatus = async () => {
@@ -118,6 +121,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           const userSnap = await getDoc(userDocRef);
           if (userSnap.exists()) {
             const userData = userSnap.data();
+            setUserName(`${userData.nombre || ''} ${userData.apellidos || ''}`);
             const profile = userData.perfil;
             const userPlan = userData.plan;
             const restaurantId = userData.restauranteId;
@@ -142,17 +146,21 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               setDashboardUrl('/login');
             }
 
-            // --- Trial Status Check ---
-            if (userPlan === 'demo' && restaurantId) {
-                const restaurantRef = doc(db, 'restaurantes_demo', restaurantId);
+            // --- Fetch restaurant name & Trial Status Check ---
+            if (restaurantId) {
+                const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+                const restaurantRef = doc(db, collectionName, restaurantId);
                 const restaurantSnap = await getDoc(restaurantRef);
                 if (restaurantSnap.exists()) {
                     const restaurantData = restaurantSnap.data();
-                    const registrationDate = restaurantData.fecharegistro?.toDate();
-                    if (registrationDate) {
-                        const daysElapsed = differenceInDays(new Date(), registrationDate);
-                        if (daysElapsed > 15) {
-                            setIsTrialExpired(true);
+                    setRestaurantName(restaurantData.restaurantName);
+                    if (userPlan === 'demo') {
+                        const registrationDate = restaurantData.fecharegistro?.toDate();
+                        if (registrationDate) {
+                            const daysElapsed = differenceInDays(new Date(), registrationDate);
+                            if (daysElapsed > 15) {
+                                setIsTrialExpired(true);
+                            }
                         }
                     }
                 }
@@ -298,7 +306,14 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{t('My Account')}</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                <p className="font-semibold">{userName || t('My Account')}</p>
+                 {restaurantName && (
+                  <p className="text-xs text-muted-foreground font-normal flex items-center gap-1">
+                    <Building className="h-3 w-3"/>{restaurantName}
+                  </p>
+                )}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
