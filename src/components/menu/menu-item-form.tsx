@@ -84,7 +84,6 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newResponsibleName, setNewResponsibleName] = useState('');
   const [isComboboxOpen, setIsComboboxOpen] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const isEditMode = !!menuItemToEdit;
 
   const [formData, setFormData] = useState(
@@ -156,22 +155,6 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-        if (!file.type.startsWith('image/')) {
-            toast({ variant: 'destructive', title: t('Invalid File Type'), description: t('Please select an image file.') });
-            return;
-        }
-        if (file.size > 1024 * 1024) { // 1MB
-            toast({ variant: 'destructive', title: t('File too large'), description: t('Please select an image smaller than 1MB.') });
-            return;
-        }
-        setImageFile(file);
-    }
-  };
-
-
   const handleInventoryItemSelect = (value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -220,19 +203,10 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     setIsLoading(true);
 
     try {
-      let imageUrl = formData.imageUrl || '';
-      
-      if (imageFile) {
-        const imageRef = ref(storage, `restaurantes/${restaurantId}/menuItems/${Date.now()}_${imageFile.name}`);
-        const snapshot = await uploadBytes(imageRef, imageFile);
-        imageUrl = await getDownloadURL(snapshot.ref);
-      }
-      
       const menuItemData = {
         ...formData,
         price: Number(formData.price) || 0,
         preparationTime: Number(formData.preparationTime) || 0,
-        imageUrl,
         updatedAt: serverTimestamp(),
       };
 
@@ -287,7 +261,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
-                  <CommandInput placeholder={t('Search item...')} />
+                  <CommandInput placeholder={t('Search item...')}/>
                   <CommandEmpty>{t('No item found.')}</CommandEmpty>
                   <CommandList>
                     <CommandGroup>
@@ -368,12 +342,6 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
             </div>
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="imageFile">{t('Image (Optional)')}</Label>
-          <Input id="imageFile" name="imageFile" type="file" onChange={handleFileChange} accept="image/*" className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
-          {imageFile && <p className="text-sm text-muted-foreground">{t('Selected')}: {imageFile.name}</p>}
-        </div>
-        
         <div className="flex justify-end pt-2">
           <Button type="submit" disabled={isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -427,3 +395,4 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       </Dialog>
     </>
   );
+}

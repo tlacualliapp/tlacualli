@@ -89,8 +89,8 @@ export default function SettingsPage() {
               toast({ variant: 'destructive', title: t('Invalid File Type'), description: t('Please select an image file.') });
               return;
           }
-          if (file.size > 2 * 1024 * 1024) { // 2MB limit
-              toast({ variant: 'destructive', title: t('File too large'), description: t('Please select an image smaller than 2MB.') });
+          if (file.size > 1 * 1024 * 1024) { // 1MB limit
+              toast({ variant: 'destructive', title: t('File too large'), description: t('Please select an image smaller than 1MB.') });
               return;
           }
           if (fileType === 'logo') setLogoFile(file);
@@ -99,96 +99,67 @@ export default function SettingsPage() {
   };
 
   const handleImageUpload = async () => {
-    console.log('[DEBUG] handleImageUpload started.');
-    toast({ title: '[DEBUG] 1. Upload Started', description: 'handleImageUpload function called.' });
-
     if (!logoFile && !iconFile) {
-        console.error('[DEBUG] No file selected for upload.');
         toast({ variant: 'destructive', title: t('No file selected'), description: t('Please select a file to upload.') });
         return;
     }
-    console.log('[DEBUG] File selected:', { logoFile: logoFile?.name, iconFile: iconFile?.name });
-    toast({ title: '[DEBUG] 2. File checked', description: 'A file has been selected.' });
 
     if (!restaurant?.id || !restaurant.plan) {
-        console.error('[DEBUG] Restaurant information is missing.', { restaurant });
         toast({ variant: 'destructive', title: t('Error'), description: t('Could not find restaurant information.') });
         return;
     };
-    console.log('[DEBUG] Restaurant info available:', { id: restaurant.id, plan: restaurant.plan });
-    toast({ title: '[DEBUG] 3. Restaurant info checked', description: 'Restaurant data is available.' });
 
     setIsUploading(true);
-    console.log('[DEBUG] isUploading state set to true.');
     
     try {
         const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
         const storagePath = `restaurantes/${restaurant.id}`;
-        console.log('[DEBUG] Determined paths:', { collectionName, storagePath });
-        toast({ title: '[DEBUG] 4. Paths Determined', description: `Collection: ${collectionName}, Storage: ${storagePath}`});
-
         
-        const uploadPromises: Promise<void>[] = [];
-        const updateData: { logoUrl?: string, iconUrl?: string } = {};
+        const uploadPromises: Promise<{type: 'logo' | 'icon', url: string}>[] = [];
 
         if (logoFile) {
             const logoRef = ref(storage, `${storagePath}/logos/${logoFile.name}`);
-            console.log('[DEBUG] Creating logo upload promise.');
-            toast({ title: '[DEBUG] 5a. Logo Promise Created'});
             uploadPromises.push(
-                uploadBytes(logoRef, logoFile).then(snapshot => {
-                  console.log('[DEBUG] Logo uploaded, getting URL.');
-                  toast({ title: '[DEBUG] 6a. Logo Uploaded' });
-                  return getDownloadURL(snapshot.ref)
-                }).then(url => {
-                    console.log('[DEBUG] Logo URL obtained:', url);
-                    toast({ title: '[DEBUG] 7a. Logo URL ready' });
-                    updateData.logoUrl = url;
-                })
+                uploadBytes(logoRef, logoFile)
+                    .then(snapshot => getDownloadURL(snapshot.ref))
+                    .then(url => ({ type: 'logo', url }))
             );
         }
 
         if (iconFile) {
             const iconRef = ref(storage, `${storagePath}/icons/${iconFile.name}`);
-            console.log('[DEBUG] Creating icon upload promise.');
-            toast({ title: '[DEBUG] 5b. Icon Promise Created'});
             uploadPromises.push(
-                uploadBytes(iconRef, iconFile).then(snapshot => {
-                    console.log('[DEBUG] Icon uploaded, getting URL.');
-                    toast({ title: '[DEBUG] 6b. Icon Uploaded' });
-                    return getDownloadURL(snapshot.ref)
-                }).then(url => {
-                    console.log('[DEBUG] Icon URL obtained:', url);
-                    toast({ title: '[DEBUG] 7b. Icon URL ready' });
-                    updateData.iconUrl = url;
-                })
+                uploadBytes(iconRef, iconFile)
+                    .then(snapshot => getDownloadURL(snapshot.ref))
+                    .then(url => ({ type: 'icon', url }))
             );
         }
 
-        console.log('[DEBUG] Awaiting all promises.');
-        toast({ title: '[DEBUG] 8. Awaiting Promises' });
-        await Promise.all(uploadPromises);
-        console.log('[DEBUG] All promises resolved.');
-        toast({ title: '[DEBUG] 9. Promises Resolved' });
+        const results = await Promise.all(uploadPromises);
+
+        const updateData: { logoUrl?: string, iconUrl?: string } = {};
+        results.forEach(result => {
+            if (result.type === 'logo') {
+                updateData.logoUrl = result.url;
+            } else if (result.type === 'icon') {
+                updateData.iconUrl = result.url;
+            }
+        });
 
 
         if (Object.keys(updateData).length > 0) {
-            console.log('[DEBUG] Updating Firestore document with:', updateData);
-            toast({ title: '[DEBUG] 10. Updating Firestore'});
             const restaurantRef = doc(db, collectionName, restaurant.id);
             await updateDoc(restaurantRef, updateData);
             setRestaurant(prev => prev ? { ...prev, ...updateData } : null);
-            console.log('[DEBUG] Firestore document updated.');
         }
 
         toast({ title: t('Upload successful'), description: t('Your images have been updated.') });
         setLogoFile(null);
         setIconFile(null);
     } catch (error) {
-        console.error("[DEBUG] Error uploading images:", error);
+        console.error("Error uploading images:", error);
         toast({ variant: 'destructive', title: t('Upload failed'), description: `Error: ${(error as Error).message}` });
     } finally {
-        console.log('[DEBUG] Upload process finished, setting isUploading to false.');
         setIsUploading(false);
     }
   };
@@ -264,13 +235,13 @@ export default function SettingsPage() {
                     <AccordionContent>
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
-                                <Label htmlFor="logo">{t('Logo File (max 2MB)')}</Label>
+                                <Label htmlFor="logo">{t('Logo File (max 1MB)')}</Label>
                                 <Input id="logo" type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} />
                                 {logoFile && <p className="text-sm text-muted-foreground">{t('Selected')}: {logoFile.name}</p>}
                                 {restaurant.logoUrl && !logoFile && <img src={restaurant.logoUrl} alt="Current Logo" className="h-16 mt-2"/>}
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="icon">{t('Icon File (max 2MB)')}</Label>
+                                <Label htmlFor="icon">{t('Icon File (max 1MB)')}</Label>
                                 <Input id="icon" type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'icon')}/>
                                 {iconFile && <p className="text-sm text-muted-foreground">{t('Selected')}: {iconFile.name}</p>}
                                 {restaurant.iconUrl && !iconFile && <img src={restaurant.iconUrl} alt="Current Icon" className="h-16 mt-2"/>}

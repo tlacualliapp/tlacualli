@@ -169,8 +169,9 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   }, [user, loading]);
 
 
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
+  const changeLanguage = async (lng: string) => {
+    await i18n.changeLanguage(lng);
+    router.refresh();
   };
 
   const handlePasswordChange = async () => {
