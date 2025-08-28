@@ -9,10 +9,11 @@
         .use(LanguageDetector)
         .use(initReactI18next)
         .init({
+          lng: 'es',
           supportedLngs: ['en', 'es'],
           fallbackLng: 'es',
-          debug: false, // Disabling debug mode for cleaner console
-          nonExplicitSupportedLngs: true, // Allows matching 'es-419' to 'es'
+          debug: false, 
+          nonExplicitSupportedLngs: true, 
           backend: {
             loadPath: '/locales/{{lng}}/translation.json',
           },
