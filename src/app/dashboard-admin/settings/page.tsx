@@ -111,12 +111,16 @@ export default function SettingsPage() {
     setIsUploading(true);
     
     try {
+        // The Firestore collection depends on the plan (demo or prod)
         const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        // The storage path is always 'restaurantes'
+        const storagePath = `restaurantes/${restaurant.id}`;
+        
         const uploadPromises: Promise<void>[] = [];
         const updateData: { logoUrl?: string, iconUrl?: string } = {};
 
         if (logoFile) {
-            const logoRef = ref(storage, `${collectionName}/${restaurant.id}/logos/${logoFile.name}`);
+            const logoRef = ref(storage, `${storagePath}/logos/${logoFile.name}`);
             uploadPromises.push(
                 uploadBytes(logoRef, logoFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
                     updateData.logoUrl = url;
@@ -125,7 +129,7 @@ export default function SettingsPage() {
         }
 
         if (iconFile) {
-            const iconRef = ref(storage, `${collectionName}/${restaurant.id}/icons/${iconFile.name}`);
+            const iconRef = ref(storage, `${storagePath}/icons/${iconFile.name}`);
             uploadPromises.push(
                 uploadBytes(iconRef, iconFile).then(snapshot => getDownloadURL(snapshot.ref)).then(url => {
                     updateData.iconUrl = url;
