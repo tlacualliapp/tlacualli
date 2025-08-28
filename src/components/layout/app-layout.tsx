@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LogOut,
   User,
@@ -57,6 +57,7 @@ const navItems = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { setTheme } = useTheme();
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -66,8 +67,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
 
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
+  const changeLanguage = async (lng: string) => {
+    await i18n.changeLanguage(lng);
+    router.refresh();
   };
 
   const handlePasswordChange = async () => {
