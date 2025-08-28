@@ -44,7 +44,7 @@ interface SubAccount {
   name: string;
 }
 
-interface Order {
+export interface Order {
   id: string;
   items: OrderItem[];
   subtotal: number;
@@ -64,11 +64,13 @@ interface RestaurantDetails {
     state: string;
     phone: string;
     logoUrl?: string;
+    iconUrl?: string;
     iva?: number;
 }
 
 interface OrderDetailsProps {
   restaurantId: string;
+  userPlan: string;
   orderId: string;
   tableName: string;
   onAddItems: (subAccountId: string) => void;
@@ -82,7 +84,7 @@ const statusInfo = {
 };
 
 
-export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onOrderClosed }: OrderDetailsProps) => {
+export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAddItems, onOrderClosed }: OrderDetailsProps) => {
   const [order, setOrder] = useState<Order | null>(null);
   const [restaurantDetails, setRestaurantDetails] = useState<RestaurantDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -117,7 +119,8 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     // Fetch IVA rate and restaurant details
     const fetchRestaurantData = async () => {
         try {
-            const restaurantRef = doc(db, 'restaurantes', restaurantId);
+            const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+            const restaurantRef = doc(db, collectionName, restaurantId);
             const restaurantSnap = await getDoc(restaurantRef);
             if(restaurantSnap.exists()) {
                 const data = restaurantSnap.data() as RestaurantDetails;
@@ -161,7 +164,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     });
 
     return () => unsubscribe();
-  }, [orderId, restaurantId, t]);
+  }, [orderId, restaurantId, userPlan, t]);
 
   // Effect to update paidAmount when order or IVA changes
   useEffect(() => {
@@ -374,6 +377,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
     if (!order || !restaurantDetails) return;
     const ivaAmount = order.subtotal * (ivaRate / 100);
     const totalAmount = order.subtotal + ivaAmount;
+    const logoUrl = restaurantDetails.logoUrl || restaurantDetails.iconUrl;
 
     const ticketHTML = `
       <html>
@@ -397,7 +401,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
         <body>
           <div class="ticket">
             <div class="header">
-              ${restaurantDetails.logoUrl ? `<img src="${restaurantDetails.logoUrl}" alt="Logo">` : ''}
+              ${logoUrl ? `<img src="${logoUrl}" alt="Logo">` : ''}
               <h2>${restaurantDetails.restaurantName}</h2>
               <p>${restaurantDetails.address || ''}, ${restaurantDetails.municipality || ''}, ${restaurantDetails.state || ''}</p>
               <p>${t('Phone')}: ${restaurantDetails.phone || ''}</p>
@@ -757,7 +761,7 @@ export const OrderDetails = ({ restaurantId, orderId, tableName, onAddItems, onO
               <span className="font-bold font-mono">${order.subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('IVA')} ({ivaRate}%)</span>
+              <span className="text-muted-foreground">${t('IVA')} ({ivaRate}%)</span>
               <span className="font-bold font-mono">${ivaAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold text-xl">
