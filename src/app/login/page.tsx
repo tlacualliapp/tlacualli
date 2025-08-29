@@ -12,10 +12,11 @@ import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { TacoIcon } from '@/components/icons/logo';
 import { auth, db } from '@/lib/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { differenceInDays } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import Link from 'next/link';
 
 
 export default function LoginPage() {
@@ -30,6 +31,9 @@ export default function LoginPage() {
 
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [demoModalContent, setDemoModalContent] = useState({ title: '', description: '', isTrialEnded: false, userProfile: '' });
+  
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [userForTermsCheck, setUserForTermsCheck] = useState<any>(null);
 
 
   useEffect(() => {
@@ -41,6 +45,47 @@ export default function LoginPage() {
     // Ensure user is logged out when visiting the login page
     signOut(auth);
   }, []);
+
+  const proceedToDashboard = async (userData: any) => {
+    const restaurantId = userData.restauranteId;
+    let restaurantName = 'N/A';
+     if (restaurantId) {
+        const collectionName = userData.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const restaurantRef = doc(db, collectionName, restaurantId);
+        const restaurantSnap = await getDoc(restaurantRef);
+        if (restaurantSnap.exists()) {
+            restaurantName = restaurantSnap.data().restaurantName || 'Desconocido';
+        }
+    }
+
+    // Log to Monitor
+    await addDoc(collection(db, "monitor"), {
+        accion: "Inicio de sesion",
+        usuarioNombre: `${userData.nombre} ${userData.apellidos}`,
+        usuarioPerfil: userData.perfil,
+        restauranteId: restaurantId || null,
+        restauranteNombre: restaurantName,
+        fecha: serverTimestamp(),
+    });
+    
+    toast({
+      title: t("Login Successful"),
+      description: t("Welcome back, {{name}}!", { name: userData.nombre }),
+    });
+
+    // Redirect based on profile
+    if (userData.perfil === 'AM') {
+      router.push('/dashboard-am');
+    } else if (userData.perfil === 1 || userData.perfil === '1') {
+      router.push('/dashboard-admin');
+    } else if (userData.perfil === 2 || userData.perfil === '2') {
+      router.push('/dashboard-collaborator');
+    } else if (userData.perfil === 3 || userData.perfil === '3') {
+      router.push('/dashboard-client');
+    } else {
+        throw new Error(t("Unrecognized user profile or invalid status."));
+    }
+  }
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -70,10 +115,10 @@ export default function LoginPage() {
         throw new Error(t("The user is not active or does not have permissions."));
       }
 
-      const userData = querySnapshot.docs[0].data();
+      const userDoc = querySnapshot.docs[0];
+      const userData = { id: userDoc.id, ...userDoc.data() };
       const restaurantId = userData.restauranteId;
       const userPlan = userData.plan;
-      let restaurantName = 'N/A';
       
       // 3. If user belongs to a restaurant, check restaurant status
       if (restaurantId) {
@@ -83,7 +128,6 @@ export default function LoginPage() {
 
         if (restaurantSnap.exists()) {
             const restaurantData = restaurantSnap.data();
-            restaurantName = restaurantData.restaurantName || 'Desconocido';
             if (restaurantData.status !== "1") {
                  throw new Error(t("The restaurant this user belongs to is not active."));
             }
@@ -108,6 +152,7 @@ export default function LoginPage() {
                             userProfile: userData.perfil,
                         });
                     }
+                    setIsLoading(false);
                     setIsDemoModalOpen(true);
                     return; // Stop execution here, let the modal handle redirection
                 }
@@ -118,35 +163,17 @@ export default function LoginPage() {
             throw new Error(t("The associated restaurant could not be found."));
         }
       }
-
-
-      // 4. Log to Monitor
-       await addDoc(collection(db, "monitor"), {
-            accion: "Inicio de sesion",
-            usuarioNombre: `${userData.nombre} ${userData.apellidos}`,
-            usuarioPerfil: userData.perfil,
-            restauranteId: restaurantId || null,
-            restauranteNombre: restaurantName,
-            fecha: serverTimestamp(),
-        });
       
-      toast({
-        title: t("Login Successful"),
-        description: t("Welcome back, {{name}}!", { name: userData.nombre }),
-      });
-
-      // 5. Redirect based on profile
-      if (userData.perfil === 'AM') {
-        router.push('/dashboard-am');
-      } else if (userData.perfil === 1 || userData.perfil === '1') {
-        router.push('/dashboard-admin');
-      } else if (userData.perfil === 2 || userData.perfil === '2') {
-        router.push('/dashboard-collaborator');
-      } else if (userData.perfil === 3 || userData.perfil === '3') {
-        router.push('/dashboard-client');
-      } else {
-         throw new Error(t("Unrecognized user profile or invalid status."));
+      // 4. Check if terms have been accepted
+      if (userData.aceptaTerminos !== true) {
+          setUserForTermsCheck(userData);
+          setIsTermsModalOpen(true);
+          setIsLoading(false);
+          return;
       }
+
+      // 5. Proceed to dashboard if terms are accepted
+      await proceedToDashboard(userData);
 
     } catch (error) {
       console.error("Error en el inicio de sesión:", error);
@@ -231,6 +258,34 @@ export default function LoginPage() {
     }
   };
 
+  const handleAcceptTerms = async () => {
+    if (!userForTermsCheck) return;
+    setIsLoading(true);
+    try {
+        const userRef = doc(db, "usuarios", userForTermsCheck.id);
+        await updateDoc(userRef, {
+            aceptaTerminos: true,
+            terminosAceptadosEn: serverTimestamp()
+        });
+        setIsTermsModalOpen(false);
+        await proceedToDashboard(userForTermsCheck);
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: t("Error"),
+            description: t("Could not save your preferences. Please try again."),
+        });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleDeclineTerms = () => {
+    signOut(auth);
+    setIsTermsModalOpen(false);
+    setUserForTermsCheck(null);
+  };
+
 
   return (
     <>
@@ -247,6 +302,30 @@ export default function LoginPage() {
             </DialogFooter>
         </DialogContent>
     </Dialog>
+
+    <Dialog open={isTermsModalOpen} onOpenChange={setIsTermsModalOpen}>
+        <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+            <DialogHeader>
+            <DialogTitle>{t('Accept Terms and Conditions')}</DialogTitle>
+            <DialogDescription>
+                {t('To continue, you must accept our updated terms and privacy policies.')}
+                <div className="mt-4 text-sm">
+                    <Link href="/terminos-condiciones" target="_blank" className="underline text-primary hover:text-primary/80">{t('Read Terms and Conditions')}</Link>
+                </div>
+                <div className="mt-2 text-sm">
+                    <Link href="/aviso-privacidad" target="_blank" className="underline text-primary hover:text-primary/80">{t('Read Privacy Policy')}</Link>
+                </div>
+            </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <Button variant="outline" onClick={handleDeclineTerms}>{t('Decline')}</Button>
+                <Button onClick={handleAcceptTerms} disabled={isLoading}>
+                    {isLoading ? <Loader2 className="animate-spin" /> : t('Accept and Continue')}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
     <div 
       className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
       style={{ backgroundImage: "url('/assets/background.png')" }}
@@ -308,7 +387,7 @@ export default function LoginPage() {
               {isLoading ? <Loader2 className="animate-spin" /> : t('LOG IN')}
             </Button>
           </form>
-          <p className="text-center text-xs text-gray-500 mt-6">www.tlacuallionline.com</p>
+          <p className="text-center text-xs text-gray-500 mt-6">www.tlacualli.app</p>
         </CardContent>
       </Card>
     </div>
