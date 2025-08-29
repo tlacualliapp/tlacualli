@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TacoIcon } from '@/components/icons/logo';
 import { ArrowRight, BarChart, ChefHat, ClipboardList, Package, Utensils, Map as MapIcon, Users, Mail, Loader2, HelpCircle } from 'lucide-react';
-import { useActionState, useEffect, useRef } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { sendContactEmail } from '@/app/actions/contact';
 import { useToast } from '@/hooks/use-toast';
@@ -72,6 +72,11 @@ export default function LandingPage() {
    const [state, dispatch] = useActionState(sendContactEmail, initialState);
    const { toast } = useToast();
    const formRef = useRef<HTMLFormElement>(null);
+   const [isClient, setIsClient] = useState(false);
+
+   useEffect(() => {
+    setIsClient(true);
+   }, []);
 
    useEffect(() => {
     if (state.message && !state.success) {
@@ -268,17 +273,17 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t">
-        <div className="container py-6 flex justify-between items-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} Tlacualli. {t('All rights reserved.')}</p>
-            <div className="flex items-center gap-4">
-                <Link href="/terminos-condiciones" className="hover:text-primary">{t('Terms of Service')}</Link>
-                <Link href="/aviso-privacidad" className="hover:text-primary">{t('Privacy Policy')}</Link>
+      {isClient && (
+        <footer className="border-t">
+            <div className="container py-6 flex justify-between items-center text-sm text-muted-foreground">
+                <p>&copy; {new Date().getFullYear()} Tlacualli. {t('All rights reserved.')}</p>
+                <div className="flex items-center gap-4">
+                    <Link href="/terminos-condiciones" className="hover:text-primary">{t('Terms of Service')}</Link>
+                    <Link href="/aviso-privacidad" className="hover:text-primary">{t('Privacy Policy')}</Link>
+                </div>
             </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }
-
-    
