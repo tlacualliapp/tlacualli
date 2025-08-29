@@ -116,7 +116,7 @@ export function SupplierForm({ restaurantId, userPlan, onSuccess, supplierToEdit
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone">{t('Phone')}</Label>
-          <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} required />
+          <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} />
         </div>
       </div>
 
