@@ -142,7 +142,8 @@ export function RestaurantForm({ onSuccess, restaurantToEdit, source = 'admin' }
                 status: "1",
                 fecharegistro: serverTimestamp(),
                 email,
-                telefono: phone
+                telefono: phone,
+                aceptaTerminos: true,
             };
 
             if (isDemo) {
@@ -158,10 +159,6 @@ export function RestaurantForm({ onSuccess, restaurantToEdit, source = 'admin' }
                 password: phone
             });
             
-            toast({
-              title: t("Registration Successful"),
-              description: t("The restaurant '{{name}}' and its administrator user have been registered.", {name: restaurantName}),
-            });
             resetForm();
           }
 
