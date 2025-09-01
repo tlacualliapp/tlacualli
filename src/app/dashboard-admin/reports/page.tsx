@@ -12,7 +12,7 @@ import { getCurrentUserData } from '@/lib/users';
 
 
 export default function ReportsPage() {
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,23 +27,29 @@ export default function ReportsPage() {
             setUserPlan(userData.plan);
         }
         setIsLoading(false);
-      } else if (!user && !isLoading) {
+      } else if (!loading) { // Check if not loading to avoid setting loading to false prematurely
         setIsLoading(false);
       }
     };
     fetchUserData();
-  }, [user, isLoading]);
+  }, [user, loading]);
 
-  return (
-    <AdminLayout>
-      {isLoading ? (
+  if (loading || isLoading) {
+    return (
+      <AdminLayout>
          <div className="flex justify-center items-center h-full">
             <Loader2 className="h-8 w-8 animate-spin" />
         </div>
-      ) : restaurantId && userPlan ? (
+      </AdminLayout>
+    )
+  }
+
+  return (
+    <AdminLayout>
+      {restaurantId && userPlan ? (
         <ReportsDashboard restaurantId={restaurantId} userPlan={userPlan} />
       ) : (
-        <p>{t('Restaurant not found.')}</p>
+        <p>{t('Restaurant not found or data could not be loaded.')}</p>
       )}
     </AdminLayout>
   );

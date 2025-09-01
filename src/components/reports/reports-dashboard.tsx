@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -119,6 +118,7 @@ type SortKeyDishPreparation = keyof DishPreparationTimeData;
 
 interface ReportsDashboardProps {
   restaurantId: string;
+  userPlan: string;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
@@ -144,7 +144,7 @@ const statusColors: { [key: string]: string } = {
 };
 
 
-export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
+export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardProps) {
   const { t } = useTranslation();
   const [dailySales, setDailySales] = useState(0);
   const [activeOrders, setActiveOrders] = useState(0);
@@ -183,15 +183,16 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
   const [consumptionSortConfig, setConsumptionSortConfig] = useState<{ key: SortKeyConsumption; direction: 'ascending' | 'descending' } | null>({ key: 'totalCost', direction: 'descending' });
   const [tableTurnaroundSortConfig, setTableTurnaroundSortConfig] = useState<{ key: SortKeyTableTurnaround; direction: 'ascending' | 'descending' } | null>({ key: 'averageTimeMinutes', direction: 'descending' });
 
+  const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
   // Real-time stats effect
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId || !collectionName) return;
 
     // Fetch IVA rate
     const fetchIvaRate = async () => {
         try {
-            const restaurantRef = doc(db, 'restaurantes', restaurantId);
+            const restaurantRef = doc(db, collectionName, restaurantId);
             const restaurantSnap = await getDoc(restaurantRef);
             if(restaurantSnap.exists() && restaurantSnap.data().iva) {
                 setIvaRate(restaurantSnap.data().iva);
@@ -207,7 +208,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     const todayTimestamp = Timestamp.fromDate(today);
 
     const ordersQuery = query(
-      collection(db, `restaurantes/${restaurantId}/orders`),
+      collection(db, `${collectionName}/${restaurantId}/orders`),
       where('createdAt', '>=', todayTimestamp)
     );
 
@@ -224,7 +225,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
           return categoriesCache.get(categoryId);
         }
         try {
-          const categoryRef = doc(db, `restaurantes/${restaurantId}/menuCategories`, categoryId);
+          const categoryRef = doc(db, `${collectionName}/${restaurantId}/menuCategories`, categoryId);
           const categorySnap = await getDoc(categoryRef);
           if (categorySnap.exists()) {
             const name = categorySnap.data().name;
@@ -266,11 +267,11 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     });
 
     return () => unsubscribe();
-  }, [restaurantId, t]);
+  }, [restaurantId, collectionName, t]);
 
   // Sales report effect
   useEffect(() => {
-    if (!restaurantId || !date?.from || activeTab !== 'sales') return;
+    if (!restaurantId || !date?.from || activeTab !== 'sales' || !collectionName) return;
 
     setIsSalesLoading(true);
     const startDate = new Date(date.from);
@@ -279,7 +280,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     endDate.setHours(23, 59, 59, 999);
 
     const salesQuery = query(
-      collection(db, `restaurantes/${restaurantId}/orders`),
+      collection(db, `${collectionName}/${restaurantId}/orders`),
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
       orderBy('createdAt', 'desc')
@@ -297,11 +298,11 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
     return () => unsubscribe();
 
-  }, [restaurantId, date, activeTab]);
+  }, [restaurantId, date, activeTab, collectionName]);
   
    // Profitability report effect
   useEffect(() => {
-    if (!restaurantId || !date?.from || activeTab !== 'profitability') return;
+    if (!restaurantId || !date?.from || activeTab !== 'profitability' || !collectionName) return;
 
     const calculateProfitability = async () => {
       setIsProfitabilityLoading(true);
@@ -312,8 +313,8 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       endDate.setHours(23, 59, 59, 999);
 
       // 1. Fetch all menu items and recipes
-      const menuItemsQuery = getDocs(collection(db, `restaurantes/${restaurantId}/menuItems`));
-      const recipesQuery = getDocs(collection(db, `restaurantes/${restaurantId}/recipes`));
+      const menuItemsQuery = getDocs(collection(db, `${collectionName}/${restaurantId}/menuItems`));
+      const recipesQuery = getDocs(collection(db, `${collectionName}/${restaurantId}/recipes`));
       const [menuItemsSnap, recipesSnap] = await Promise.all([menuItemsQuery, recipesQuery]);
 
       const menuItemsMap = new Map<string, MenuItem>(menuItemsSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as MenuItem]));
@@ -321,7 +322,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       
       // 2. Fetch all orders in range
       const ordersQuery = query(
-        collection(db, `restaurantes/${restaurantId}/orders`),
+        collection(db, `${collectionName}/${restaurantId}/orders`),
         where('createdAt', '>=', Timestamp.fromDate(startDate)),
         where('createdAt', '<=', Timestamp.fromDate(endDate))
       );
@@ -369,14 +370,14 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     };
 
     calculateProfitability();
-  }, [restaurantId, date, activeTab]);
+  }, [restaurantId, date, activeTab, collectionName]);
 
   // Valued inventory effect
   useEffect(() => {
-    if (!restaurantId || activeTab !== 'inventory-value') return;
+    if (!restaurantId || activeTab !== 'inventory-value' || !collectionName) return;
 
     setIsInventoryLoading(true);
-    const itemsQuery = query(collection(db, `restaurantes/${restaurantId}/inventoryItems`));
+    const itemsQuery = query(collection(db, `${collectionName}/${restaurantId}/inventoryItems`));
 
     const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
       const inventoryData = snapshot.docs.map(doc => {
@@ -398,11 +399,11 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
     });
 
     return () => unsubscribe();
-  }, [restaurantId, activeTab]);
+  }, [restaurantId, activeTab, collectionName]);
 
   // Consumption report effect
   useEffect(() => {
-    if (!restaurantId || !date?.from || activeTab !== 'consumption') return;
+    if (!restaurantId || !date?.from || activeTab !== 'consumption' || !collectionName) return;
 
     const calculateConsumption = async () => {
       setIsConsumptionLoading(true);
@@ -413,9 +414,9 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
       endDate.setHours(23, 59, 59, 999);
 
       // 1. Fetch all needed data
-      const menuItemsQuery = getDocs(collection(db, `restaurantes/${restaurantId}/menuItems`));
-      const recipesQuery = getDocs(collection(db, `restaurantes/${restaurantId}/recipes`));
-      const inventoryQuery = getDocs(collection(db, `restaurantes/${restaurantId}/inventoryItems`));
+      const menuItemsQuery = getDocs(collection(db, `${collectionName}/${restaurantId}/menuItems`));
+      const recipesQuery = getDocs(collection(db, `${collectionName}/${restaurantId}/recipes`));
+      const inventoryQuery = getDocs(collection(db, `${collectionName}/${restaurantId}/inventoryItems`));
       const [menuItemsSnap, recipesSnap, inventorySnap] = await Promise.all([menuItemsQuery, recipesQuery, inventoryQuery]);
 
       const menuItemsMap = new Map<string, MenuItem>(menuItemsSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as MenuItem]));
@@ -424,7 +425,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
       // 2. Fetch orders in range
       const ordersQuery = query(
-        collection(db, `restaurantes/${restaurantId}/orders`),
+        collection(db, `${collectionName}/${restaurantId}/orders`),
         where('createdAt', '>=', Timestamp.fromDate(startDate)),
         where('createdAt', '<=', Timestamp.fromDate(endDate))
       );
@@ -477,11 +478,11 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
 
     calculateConsumption();
 
-  }, [restaurantId, date, activeTab, t]);
+  }, [restaurantId, date, activeTab, t, collectionName]);
 
     // Performance Analytics effect for Operational Analytics Card
   useEffect(() => {
-    if (!restaurantId || !date?.from) return;
+    if (!restaurantId || !date?.from || !collectionName) return;
 
     const calculatePerformance = async () => {
         setIsPerformanceLoading(true);
@@ -492,7 +493,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         endDate.setHours(23, 59, 59, 999);
         
         const ordersQuery = query(
-            collection(db, `restaurantes/${restaurantId}/orders`),
+            collection(db, `${collectionName}/${restaurantId}/orders`),
             where('createdAt', '>=', Timestamp.fromDate(startDate)),
             where('createdAt', '<=', Timestamp.fromDate(endDate))
         );
@@ -500,7 +501,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         const orders = ordersSnap.docs.map(d => ({id: d.id, ...d.data()}) as Order);
         
         const paymentsQuery = getDocs(query(
-            collection(db, `restaurantes/${restaurantId}/payments`),
+            collection(db, `${collectionName}/${restaurantId}/payments`),
             where('paymentDate', '>=', Timestamp.fromDate(startDate)),
             where('paymentDate', '<=', Timestamp.fromDate(endDate))
         ));
@@ -569,7 +570,7 @@ export function ReportsDashboard({ restaurantId }: ReportsDashboardProps) {
         setIsPerformanceLoading(false);
     };
     calculatePerformance();
-  }, [restaurantId, date, t]);
+  }, [restaurantId, date, t, collectionName]);
 
 
  const requestSortProfitability = (key: SortKeyProfitability) => {
