@@ -94,7 +94,7 @@ export default function MenuPage() {
         </Dialog>
 
         {/* AI Recipe Suggester Card */}
-        <Card className="hover:shadow-lg transition-shadow bg-accent/10 border-accent">
+        <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Wand2 className="text-accent"/>{t('AI Inspiration')}</CardTitle>
                 <CardDescription>{t('Generate recipe ideas based on your inventory.')}</CardDescription>
