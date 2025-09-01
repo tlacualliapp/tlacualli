@@ -155,15 +155,6 @@ function MenuDisplay() {
                                     <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
                                     <p className="font-semibold mt-2">${item.price.toFixed(2)} MXN</p>
                                 </div>
-                                <div className="w-24 h-24 flex-shrink-0 relative rounded-lg overflow-hidden">
-                                     {item.imageUrl ? (
-                                        <Image src={item.imageUrl} alt={item.name} layout="fill" objectFit="cover" data-ai-hint="dish photo"/>
-                                     ) : (
-                                        <div className="w-full h-full bg-muted flex items-center justify-center">
-                                            <ImageOff className="h-6 w-6 text-muted-foreground"/>
-                                        </div>
-                                     )}
-                                </div>
                             </CardContent>
                         </Card>
                     ))}
