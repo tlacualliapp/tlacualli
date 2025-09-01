@@ -89,7 +89,7 @@ export default function BillingPage() {
 
     setIsPaymentsLoading(true);
     const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-    const paymentsQuery = query(collection(db, `${collectionName}/${restaurant.id}/payments`));
+    const paymentsQuery = query(collection(db, `${collectionName}/${restaurant.id}/billing`));
     
     const unsubscribe = onSnapshot(paymentsQuery, (snapshot) => {
         const history: Payment[] = [];

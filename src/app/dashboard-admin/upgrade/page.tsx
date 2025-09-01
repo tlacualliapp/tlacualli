@@ -100,7 +100,7 @@ export default function UpgradePage() {
             plan: selectedPlanId,
             userId: user.uid
         };
-        await addDoc(collection(db, `${toCollection}/${restaurantId}/payments`), paymentData);
+        await addDoc(collection(db, `${toCollection}/${restaurantId}/billing`), paymentData);
         
         toast({
             title: t('Upgrade Successful!'),

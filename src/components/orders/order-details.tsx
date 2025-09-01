@@ -215,7 +215,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
         const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, order.id);
         
         // 1. Save payment information
-        const paymentRef = collection(db, `${collectionName}/${restaurantId}/payments`);
+        const paymentRef = collection(db, `${collectionName}/${restaurantId}/billing`);
         await addDoc(paymentRef, {
             orderId: order.id,
             ...paymentData,
