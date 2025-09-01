@@ -54,6 +54,7 @@ export interface Order {
   subaccounts: SubAccount[];
   tableName?: string;
   takeoutId?: string;
+  type?: 'dine-in' | 'takeout';
   createdAt: Timestamp;
 }
 
