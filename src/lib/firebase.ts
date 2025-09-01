@@ -1,4 +1,3 @@
-
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
@@ -6,7 +5,7 @@ import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDYjOlX8qBWTGdDAMjBWwMslQnSu21oDws",
-  authDomain: "tlacualli-a881e.firebaseapp.com",
+  authDomain: "tlacualli.app",
   projectId: "tlacualli-a881e",
   storageBucket: "tlacualli-a881e.firebasestorage.app",
   messagingSenderId: "323312061685",
