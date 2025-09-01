@@ -140,7 +140,7 @@ export default function OrdersPage() {
 
   // Effect to listen to tables in all fetched rooms
   useEffect(() => {
-    if (rooms.length === 0 || !userPlan) return;
+    if (rooms.length === 0 || !restaurantId || !userPlan) return;
 
     const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
     const allUnsubscribes = rooms.map(room => {
@@ -286,7 +286,8 @@ export default function OrdersPage() {
     if (!restaurantId || !userPlan) return;
 
     try {
-        const newTakeoutId = await getNextTakeoutId(restaurantId);
+        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const newTakeoutId = await getNextTakeoutId(restaurantId, userPlan);
         
         const newOrder = {
             restaurantId: restaurantId,
@@ -300,7 +301,6 @@ export default function OrdersPage() {
             createdBy: user?.uid,
         };
 
-        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
         const docRef = await addDoc(collection(db, `${collectionName}/${restaurantId}/orders`), newOrder);
 
         const newTakeoutAsTable: Table = {

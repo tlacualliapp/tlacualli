@@ -108,6 +108,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
     invoiceEmail: '',
   });
 
+  const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
   useEffect(() => {
     if (!orderId || !restaurantId) {
@@ -119,7 +120,6 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
     // Fetch IVA rate and restaurant details
     const fetchRestaurantData = async () => {
         try {
-            const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
             const restaurantRef = doc(db, collectionName, restaurantId);
             const restaurantSnap = await getDoc(restaurantRef);
             if(restaurantSnap.exists()) {
@@ -136,7 +136,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
     fetchRestaurantData();
 
     setIsLoading(true);
-    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
+    const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, orderId);
     
     const unsubscribe = onSnapshot(orderRef, (docSnapshot) => {
         if (docSnapshot.exists()) {
@@ -164,7 +164,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
     });
 
     return () => unsubscribe();
-  }, [orderId, restaurantId, userPlan, t]);
+  }, [orderId, restaurantId, collectionName, t]);
 
   // Effect to update paidAmount when order or IVA changes
   useEffect(() => {
@@ -193,7 +193,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
   const handleSendToKitchen = async () => {
     if (!order || !restaurantId || order.items.length === 0) return;
     try {
-        const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
+        const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, order.id);
         const itemsWithStatus = order.items.map(item => ({...item, status: 'pending'}));
         
         await updateDoc(orderRef, {
@@ -211,10 +211,10 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
     if(!order || !restaurantId) return;
     
     try {
-        const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
+        const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, order.id);
         
         // 1. Save payment information
-        const paymentRef = collection(db, `restaurantes/${restaurantId}/payments`);
+        const paymentRef = collection(db, `${collectionName}/${restaurantId}/payments`);
         await addDoc(paymentRef, {
             orderId: order.id,
             ...paymentData,
@@ -249,7 +249,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
         return;
     }
 
-    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
+    const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, order.id);
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -268,7 +268,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
 
             // If it's a direct inventory item, we need to update its stock
             if (!actualItemToRemove.recipeId && actualItemToRemove.inventoryItemId) {
-                const inventoryItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, actualItemToRemove.inventoryItemId);
+                const inventoryItemRef = doc(db, `${collectionName}/${restaurantId}/inventoryItems`, actualItemToRemove.inventoryItemId);
                 const inventoryItemDoc = await transaction.get(inventoryItemRef);
                 if (inventoryItemDoc.exists()) {
                     const newStock = (inventoryItemDoc.data().currentStock || 0) + actualItemToRemove.quantity;
@@ -297,7 +297,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
   const handleCancelOrder = async () => {
     if(!order || !restaurantId) return;
     try {
-        const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
+        const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, order.id);
         await updateDoc(orderRef, { status: 'cancelled' });
 
         toast({ title: t('Order Cancelled'), description: t('The order has been marked as cancelled.') });
@@ -318,7 +318,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
 
   const handleAddSubAccount = async () => {
     if (!order || !restaurantId) return;
-    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
+    const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, order.id);
     const newSubAccount: SubAccount = {
       id: `sub_${Date.now()}`,
       name: `${t('Diner')} ${order.subaccounts.length + 1}`
@@ -346,7 +346,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
       return;
     }
 
-    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
+    const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, order.id);
     const updatedSubAccounts = order.subaccounts.filter(sa => sa.id !== subAccountId);
 
     try {
@@ -362,7 +362,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
   const handleAcknowledgePickup = async () => {
     if (!order || !restaurantId) return;
     try {
-        const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, order.id);
+        const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, order.id);
         await updateDoc(orderRef, { 
             status: 'served',
             pickupAcknowledgedAt: serverTimestamp()
@@ -761,7 +761,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
               <span className="font-bold font-mono">${order.subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
-              <span className="text-muted-foreground">${t('IVA')} ({ivaRate}%)</span>
+              <span className="text-muted-foreground">${t('IVA')} (${ivaRate}%)</span>
               <span className="font-bold font-mono">${ivaAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold text-xl">

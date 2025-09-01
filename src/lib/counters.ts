@@ -6,13 +6,15 @@ import { db } from './firebase';
  * Gets the next consecutive ID for takeout orders for the current day.
  * Uses a Firestore transaction to ensure atomicity.
  * @param restaurantId The ID of the restaurant.
+ * @param userPlan The plan of the user ('demo' or a paid plan).
  * @returns A promise that resolves to the formatted takeout ID (e.g., "00001-20240726").
  */
-export async function getNextTakeoutId(restaurantId: string): Promise<string> {
+export async function getNextTakeoutId(restaurantId: string, userPlan: string): Promise<string> {
   const today = new Date();
   const dateString = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
   
-  const counterRef = doc(db, `restaurantes/${restaurantId}/counters`, dateString);
+  const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+  const counterRef = doc(db, `${collectionName}/${restaurantId}/counters`, dateString);
 
   try {
     const newCount = await runTransaction(db, async (transaction) => {
