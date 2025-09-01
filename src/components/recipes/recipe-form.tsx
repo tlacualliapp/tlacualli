@@ -37,11 +37,12 @@ interface InventoryItem {
 
 interface RecipeFormProps {
   restaurantId: string;
+  userPlan: string;
   onSuccess?: () => void;
   recipeToEdit?: Recipe | null;
 }
 
-export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeFormProps) {
+export function RecipeForm({ restaurantId, userPlan, onSuccess, recipeToEdit }: RecipeFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
@@ -61,14 +62,15 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
 
   useEffect(() => {
     const fetchInventoryItems = async () => {
-      if (!restaurantId) return;
-      const itemsQuery = collection(db, `restaurantes/${restaurantId}/inventoryItems`);
+      if (!restaurantId || !userPlan) return;
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      const itemsQuery = collection(db, `${collectionName}/${restaurantId}/inventoryItems`);
       const querySnapshot = await getDocs(itemsQuery);
       const itemsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
       setInventoryItems(itemsList);
     };
     fetchInventoryItems();
-  }, [restaurantId]);
+  }, [restaurantId, userPlan]);
 
   useEffect(() => {
     const cost = ingredients.reduce((acc, ing) => {
@@ -113,6 +115,7 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
     try {
       // Filter out ingredients without an itemId
       const validIngredients = ingredients.filter(ing => ing.itemId);
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
       const recipeData = {
         name,
@@ -122,11 +125,11 @@ export function RecipeForm({ restaurantId, onSuccess, recipeToEdit }: RecipeForm
       };
 
       if (isEditMode && recipeToEdit?.id) {
-        const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, recipeToEdit.id);
+        const recipeRef = doc(db, `${collectionName}/${restaurantId}/recipes`, recipeToEdit.id);
         await updateDoc(recipeRef, recipeData);
         toast({ title: t("Update Successful"), description: t("The recipe has been updated.") });
       } else {
-        const collectionRef = collection(db, `restaurantes/${restaurantId}/recipes`);
+        const collectionRef = collection(db, `${collectionName}/${restaurantId}/recipes`);
         await addDoc(collectionRef, { ...recipeData, createdAt: serverTimestamp() });
         toast({ title: t("Recipe Added"), description: t("The new recipe has been added.") });
       }
