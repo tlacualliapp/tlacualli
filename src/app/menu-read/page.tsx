@@ -25,6 +25,25 @@ interface Category {
   name: string;
 }
 
+async function getRestaurantDoc(restaurantId: string): Promise<any> {
+    const prodRef = doc(db, 'restaurantes', restaurantId);
+    const prodSnap = await getDoc(prodRef);
+
+    if (prodSnap.exists()) {
+        return prodSnap;
+    }
+
+    const demoRef = doc(db, 'restaurantes_demo', restaurantId);
+    const demoSnap = await getDoc(demoRef);
+
+    if (demoSnap.exists()) {
+        return demoSnap;
+    }
+
+    return null;
+}
+
+
 function MenuDisplay() {
   const searchParams = useSearchParams();
   const restaurantId = searchParams.get('restaurantId');
@@ -44,43 +63,49 @@ function MenuDisplay() {
       return;
     }
 
-    // Fetch restaurant name, logo, and icon
-    const restaurantRef = doc(db, 'restaurantes', restaurantId);
-    getDoc(restaurantRef).then(docSnap => {
-        if(docSnap.exists()) {
-            const data = docSnap.data();
+    const fetchRestaurantData = async () => {
+        const restaurantDoc = await getRestaurantDoc(restaurantId);
+
+        if (restaurantDoc && restaurantDoc.exists()) {
+            const data = restaurantDoc.data();
             setRestaurantName(data.restaurantName || 'Menú');
             setLogoUrl(data.logoUrl || '');
             setIconUrl(data.iconUrl || '');
+            
+            const collectionName = restaurantDoc.ref.parent.id; // 'restaurantes' or 'restaurantes_demo'
+
+            // Listen for categories
+            const categoriesQuery = query(collection(db, `${collectionName}/${restaurantId}/menuCategories`));
+            const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
+              setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
+            }, () => setError("Error al cargar las categorías."));
+
+            // Listen for active menu items
+            const itemsQuery = query(
+                collection(db, `${collectionName}/${restaurantId}/menuItems`),
+                where('status', '==', 'active')
+            );
+            const unsubItems = onSnapshot(itemsQuery, (snapshot) => {
+              setMenuItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)));
+              setIsLoading(false);
+            }, () => {
+                setError("Error al cargar los platillos.");
+                setIsLoading(false);
+            });
+            
+            return () => {
+                unsubCategories();
+                unsubItems();
+            };
+
         } else {
             setError("Restaurante no encontrado.");
+            setIsLoading(false);
         }
-    }).catch(() => setError("Error al cargar datos del restaurante."));
+    }
+    
+    fetchRestaurantData();
 
-
-    // Listen for categories
-    const categoriesQuery = query(collection(db, `restaurantes/${restaurantId}/menuCategories`));
-    const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
-      setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
-    }, () => setError("Error al cargar las categorías."));
-
-    // Listen for active menu items
-    const itemsQuery = query(
-        collection(db, `restaurantes/${restaurantId}/menuItems`),
-        where('status', '==', 'active')
-    );
-    const unsubItems = onSnapshot(itemsQuery, (snapshot) => {
-      setMenuItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)));
-      setIsLoading(false);
-    }, () => {
-        setError("Error al cargar los platillos.");
-        setIsLoading(false);
-    });
-
-    return () => {
-      unsubCategories();
-      unsubItems();
-    };
   }, [restaurantId]);
 
   if (isLoading) {
@@ -172,3 +197,5 @@ export default function MenuReadOnlyPage() {
         </div>
     )
 }
+
+    

@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { KitchenOrderCard, Order, OrderItem } from '@/components/kitchen/order-card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { getRestaurantIdForCurrentUser } from '@/lib/users';
+import { getCurrentUserData } from '@/lib/users';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Recipe {
@@ -32,6 +32,7 @@ export default function KitchenPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<string | null>(null);
   
   useEffect(() => {
     if (!loading && !user) {
@@ -40,23 +41,28 @@ export default function KitchenPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    const fetchRestaurantId = async () => {
+    const fetchUserData = async () => {
       if (user) {
-        const id = await getRestaurantIdForCurrentUser();
-        setRestaurantId(id);
+        const userData = await getCurrentUserData();
+        if (userData) {
+          setRestaurantId(userData.restauranteId);
+          setUserPlan(userData.plan);
+        }
       }
     };
-    fetchRestaurantId();
+    fetchUserData();
   }, [user]);
 
   useEffect(() => {
-    if (!restaurantId) {
+    if (!restaurantId || !userPlan) {
         if (!user) setIsLoading(false);
         return;
     };
 
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+
     const q = query(
-      collection(db, `restaurantes/${restaurantId}/orders`), 
+      collection(db, `${collectionName}/${restaurantId}/orders`), 
       where('status', 'in', ['preparing', 'ready_for_pickup'])
     );
 
@@ -74,12 +80,13 @@ export default function KitchenPage() {
     });
 
     return () => unsubscribe();
-  }, [restaurantId, t, toast, user]);
+  }, [restaurantId, userPlan, t, toast, user]);
 
   const handleItemStatusChange = async (orderId: string, itemId: string, newStatus: 'pending' | 'preparing' | 'ready') => {
-    if (!restaurantId) return;
-
-    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
+    if (!restaurantId || !userPlan) return;
+    
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, orderId);
     
     try {
         await runTransaction(db, async (transaction) => {
@@ -104,7 +111,7 @@ export default function KitchenPage() {
             const inventoryUpdates: InventoryUpdate[] = [];
 
             if (newStatus === 'ready') {
-                const menuItemRef = doc(db, `restaurantes/${restaurantId}/menuItems`, orderItem.id);
+                const menuItemRef = doc(db, `${collectionName}/${restaurantId}/menuItems`, orderItem.id);
                 const menuItemSnap = await transaction.get(menuItemRef);
 
                 if (menuItemSnap.exists()) {
@@ -112,13 +119,13 @@ export default function KitchenPage() {
                     // Case 1: Item is made from a recipe
                     if (menuItemData.recipeId && menuItemData.recipeId !== 'none') {
                         const recipeId = menuItemData.recipeId;
-                        const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, recipeId);
+                        const recipeRef = doc(db, `${collectionName}/${restaurantId}/recipes`, recipeId);
                         const recipeSnap = await transaction.get(recipeRef);
 
                         if (recipeSnap.exists()) {
                             const recipe = recipeSnap.data() as Recipe;
                             for (const ingredient of recipe.ingredients) {
-                                const inventoryItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, ingredient.itemId);
+                                const inventoryItemRef = doc(db, `${collectionName}/${restaurantId}/inventoryItems`, ingredient.itemId);
                                 const inventoryItemSnap = await transaction.get(inventoryItemRef);
                                 if (inventoryItemSnap.exists()) {
                                     const currentStock = inventoryItemSnap.data().currentStock || 0;
@@ -132,7 +139,7 @@ export default function KitchenPage() {
                         }
                     // Case 2: Item is a direct inventory item
                     } else if (menuItemData.inventoryItemId) {
-                         const inventoryItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, menuItemData.inventoryItemId);
+                         const inventoryItemRef = doc(db, `${collectionName}/${restaurantId}/inventoryItems`, menuItemData.inventoryItemId);
                          const inventoryItemSnap = await transaction.get(inventoryItemRef);
                          if (inventoryItemSnap.exists()) {
                             const currentStock = inventoryItemSnap.data().currentStock || 0;
@@ -182,9 +189,10 @@ export default function KitchenPage() {
 
 
   const handleOrderReady = async (orderId: string) => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
     try {
-      const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, orderId);
       
       const currentOrder = orders.find(o => o.id === orderId);
       if (!currentOrder || currentOrder.type === 'delivery') return; // Do not use this for delivery orders
@@ -250,3 +258,5 @@ export default function KitchenPage() {
     </AdminLayout>
   );
 }
+
+    

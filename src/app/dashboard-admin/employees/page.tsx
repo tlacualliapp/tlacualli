@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { getRestaurantIdForCurrentUser, getCurrentUserData } from '@/lib/users';
+import { getCurrentUserData } from '@/lib/users';
 
 interface Employee {
   id: string;
@@ -85,8 +85,12 @@ export default function EmployeesPage() {
   }, [user]);
 
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
     setIsLoading(true);
+    
+    // Although the user's collection does not depend on the plan, 
+    // it's good practice to keep the logic consistent if this ever changes.
+    // For now, it queries the main 'usuarios' collection.
     const q = query(
         collection(db, "usuarios"), 
         where("restauranteId", "==", restaurantId)
@@ -118,7 +122,7 @@ export default function EmployeesPage() {
     });
 
     return () => unsubscribe();
-  }, [restaurantId, t, toast]);
+  }, [restaurantId, userPlan, t, toast]);
 
   const handleAddNew = () => {
     if (!restaurantId || !userPlan) {
@@ -345,3 +349,5 @@ export default function EmployeesPage() {
     </AdminLayout>
   );
 }
+
+    

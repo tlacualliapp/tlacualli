@@ -74,13 +74,14 @@ interface MissingIngredient {
 
 interface MenuSelectionProps {
   restaurantId: string;
+  userPlan: string;
   orderId: string;
   tableName: string;
   onBack: () => void;
   subAccountId: string;
 }
 
-export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAccountId }: MenuSelectionProps) => {
+export const MenuSelection = ({ restaurantId, userPlan, orderId, tableName, onBack, subAccountId }: MenuSelectionProps) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subAccounts, setSubAccounts] = useState<SubAccount[]>([]);
@@ -96,17 +97,19 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
 
   const [isInventoryAlertOpen, setIsInventoryAlertOpen] = useState(false);
   const [missingIngredients, setMissingIngredients] = useState<MissingIngredient[]>([]);
+  
+  const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
   useEffect(() => {
     if (!restaurantId) return;
 
     setIsLoading(true);
-    const categoriesQuery = query(collection(db, `restaurantes/${restaurantId}/menuCategories`));
+    const categoriesQuery = query(collection(db, `${collectionName}/${restaurantId}/menuCategories`));
     const itemsQuery = query(
-        collection(db, `restaurantes/${restaurantId}/menuItems`),
+        collection(db, `${collectionName}/${restaurantId}/menuItems`),
         where('status', '==', 'active')
     );
-    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
+    const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, orderId);
 
     const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
       setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
@@ -129,7 +132,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
       unsubItems();
       unsubOrder();
     };
-  }, [restaurantId, orderId, t]);
+  }, [restaurantId, orderId, collectionName, t]);
   
   const handleSelectItem = async (item: MenuItem) => {
     setSelectedItemForNotes(item); // Set the item for later use
@@ -138,7 +141,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
         const missing: MissingIngredient[] = [];
         // Case 1: Item is based on a recipe
         if (item.recipeId && item.recipeId !== 'none') {
-            const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, item.recipeId);
+            const recipeRef = doc(db, `${collectionName}/${restaurantId}/recipes`, item.recipeId);
             const recipeSnap = await getDoc(recipeRef);
 
             if (!recipeSnap.exists()) {
@@ -148,7 +151,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
 
             const recipe = recipeSnap.data() as Recipe;
             for (const ingredient of recipe.ingredients) {
-                const invItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, ingredient.itemId);
+                const invItemRef = doc(db, `${collectionName}/${restaurantId}/inventoryItems`, ingredient.itemId);
                 const invItemSnap = await getDoc(invItemRef);
                 
                 if (invItemSnap.exists()) {
@@ -166,7 +169,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
             }
         // Case 2: Item is a direct inventory item
         } else if (item.inventoryItemId) {
-            const invItemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, item.inventoryItemId);
+            const invItemRef = doc(db, `${collectionName}/${restaurantId}/inventoryItems`, item.inventoryItemId);
             const invItemSnap = await getDoc(invItemRef);
             if(invItemSnap.exists()) {
                 const inventoryItem = invItemSnap.data() as InventoryItem;
@@ -206,7 +209,7 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
     }
     
     setIsNotesModalOpen(false);
-    const orderRef = doc(db, `restaurantes/${restaurantId}/orders`, orderId);
+    const orderRef = doc(db, `${collectionName}/${restaurantId}/orders`, orderId);
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -396,3 +399,5 @@ export const MenuSelection = ({ restaurantId, orderId, tableName, onBack, subAcc
     </>
   );
 };
+
+    

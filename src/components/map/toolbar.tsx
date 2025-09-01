@@ -22,23 +22,26 @@ import { useTranslation } from 'react-i18next';
 
 interface ToolbarProps {
     restaurantId: string;
+    userPlan: string;
     rooms: Room[];
     activeRoom: string;
     setActiveRoom: (id: string) => void;
 }
 
-export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: ToolbarProps) => {
+export const Toolbar = ({ restaurantId, userPlan, rooms, activeRoom, setActiveRoom }: ToolbarProps) => {
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
   const addTable = async (shape: 'square' | 'circle') => {
     if (!activeRoom) {
         toast({ variant: 'destructive', title: t('Select a room'), description: t('You must select a room to add a table.') });
         return;
     }
-    const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`);
+    const tablesRef = collection(db, `${collectionName}/${restaurantId}/rooms/${activeRoom}/tables`);
     await addDoc(tablesRef, {
       name: `M${Math.floor(Math.random() * 100)}`,
       shape: shape,
@@ -50,7 +53,7 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
 
   const addRoom = async () => {
     if (!newRoomName.trim()) return;
-    const roomsRef = collection(db, `restaurantes/${restaurantId}/rooms`);
+    const roomsRef = collection(db, `${collectionName}/${restaurantId}/rooms`);
     const newRoom = await addDoc(roomsRef, { name: newRoomName, createdAt: serverTimestamp() });
     setNewRoomName('');
     setIsRoomModalOpen(false);
@@ -63,7 +66,7 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
         toast({ variant: 'destructive', title: t('Action not allowed'), description: t('You cannot delete the only existing room.') });
         return;
     }
-    await deleteDoc(doc(db, `restaurantes/${restaurantId}/rooms`, roomId));
+    await deleteDoc(doc(db, `${collectionName}/${restaurantId}/rooms`, roomId));
     const newActiveRoom = rooms.find(r => r.id !== roomId)?.id || '';
     setActiveRoom(newActiveRoom);
     toast({ title: t('Room deleted'), description: t('The room "{{name}}" has been deleted.', { name: roomName }) });
@@ -133,3 +136,5 @@ export const Toolbar = ({ restaurantId, rooms, activeRoom, setActiveRoom }: Tool
     </div>
   );
 };
+
+    

@@ -22,6 +22,7 @@ export interface Room {
 
 interface MapEditorProps {
   restaurantId: string;
+  userPlan: string;
   view?: 'admin' | 'operational';
 }
 
@@ -29,7 +30,7 @@ export const ItemTypes = {
   TABLE: 'table',
 };
 
-export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
+export const MapEditor = ({ restaurantId, userPlan, view = 'admin' }: MapEditorProps) => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tables, setTables] = useState<{ [roomId: string]: Table[] }>({});
   const [activeRoom, setActiveRoom] = useState<string>('');
@@ -40,8 +41,10 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
   const { toast } = useToast();
   const { t } = useTranslation();
 
+  const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+
   useEffect(() => {
-    const roomsRef = collection(db, `restaurantes/${restaurantId}/rooms`);
+    const roomsRef = collection(db, `${collectionName}/${restaurantId}/rooms`);
     const unsubscribeRooms = onSnapshot(roomsRef, (snapshot) => {
       const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
       setRooms(roomsData);
@@ -52,7 +55,7 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
     });
 
     const ordersQuery = query(
-      collection(db, `restaurantes/${restaurantId}/orders`),
+      collection(db, `${collectionName}/${restaurantId}/orders`),
       where("status", "in", ["open", "preparing", "ready_for_pickup", "served"])
     );
     const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
@@ -65,19 +68,19 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
         unsubscribeRooms();
         unsubscribeOrders();
     }
-  }, [restaurantId, activeRoom]);
+  }, [restaurantId, collectionName, activeRoom]);
 
   useEffect(() => {
     if (!activeRoom) return;
 
-    const tablesRef = collection(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`);
+    const tablesRef = collection(db, `${collectionName}/${restaurantId}/rooms/${activeRoom}/tables`);
     const unsubscribeTables = onSnapshot(tablesRef, (snapshot) => {
       const tablesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Table));
       setTables(prev => ({ ...prev, [activeRoom]: tablesData }));
     });
 
     return () => unsubscribeTables();
-  }, [restaurantId, activeRoom]);
+  }, [restaurantId, collectionName, activeRoom]);
   
   const getTableWithStatus = (table: Table): Table => {
     const activeOrder = activeOrders.find(o => o.tableId === table.id && o.type !== 'takeout');
@@ -96,13 +99,13 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
 
   const moveTable = async (id: string, left: number, top: number) => {
     if (view !== 'admin' || !activeRoom) return;
-    const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`, id);
+    const tableRef = doc(db, `${collectionName}/${restaurantId}/rooms/${activeRoom}/tables`, id);
     await updateDoc(tableRef, { left, top });
   };
   
   const deleteTable = async (id: string) => {
     if (!activeRoom) return;
-    const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`, id);
+    const tableRef = doc(db, `${collectionName}/${restaurantId}/rooms/${activeRoom}/tables`, id);
     await deleteDoc(tableRef);
     toast({ title: t('Table deleted'), description: t('The table has been removed from the map.') });
   };
@@ -114,7 +117,7 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
 
   const handleSaveTable = async (formData: {name: string, seats: number}) => {
     if (!tableToEdit || !activeRoom) return;
-    const tableRef = doc(db, `restaurantes/${restaurantId}/rooms/${activeRoom}/tables`, tableToEdit.id);
+    const tableRef = doc(db, `${collectionName}/${restaurantId}/rooms/${activeRoom}/tables`, tableToEdit.id);
     await updateDoc(tableRef, { name: formData.name, seats: formData.seats });
     toast({ title: t('Table updated') });
     setIsFormOpen(false);
@@ -150,7 +153,7 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
   
   return (
     <div className="flex flex-col h-full">
-        {view === 'admin' && <Toolbar restaurantId={restaurantId} rooms={rooms} activeRoom={activeRoom} setActiveRoom={setActiveRoom} />}
+        {view === 'admin' && <Toolbar restaurantId={restaurantId} userPlan={userPlan} rooms={rooms} activeRoom={activeRoom} setActiveRoom={setActiveRoom} />}
         <div className="flex-grow relative" ref={drop}>
             {rooms.map(room => (
                 <div key={room.id} style={{ display: activeRoom === room.id ? 'block' : 'none' }} className="w-full h-full">
@@ -190,3 +193,5 @@ export const MapEditor = ({ restaurantId, view = 'admin' }: MapEditorProps) => {
     </div>
   );
 };
+
+    

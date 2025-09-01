@@ -35,9 +35,10 @@ interface Table {
 
 interface AssignmentManagerProps {
   restaurantId: string;
+  userPlan: string;
 }
 
-export const AssignmentManager = ({ restaurantId }: AssignmentManagerProps) => {
+export const AssignmentManager = ({ restaurantId, userPlan }: AssignmentManagerProps) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tablesByRoom, setTablesByRoom] = useState<{ [roomId: string]: Table[] }>({});
@@ -45,6 +46,8 @@ export const AssignmentManager = ({ restaurantId }: AssignmentManagerProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -55,13 +58,13 @@ export const AssignmentManager = ({ restaurantId }: AssignmentManagerProps) => {
       setIsLoading(false);
     });
 
-    const roomsQuery = query(collection(db, `restaurantes/${restaurantId}/rooms`));
+    const roomsQuery = query(collection(db, `${collectionName}/${restaurantId}/rooms`));
     const unsubscribeRooms = onSnapshot(roomsQuery, snapshot => {
       const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
       setRooms(roomsData);
 
       roomsData.forEach(room => {
-        const tablesQuery = query(collection(db, `restaurantes/${restaurantId}/rooms/${room.id}/tables`));
+        const tablesQuery = query(collection(db, `${collectionName}/${restaurantId}/rooms/${room.id}/tables`));
         onSnapshot(tablesQuery, tablesSnapshot => {
           const tablesData = tablesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Table));
           setTablesByRoom(prev => ({ ...prev, [room.id]: tablesData }));
@@ -73,7 +76,7 @@ export const AssignmentManager = ({ restaurantId }: AssignmentManagerProps) => {
       unsubscribeEmployees();
       unsubscribeRooms();
     };
-  }, [restaurantId]);
+  }, [restaurantId, collectionName]);
 
   const handleEmployeeSelect = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
@@ -185,3 +188,5 @@ export const AssignmentManager = ({ restaurantId }: AssignmentManagerProps) => {
     </div>
   );
 };
+
+    
