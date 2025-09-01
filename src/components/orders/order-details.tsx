@@ -382,7 +382,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
     const ticketHTML = `
       <html>
         <head>
-          <title>Print Ticket</title>
+          <title>${t('Print Ticket')}</title>
           <style>
             body { font-family: ${printerType === 'thermal' ? "'Courier New', Courier, monospace" : "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"}; margin: 0; padding: 10px; background-color: #fff; color: #000; }
             .ticket { width: ${printerType === 'thermal' ? '80mm' : '100%'}; margin: 0 auto; }
@@ -482,7 +482,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
             <hr />
             <p>${t('Subtotal')}: $${order.subtotal.toFixed(2)}</p>
             <p>${t('IVA')} (${ivaRate}%): $${ivaAmount.toFixed(2)}</p>
-            <h3>Total: $${totalAmount.toFixed(2)}</h3>
+            <h3>${t('Total')}: $${totalAmount.toFixed(2)}</h3>
             <hr />
             <p>${t('Thank you for your visit!')}</p>
         </div>
@@ -500,7 +500,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
     
     const billText = order.items.map(item => `${item.quantity}x ${item.name} - $${(item.price * item.quantity).toFixed(2)}`).join('\\n');
     const total = totalAmount.toFixed(2);
-    const fullMessage = `${t('Hello! Here is your bill for')} ${t('Table')} ${tableName}:\\n\\n${billText}\\n\\nSubtotal: $${order.subtotal.toFixed(2)}\\n${t('IVA')} (${ivaRate}%): $${ivaAmount.toFixed(2)}\\n*Total: $${total}*\\n\\n${t('Thank you for your visit!')}`;
+    const fullMessage = `${t('Hello! Here is your bill for')} ${t('Table')} ${tableName}:\\n\\n${billText}\\n\\n${t('Subtotal')}: $${order.subtotal.toFixed(2)}\\n${t('IVA')} (${ivaRate}%): $${ivaAmount.toFixed(2)}\\n*Total: $${total}*\\n\\n${t('Thank you for your visit!')}`;
     
     const whatsappUrl = `https://api.whatsapp.com/send/?phone=${whatsappNumber}&text=${encodeURIComponent(fullMessage)}&type=phone_number&app_absent=0`;
     window.open(whatsappUrl, '_blank');
@@ -761,7 +761,7 @@ export const OrderDetails = ({ restaurantId, userPlan, orderId, tableName, onAdd
               <span className="font-bold font-mono">${order.subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
-              <span className="text-muted-foreground">${t('IVA')} (${ivaRate}%)</span>
+              <span className="text-muted-foreground">{t('IVA')} (${ivaRate}%)</span>
               <span className="font-bold font-mono">${ivaAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold text-xl">
