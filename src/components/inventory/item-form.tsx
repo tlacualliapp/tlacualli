@@ -9,9 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs, getDoc } from 'firebase/firestore';
-import { useTranslation } from 'react-i18next';
-import { getCurrentUserData } from '@/lib/users';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 
 interface Item {
   id?: string;
@@ -25,6 +23,7 @@ interface Item {
 }
 
 interface ItemFormProps {
+  t: (key: string) => string;
   restaurantId: string;
   userPlan: string;
   onSuccess?: () => void;
@@ -34,12 +33,11 @@ interface ItemFormProps {
 const unitsOfMeasure = ["kg", "g", "L", "ml", "pz", "box", "can"];
 const categories = ["Meats", "Vegetables", "Fruits", "Dairy", "Pantry", "Beverages", "Cleaning", "Other"];
 
-export function ItemForm({ restaurantId, userPlan, onSuccess, itemToEdit }: ItemFormProps) {
+export function ItemForm({ t, restaurantId, userPlan, onSuccess, itemToEdit }: ItemFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<{ id: string, name: string }[]>([]);
   const isEditMode = !!itemToEdit;
-  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -149,7 +147,7 @@ export function ItemForm({ restaurantId, userPlan, onSuccess, itemToEdit }: Item
           <Select name="unitOfMeasure" value={formData.unitOfMeasure} onValueChange={(value) => handleSelectChange('unitOfMeasure', value)}>
             <SelectTrigger><SelectValue placeholder={t('Select a unit')} /></SelectTrigger>
             <SelectContent>
-              {unitsOfMeasure.map(unit => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}
+              {unitsOfMeasure.map(unit => <SelectItem key={unit} value={unit}>{t(unit)}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -185,7 +183,7 @@ export function ItemForm({ restaurantId, userPlan, onSuccess, itemToEdit }: Item
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={isLoading}>
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {t('Save Item')}
+          {isEditMode ? t('Update Item') : t('Save Item')}
         </Button>
       </div>
     </form>

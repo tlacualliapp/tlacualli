@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { useTranslation } from 'react-i18next';
 
 interface Supplier {
   id?: string;
@@ -23,17 +22,17 @@ interface Supplier {
 }
 
 interface SupplierFormProps {
+  t: (key: string) => string;
   restaurantId: string;
   userPlan: string;
   onSuccess?: () => void;
   supplierToEdit?: Supplier | null;
 }
 
-export function SupplierForm({ restaurantId, userPlan, onSuccess, supplierToEdit }: SupplierFormProps) {
+export function SupplierForm({ t, restaurantId, userPlan, onSuccess, supplierToEdit }: SupplierFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const isEditMode = !!supplierToEdit;
-  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -138,7 +137,7 @@ export function SupplierForm({ restaurantId, userPlan, onSuccess, supplierToEdit
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={isLoading}>
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {t('Save Supplier')}
+          {isEditMode ? t('Update Supplier') : t('Save Supplier')}
         </Button>
       </div>
     </form>

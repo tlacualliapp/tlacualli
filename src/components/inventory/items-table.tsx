@@ -118,7 +118,7 @@ export function InventoryItemsTable({ restaurantId, userPlan }: ItemsTableProps)
             <DialogTitle>{itemToEdit ? t('Edit Item') : t('Add New Item')}</DialogTitle>
             <DialogDescription>{itemToEdit ? t('Modify the item details.') : t('Add a new item to your inventory.')}</DialogDescription>
           </DialogHeader>
-          <ItemForm restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsFormModalOpen(false)} itemToEdit={itemToEdit} />
+          <ItemForm t={t} restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsFormModalOpen(false)} itemToEdit={itemToEdit} />
         </DialogContent>
       </Dialog>
 
@@ -129,6 +129,7 @@ export function InventoryItemsTable({ restaurantId, userPlan }: ItemsTableProps)
           </DialogHeader>
           {itemForMovement && (
             <MovementForm
+              t={t}
               restaurantId={restaurantId}
               userPlan={userPlan}
               item={itemForMovement}
@@ -161,7 +162,7 @@ export function InventoryItemsTable({ restaurantId, userPlan }: ItemsTableProps)
                   <TableCell><Badge variant="outline">{t(item.category)}</Badge></TableCell>
                   <TableCell className="text-right font-mono">{item.currentStock}</TableCell>
                   <TableCell className="text-right font-mono">{item.minimumStock}</TableCell>
-                  <TableCell>{item.unitOfMeasure}</TableCell>
+                  <TableCell>{t(item.unitOfMeasure)}</TableCell>
                   <TableCell className="text-right">
                     <AlertDialog>
                        <DropdownMenu>

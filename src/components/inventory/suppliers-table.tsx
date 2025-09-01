@@ -104,7 +104,7 @@ export function SuppliersTable({ restaurantId, userPlan }: SuppliersTableProps) 
             <DialogTitle>{supplierToEdit ? t('Edit Supplier') : t('Add New Supplier')}</DialogTitle>
             <DialogDescription>{supplierToEdit ? t('Modify the supplier details.') : t('Add a new supplier.')}</DialogDescription>
           </DialogHeader>
-          <SupplierForm restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsFormModalOpen(false)} supplierToEdit={supplierToEdit} />
+          <SupplierForm t={t} restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsFormModalOpen(false)} supplierToEdit={supplierToEdit} />
         </DialogContent>
       </Dialog>
 

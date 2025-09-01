@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, BookOpen, Utensils, List, Loader2 } from 'lucide-react';
+import { PlusCircle, BookOpen, Utensils, List, Loader2, Wand2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { RecipeForm } from '@/components/recipes/recipe-form';
 import { RecipesTable } from '@/components/recipes/recipes-table';
@@ -17,6 +17,7 @@ import { auth, db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { getCurrentUserData } from '@/lib/users';
+import { RecipeSuggester } from '@/components/recipes/recipe-suggester';
 
 export default function MenuPage() {
   const [user, loading] = useAuthState(auth);
@@ -69,7 +70,7 @@ export default function MenuPage() {
         </CardHeader>
       </Card>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {/* Create Recipe Card */}
         <Dialog open={isRecipeModalOpen} onOpenChange={setIsRecipeModalOpen}>
             <Card className="hover:shadow-lg transition-shadow">
@@ -91,6 +92,17 @@ export default function MenuPage() {
                 <RecipeForm restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsRecipeModalOpen(false)} />
             </DialogContent>
         </Dialog>
+
+        {/* AI Recipe Suggester Card */}
+        <Card className="hover:shadow-lg transition-shadow bg-accent/10 border-accent">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Wand2 className="text-accent"/>{t('AI Inspiration')}</CardTitle>
+                <CardDescription>{t('Generate recipe ideas based on your inventory.')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <RecipeSuggester restaurantId={restaurantId} userPlan={userPlan} />
+            </CardContent>
+        </Card>
         
         {/* Create Menu Item Card */}
         <Dialog open={isMenuItemModalOpen} onOpenChange={setIsMenuItemModalOpen}>
