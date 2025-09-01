@@ -54,6 +54,7 @@ interface Responsible {
 
 interface MenuItemFormProps {
   restaurantId: string;
+  userPlan: string;
   onSuccess?: () => void;
   menuItemToEdit?: MenuItem | null;
 }
@@ -71,7 +72,7 @@ const initialFormData = {
   status: 'active' as 'active' | 'inactive',
 };
 
-export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuItemFormProps) {
+export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit }: MenuItemFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
@@ -102,26 +103,28 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
   );
   
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
 
-    const unsubRecipes = onSnapshot(collection(db, `restaurantes/${restaurantId}/recipes`), (snapshot) => {
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+
+    const unsubRecipes = onSnapshot(collection(db, `${collectionName}/${restaurantId}/recipes`), (snapshot) => {
       setRecipes(snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string })));
     });
 
-    const unsubInventory = onSnapshot(collection(db, `restaurantes/${restaurantId}/inventoryItems`), (snapshot) => {
+    const unsubInventory = onSnapshot(collection(db, `${collectionName}/${restaurantId}/inventoryItems`), (snapshot) => {
       setInventoryItems(snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string })));
     });
     
-    const unsubCategories = onSnapshot(collection(db, `restaurantes/${restaurantId}/menuCategories`), (snapshot) => {
+    const unsubCategories = onSnapshot(collection(db, `${collectionName}/${restaurantId}/menuCategories`), (snapshot) => {
       setCategories(snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string })));
     });
     
-    const unsubResponsibles = onSnapshot(collection(db, `restaurantes/${restaurantId}/preparationResponsibles`), (snapshot) => {
+    const unsubResponsibles = onSnapshot(collection(db, `${collectionName}/${restaurantId}/preparationResponsibles`), (snapshot) => {
       const responsiblesList = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
       if (responsiblesList.length === 0) {
         const initialResponsibles = [{ name: 'Cocina' }, { name: 'Mesero' }];
         initialResponsibles.forEach(async (resp) => {
-            await addDoc(collection(db, `restaurantes/${restaurantId}/preparationResponsibles`), resp);
+            await addDoc(collection(db, `${collectionName}/${restaurantId}/preparationResponsibles`), resp);
         });
       }
       setResponsibles(responsiblesList);
@@ -133,7 +136,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       unsubCategories();
       unsubResponsibles();
     };
-  }, [restaurantId]);
+  }, [restaurantId, userPlan]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -170,7 +173,8 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       return;
     }
     try {
-      const collectionRef = collection(db, `restaurantes/${restaurantId}/menuCategories`);
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      const collectionRef = collection(db, `${collectionName}/${restaurantId}/menuCategories`);
       await addDoc(collectionRef, { name: newCategoryName });
       toast({ title: t('Category Added'), description: t('The new category has been added.') });
       setNewCategoryName('');
@@ -187,7 +191,8 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       return;
     }
     try {
-      const collectionRef = collection(db, `restaurantes/${restaurantId}/preparationResponsibles`);
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      const collectionRef = collection(db, `${collectionName}/${restaurantId}/preparationResponsibles`);
       await addDoc(collectionRef, { name: newResponsibleName });
       toast({ title: t('Responsible Added'), description: t('The new responsible has been added.') });
       setNewResponsibleName('');
@@ -203,6 +208,7 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
     setIsLoading(true);
 
     try {
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
       const menuItemData = {
         ...formData,
         price: Number(formData.price) || 0,
@@ -211,11 +217,11 @@ export function MenuItemForm({ restaurantId, onSuccess, menuItemToEdit }: MenuIt
       };
 
       if (isEditMode && menuItemToEdit?.id) {
-        const menuItemRef = doc(db, `restaurantes/${restaurantId}/menuItems`, menuItemToEdit.id);
+        const menuItemRef = doc(db, `${collectionName}/${restaurantId}/menuItems`, menuItemToEdit.id);
         await updateDoc(menuItemRef, menuItemData);
         toast({ title: t("Update Successful"), description: t("The menu item has been updated.") });
       } else {
-        const collectionRef = collection(db, `restaurantes/${restaurantId}/menuItems`);
+        const collectionRef = collection(db, `${collectionName}/${restaurantId}/menuItems`);
         await addDoc(collectionRef, { ...menuItemData, createdAt: serverTimestamp(), status: 'active' });
         toast({ title: t("Menu Item Added"), description: t("The new item has been added to the menu.") });
       }
