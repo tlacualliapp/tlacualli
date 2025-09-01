@@ -304,7 +304,7 @@ export default function LoginPage() {
     </Dialog>
 
     <Dialog open={isTermsModalOpen} onOpenChange={setIsTermsModalOpen}>
-        <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+        <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} showCloseButton={false}>
             <DialogHeader>
             <DialogTitle>{t('Accept Terms and Conditions')}</DialogTitle>
             <DialogDescription>
