@@ -48,7 +48,7 @@ const MovementIcon = ({ type }: { type: Movement['type'] }) => {
     }
   };
 
-  const { icon, label, className } = movementDetails[type];
+  const { icon, label, className } = movementDetails[type] || {};
 
   return (
     <TooltipProvider>

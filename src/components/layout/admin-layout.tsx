@@ -346,11 +346,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                   <DropdownMenuSubContent>
                     <DropdownMenuItem onClick={() => changeLanguage('en')}>
                       <Check className={cn("mr-2 h-4 w-4", i18n.language === 'en' ? 'opacity-100' : 'opacity-0')} />
-                      <span>English</span>
+                      <span>{t('English')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => changeLanguage('es')}>
                        <Check className={cn("mr-2 h-4 w-4", i18n.language === 'es' ? 'opacity-100' : 'opacity-0')} />
-                      <span>Español</span>
+                      <span>{t('Spanish')}</span>
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
