@@ -34,9 +34,10 @@ interface MenuItem {
 
 interface MenuTableProps {
   restaurantId: string;
+  userPlan: string;
 }
 
-export function MenuTable({ restaurantId }: MenuTableProps) {
+export function MenuTable({ restaurantId, userPlan }: MenuTableProps) {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -45,9 +46,11 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
     setIsLoading(true);
-    const q = query(collection(db, `restaurantes/${restaurantId}/menuItems`));
+
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    const q = query(collection(db, `${collectionName}/${restaurantId}/menuItems`));
 
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
       const itemsDataPromises = querySnapshot.docs.map(async (docSnapshot) => {
@@ -55,7 +58,7 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
         let recipeName = t('None');
         if (data.recipeId && data.recipeId !== 'none') {
           try {
-            const recipeRef = doc(db, `restaurantes/${restaurantId}/recipes`, data.recipeId);
+            const recipeRef = doc(db, `${collectionName}/${restaurantId}/recipes`, data.recipeId);
             const recipeSnap = await getDoc(recipeRef);
             if (recipeSnap.exists()) {
               recipeName = recipeSnap.data().name;
@@ -66,7 +69,7 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
         let categoryName = t('Uncategorized');
         if (data.categoryId) {
            try {
-            const categoryRef = doc(db, `restaurantes/${restaurantId}/menuCategories`, data.categoryId);
+            const categoryRef = doc(db, `${collectionName}/${restaurantId}/menuCategories`, data.categoryId);
             const categorySnap = await getDoc(categoryRef);
             if (categorySnap.exists()) {
               categoryName = categorySnap.data().name;
@@ -77,7 +80,7 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
         let preparationResponsibleName = t('Not specified');
         if (data.preparationResponsible) {
           try {
-            const responsibleRef = doc(db, `restaurantes/${restaurantId}/preparationResponsibles`, data.preparationResponsible);
+            const responsibleRef = doc(db, `${collectionName}/${restaurantId}/preparationResponsibles`, data.preparationResponsible);
             const responsibleSnap = await getDoc(responsibleRef);
             if(responsibleSnap.exists()){
               preparationResponsibleName = responsibleSnap.data().name;
@@ -97,7 +100,7 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
     });
 
     return () => unsubscribe();
-  }, [restaurantId, t]);
+  }, [restaurantId, userPlan, t]);
 
   const handleEdit = (item: MenuItem) => {
     setMenuItemToEdit(item);
@@ -106,7 +109,8 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
   
   const handleDelete = async (itemId: string) => {
     try {
-      await deleteDoc(doc(db, `restaurantes/${restaurantId}/menuItems`, itemId));
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      await deleteDoc(doc(db, `${collectionName}/${restaurantId}/menuItems`, itemId));
       toast({ title: t("Item Deleted"), description: t("The menu item has been removed.") });
     } catch (error) {
       console.error("Error deleting menu item:", error);
@@ -117,7 +121,8 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
   const handleToggleStatus = async (itemId: string, currentStatus?: 'active' | 'inactive') => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     try {
-      const itemRef = doc(db, `restaurantes/${restaurantId}/menuItems`, itemId);
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      const itemRef = doc(db, `${collectionName}/${restaurantId}/menuItems`, itemId);
       await updateDoc(itemRef, { status: newStatus });
       toast({
         title: t("Status Updated"),
@@ -142,7 +147,8 @@ export function MenuTable({ restaurantId }: MenuTableProps) {
             <DialogDescription>{t('Modify the dish details.')}</DialogDescription>
           </DialogHeader>
           <MenuItemForm 
-            restaurantId={restaurantId} 
+            restaurantId={restaurantId}
+            userPlan={userPlan}
             onSuccess={() => setIsFormModalOpen(false)} 
             menuItemToEdit={menuItemToEdit}
           />

@@ -32,9 +32,10 @@ interface Recipe {
 
 interface RecipesTableProps {
   restaurantId: string;
+  userPlan: string;
 }
 
-export function RecipesTable({ restaurantId }: RecipesTableProps) {
+export function RecipesTable({ restaurantId, userPlan }: RecipesTableProps) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -44,9 +45,10 @@ export function RecipesTable({ restaurantId }: RecipesTableProps) {
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId || !userPlan) return;
     setIsLoading(true);
-    const q = query(collection(db, `restaurantes/${restaurantId}/recipes`));
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    const q = query(collection(db, `${collectionName}/${restaurantId}/recipes`));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const recipesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
@@ -58,7 +60,7 @@ export function RecipesTable({ restaurantId }: RecipesTableProps) {
     });
 
     return () => unsubscribe();
-  }, [restaurantId]);
+  }, [restaurantId, userPlan]);
 
   const handleEdit = (recipe: Recipe) => {
     setRecipeToEdit(recipe);
@@ -66,8 +68,9 @@ export function RecipesTable({ restaurantId }: RecipesTableProps) {
   };
   
   const handleDelete = async (recipeId: string) => {
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
     // 1. Check if recipe is used in any menu item
-    const menuItemsRef = collection(db, `restaurantes/${restaurantId}/menuItems`);
+    const menuItemsRef = collection(db, `${collectionName}/${restaurantId}/menuItems`);
     const q = query(menuItemsRef, where("recipeId", "==", recipeId));
     const querySnapshot = await getDocs(q);
 
@@ -82,7 +85,7 @@ export function RecipesTable({ restaurantId }: RecipesTableProps) {
 
     // 2. If not used, proceed with deletion
     try {
-      await deleteDoc(doc(db, `restaurantes/${restaurantId}/recipes`, recipeId));
+      await deleteDoc(doc(db, `${collectionName}/${restaurantId}/recipes`, recipeId));
       toast({ title: t("Recipe Deleted"), description: t("The recipe has been removed.") });
     } catch (error) {
       console.error("Error deleting recipe:", error);
@@ -100,6 +103,7 @@ export function RecipesTable({ restaurantId }: RecipesTableProps) {
                 </DialogHeader>
                 <RecipeForm 
                     restaurantId={restaurantId} 
+                    userPlan={userPlan}
                     onSuccess={() => setIsFormModalOpen(false)} 
                     recipeToEdit={recipeToEdit}
                 />
