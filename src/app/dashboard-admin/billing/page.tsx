@@ -56,6 +56,7 @@ export default function BillingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentsLoading, setIsPaymentsLoading] = useState(true);
   const { toast } = useToast();
+  const [userPlan, setUserPlan] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -69,6 +70,7 @@ export default function BillingPage() {
         setIsLoading(true);
         const userData = await getCurrentUserData();
         if (userData && userData.restauranteId) {
+          setUserPlan(userData.plan);
           const collectionName = userData.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
           const restaurantRef = doc(db, collectionName, userData.restauranteId);
           const restaurantSnap = await getDoc(restaurantRef);
@@ -83,10 +85,10 @@ export default function BillingPage() {
   }, [user]);
 
   useEffect(() => {
-    if (!restaurant) return;
+    if (!restaurant || !userPlan) return;
 
     setIsPaymentsLoading(true);
-    const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
     const paymentsQuery = query(collection(db, `${collectionName}/${restaurant.id}/payments`));
     
     const unsubscribe = onSnapshot(paymentsQuery, (snapshot) => {
@@ -110,7 +112,7 @@ export default function BillingPage() {
     });
 
     return () => unsubscribe();
-  }, [restaurant, t, toast]);
+  }, [restaurant, t, toast, userPlan]);
 
   if (loading || isLoading) {
     return (

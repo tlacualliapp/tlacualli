@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
+import { getCurrentUserData } from '@/lib/users';
 
 interface Item {
   id?: string;
@@ -25,6 +26,7 @@ interface Item {
 
 interface ItemFormProps {
   restaurantId: string;
+  userPlan: string;
   onSuccess?: () => void;
   itemToEdit?: Item | null;
 }
@@ -32,7 +34,7 @@ interface ItemFormProps {
 const unitsOfMeasure = ["kg", "g", "L", "ml", "pz", "box", "can"];
 const categories = ["Meats", "Vegetables", "Fruits", "Dairy", "Pantry", "Beverages", "Cleaning", "Other"];
 
-export function ItemForm({ restaurantId, onSuccess, itemToEdit }: ItemFormProps) {
+export function ItemForm({ restaurantId, userPlan, onSuccess, itemToEdit }: ItemFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<{ id: string, name: string }[]>([]);
@@ -76,14 +78,15 @@ export function ItemForm({ restaurantId, onSuccess, itemToEdit }: ItemFormProps)
 
   useEffect(() => {
     const fetchSuppliers = async () => {
-      if (!restaurantId) return;
-      const suppliersQuery = collection(db, `restaurantes/${restaurantId}/suppliers`);
+      if (!restaurantId || !userPlan) return;
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      const suppliersQuery = collection(db, `${collectionName}/${restaurantId}/suppliers`);
       const querySnapshot = await getDocs(suppliersQuery);
       const suppliersList = querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
       setSuppliers(suppliersList);
     };
     fetchSuppliers();
-  }, [restaurantId]);
+  }, [restaurantId, userPlan]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -103,13 +106,15 @@ export function ItemForm({ restaurantId, onSuccess, itemToEdit }: ItemFormProps)
         ...formData,
         updatedAt: serverTimestamp(),
       };
+      
+      const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
       if (isEditMode && itemToEdit?.id) {
-        const itemRef = doc(db, `restaurantes/${restaurantId}/inventoryItems`, itemToEdit.id);
+        const itemRef = doc(db, `${collectionName}/${restaurantId}/inventoryItems`, itemToEdit.id);
         await updateDoc(itemRef, itemData);
         toast({ title: t("Update Successful"), description: t("The item has been updated.") });
       } else {
-        const collectionRef = collection(db, `restaurantes/${restaurantId}/inventoryItems`);
+        const collectionRef = collection(db, `${collectionName}/${restaurantId}/inventoryItems`);
         await addDoc(collectionRef, { ...itemData, createdAt: serverTimestamp() });
         toast({ title: t("Item Added"), description: t("The new item has been added to inventory.") });
       }
