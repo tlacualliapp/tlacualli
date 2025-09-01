@@ -38,6 +38,7 @@ export function SuppliersTable({ restaurantId, userPlan }: SuppliersTableProps) 
   const { t } = useTranslation();
 
   useEffect(() => {
+    if (!restaurantId || !userPlan) return;
     setIsLoading(true);
     const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
     const q = query(collection(db, `${collectionName}/${restaurantId}/suppliers`));
