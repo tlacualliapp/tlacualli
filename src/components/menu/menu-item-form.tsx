@@ -149,12 +149,22 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
     } else if (name === 'preparationResponsible' && value === 'add_new') {
         setIsAddResponsibleOpen(true);
     } else {
-       setFormData(prev => ({
-            ...prev,
-            [name]: value,
-            // Clear the other if one is selected
-            ...(name === 'recipeId' && { inventoryItemId: '' }),
-       }));
+       setFormData(prev => {
+            const newState = {
+                ...prev,
+                [name]: value,
+            };
+            if (name === 'recipeId') {
+                newState.inventoryItemId = ''; // Clear inventory item if recipe is selected
+                const selectedRecipe = recipes.find(r => r.id === value);
+                if (selectedRecipe) {
+                    newState.name = selectedRecipe.name;
+                } else if (value === 'none') {
+                    newState.name = ''; // Clear name if 'none' is selected
+                }
+            }
+            return newState;
+       });
     }
   };
 
