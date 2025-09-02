@@ -81,7 +81,8 @@ export default function ContactPage() {
     if (!message.trim() || !user || !userInfo || !restaurant) return;
 
     const userMessage: Message = { role: 'user', content: message };
-    setConversation(prev => [...prev, userMessage]);
+    const updatedConversation = [...conversation, userMessage];
+    setConversation(updatedConversation);
     setMessage('');
     setIsSending(true);
 
@@ -93,7 +94,7 @@ export default function ContactPage() {
             restaurantId: restaurant.id,
             restaurantName: restaurant.restaurantName,
             message: message,
-            conversationHistory: conversation
+            conversationHistory: updatedConversation,
         };
         
         const result = await getSupportResponse(input);
