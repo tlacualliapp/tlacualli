@@ -44,13 +44,7 @@ export async function getSupportResponse(input: SupportAgentInput): Promise<Supp
 
 const prompt = ai.definePrompt({
     name: 'supportAgentPrompt',
-    input: {
-        schema: z.object({
-            message: z.string(),
-            userName: z.string(),
-            conversationHistory: z.array(z.any()).optional(),
-        })
-    },
+    input: { schema: SupportAgentInputSchema },
     output: {
         schema: z.object({
             response: z.string().describe("The direct, helpful, and friendly response to the user's query in Spanish."),
@@ -96,11 +90,7 @@ const supportAgentFlow = ai.defineFlow(
     outputSchema: SupportAgentOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt({
-        message: input.message,
-        userName: input.userName,
-        conversationHistory: input.conversationHistory,
-    });
+    const { output } = await prompt(input);
     
     if (!output) {
       throw new Error("AI did not generate a valid response.");
