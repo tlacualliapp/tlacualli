@@ -233,27 +233,44 @@ export default function LoginPage() {
 
   const handleModalAction = () => {
     setIsDemoModalOpen(false);
+
     if (demoModalContent.isTrialEnded) {
         if (demoModalContent.userProfile === '1') {
             router.push('/dashboard-admin/upgrade');
         } else {
+            // For non-admins, maybe a generic page explaining the situation
             router.push('/planes');
         }
     } else {
-        // Find the profile and redirect
         const user = auth.currentUser;
-        if(user) {
+        if (user) {
             getDocs(query(collection(db, "usuarios"), where("uid", "==", user.uid))).then(snap => {
-                if(!snap.empty) {
+                if (!snap.empty) {
                     const userData = snap.docs[0].data();
-                     if (userData.perfil === '1') {
-                        router.push('/dashboard-admin');
-                    } else {
-                        // Add other profiles if needed, or a default
-                        router.push('/login'); 
+                    const profile = String(userData.perfil); // Ensure profile is a string
+                    
+                    switch (profile) {
+                        case '1':
+                            router.push('/dashboard-admin');
+                            break;
+                        case '2':
+                            router.push('/dashboard-collaborator');
+                            break;
+                        case 'AM':
+                            router.push('/dashboard-am');
+                            break;
+                        default:
+                            router.push('/login'); // Fallback to login
+                            break;
                     }
+                } else {
+                     router.push('/login'); // Fallback if user data not found
                 }
+            }).catch(() => {
+                router.push('/login'); // Fallback on error
             });
+        } else {
+            router.push('/login'); // Fallback if no user is authenticated
         }
     }
   };

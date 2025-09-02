@@ -8,11 +8,23 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+import { initializeApp, getApp, getApps } from 'firebase/app';
 import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sendWelcomeEmail } from '@/lib/email';
+
+// Firebase config needed to initialize a secondary app instance
+const firebaseConfig = {
+  apiKey: "AIzaSyDYjOlX8qBWTGdDAMjBWwMslQnSu21oDws",
+  authDomain: "tlacualli.app",
+  projectId: "tlacualli-a881e",
+  storageBucket: "tlacualli-a881e.firebasestorage.app",
+  messagingSenderId: "323312061685",
+  appId: "1:323312061685:web:38922872679f08047409bc",
+  measurementId: "G-1WY87VL7G4"
+};
 
 interface Employee {
   id?: string;
@@ -104,12 +116,18 @@ export function EmployeeForm({ restaurantId, userPlan, onSuccess, employeeToEdit
                 });
 
             } else {
-                // Creation Mode
-                // 1. Create user in Firebase Auth (password is the phone number)
-                const userCredential = await createUserWithEmailAndPassword(auth, email, telefono);
+                // --- Creation Mode: SAFE AUTHENTICATION FLOW ---
+                // 1. Create a temporary, secondary Firebase app instance.
+                const appName = `secondary-auth-${Date.now()}`;
+                const secondaryApp = initializeApp(firebaseConfig, appName);
+                const secondaryAuth = getAuth(secondaryApp);
+
+                // 2. Create the user in Firebase Auth using the secondary instance.
+                // This will NOT affect the current admin's session.
+                const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, telefono);
                 const user = userCredential.user;
 
-                // 2. Save user data in Firestore
+                // 3. Save user data in Firestore
                 const userData: any = {
                     uid: user.uid,
                     restauranteId: restaurantId,
@@ -128,14 +146,13 @@ export function EmployeeForm({ restaurantId, userPlan, onSuccess, employeeToEdit
 
                 await addDoc(collection(db, "usuarios"), userData);
                 
-                // 3. Send welcome email
+                // 4. Send welcome email
                 await sendWelcomeEmail({
                     to: email,
                     name: fullName,
                     username: email,
                     password: telefono
                 });
-
 
                 toast({
                   title: t("Employee Registered"),

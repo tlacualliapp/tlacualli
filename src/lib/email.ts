@@ -34,51 +34,67 @@ export const sendWelcomeEmail = async ({ to, name, username, password }: Welcome
 
     const subject = '¡Bienvenido a Tlacualli App!';
     const html = `
-       <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body { font-family: 'Poppins', sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
-                .container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #ffffff; }
-                .header { text-align: center; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-                .header img { max-width: 100px; }
-                .content { padding: 20px 0; }
-                .content h2 { color: #D32F2F; font-family: 'Poppins', sans-serif; }
-                .credentials { background-color: #fdf2f2; padding: 15px; border: 1px dashed #f5c2c7; border-radius: 5px; }
-                .credentials p { margin: 5px 0; }
-                .button-container { text-align: center; margin-top: 20px; }
-                .button { display: inline-block; background-color: #D32F2F; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; }
-                .footer { font-size: 0.9em; color: #777; margin-top: 30px; text-align: center; }
-            </style>
-            <link rel="preconnect" href="https://fonts.googleapis.com">
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <img src="https://firebasestorage.googleapis.com/v0/b/tlacualli-a881e.appspot.com/o/restaurantes%2Fassets%2Ftaco-icon.png?alt=media&token=c191a624-9b2f-4c48-8317-a53b516b3b24" alt="Tlacualli Logo">
-                </div>
-                <div class="content">
-                    <h2>¡Hola ${name}, te damos la bienvenida a Tlacualli App!</h2>
-                    <p>Tu cuenta ha sido creada exitosamente. Ahora eres parte de la comunidad que está transformando la gestión de restaurantes.</p>
-                    <p>Aquí están tus credenciales de acceso:</p>
-                    <div class="credentials">
-                        <p><strong>Usuario:</strong> ${username}</p>
-                        ${password ? `<p><strong>Contraseña Temporal:</strong> ${password}</p>` : ''}
-                    </div>
-                    <p>Te recomendamos cambiar tu contraseña después de tu primer inicio de sesión por seguridad.</p>
-                    <div class="button-container">
-                        <a href="https://tlacualli.app/login" class="button">Iniciar Sesión</a>
-                    </div>
-                </div>
-                <div class="footer">
-                    <p>Si tienes alguna pregunta, no dudes en contactar a nuestro equipo de soporte.</p>
-                    <p>El equipo de Tlacualli App.</p>
-                </div>
-            </div>
-        </body>
-        </html>
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${subject}</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Poppins', Arial, sans-serif; background-color: #f4f4f4;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f4f4;">
+            <tr>
+                <td align="center">
+                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; margin: 20px auto; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); overflow: hidden;">
+                        <!-- Header -->
+                        <tr>
+                            <td align="center" style="background-color: #D32F2F; padding: 20px 0;">
+                                <img src="https://firebasestorage.googleapis.com/v0/b/tlacualli-a881e.appspot.com/o/restaurantes%2Fassets%2Ftlacualli_logo_white.png?alt=media&token=13688b79-56de-4c42-b949-6889a7e376d5" alt="Tlacualli Logo" style="max-width: 150px;">
+                            </td>
+                        </tr>
+                        
+                        <!-- Content -->
+                        <tr>
+                            <td style="padding: 30px 40px;">
+                                <h2 style="font-family: 'Poppins', Arial, sans-serif; color: #D32F2F; margin-top: 0;">¡Hola ${name}, te damos la bienvenida a Tlacualli App!</h2>
+                                <p style="font-family: 'Poppins', Arial, sans-serif; font-size: 16px; color: #333;">Tu cuenta ha sido creada exitosamente. Ahora eres parte de la comunidad que está transformando la gestión de restaurantes.</p>
+                                <p style="font-family: 'Poppins', Arial, sans-serif; font-size: 16px; color: #333;">Aquí están tus credenciales de acceso:</p>
+                                
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #fdf2f2; border: 1px dashed #f5c2c7; border-radius: 8px; margin-top: 20px; margin-bottom: 20px;">
+                                    <tr>
+                                        <td style="padding: 20px;">
+                                            <p style="font-family: 'Poppins', Arial, sans-serif; margin: 5px 0; font-size: 16px;"><strong>Usuario:</strong> ${username}</p>
+                                            ${password ? `<p style="font-family: 'Poppins', Arial, sans-serif; margin: 5px 0; font-size: 16px;"><strong>Contraseña Temporal:</strong> ${password}</p>` : ''}
+                                        </td>
+                                    </tr>
+                                </table>
+                                
+                                <p style="font-family: 'Poppins', Arial, sans-serif; font-size: 16px; color: #333;">Te recomendamos cambiar tu contraseña después de tu primer inicio de sesión por seguridad.</p>
+                                
+                                <!-- Button -->
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 30px; text-align: center;">
+                                    <tr>
+                                        <td>
+                                            <a href="https://tlacualli.app/login" style="display: inline-block; background-color: #D32F2F; color: #ffffff; padding: 15px 30px; font-size: 18px; text-decoration: none; border-radius: 8px; font-weight: bold;">Iniciar Sesión</a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #f8f8f8; padding: 20px 40px; text-align: center; font-size: 12px; color: #777;">
+                                <p style="margin: 0;">Si tienes alguna pregunta, contacta a nuestro equipo de soporte.</p>
+                                <p style="margin-top: 10px; margin-bottom:0;">El equipo de Tlacualli App.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
     `;
 
     try {

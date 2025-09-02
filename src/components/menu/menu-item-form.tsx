@@ -169,11 +169,15 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
   };
 
   const handleInventoryItemSelect = (value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      inventoryItemId: value,
-      recipeId: '', // Reset recipe if inventory item is chosen
-    }));
+    const selectedItem = inventoryItems.find(item => item.id === value);
+    if (selectedItem) {
+        setFormData(prev => ({
+            ...prev,
+            inventoryItemId: value,
+            name: selectedItem.name,
+            recipeId: 'none', // Ensure the inventory section stays visible
+        }));
+    }
     setIsComboboxOpen(false);
   }
 
@@ -216,6 +220,16 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+
+    if (!formData.categoryId) {
+        toast({
+            variant: "destructive",
+            title: "Incomplete Form",
+            description: "Please select a category to continue.",
+        });
+        setIsLoading(false);
+        return;
+    }
 
     try {
       const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
@@ -317,7 +331,7 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
                 <Label htmlFor="categoryId">{t('Category')}</Label>
-                <Select name="categoryId" value={formData.categoryId} onValueChange={(value) => handleSelectChange('categoryId', value)}>
+                <Select name="categoryId" value={formData.categoryId} onValueChange={(value) => handleSelectChange('categoryId', value)} required>
                   <SelectTrigger><SelectValue placeholder={t('Select a category')} /></SelectTrigger>
                   <SelectContent>
                     {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
