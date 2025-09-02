@@ -169,11 +169,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           }
         }
         setIsLoadingPermissions(false);
+      } else if (!loading) {
+        setIsLoadingPermissions(false);
       }
     };
-    if (!loading) {
-      fetchPermissionsAndTrialStatus();
-    }
+    fetchPermissionsAndTrialStatus();
   }, [user, loading]);
 
 
@@ -245,7 +245,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             <TacoIcon className="h-8 w-8 text-primary" />
             <span className="sr-only">Tlacualli</span>
           </Link>
-          {navItems.map((item) => (
+          {isLoadingPermissions ? Array(5).fill(0).map((_, i) => <div key={i} className="h-4 w-16 bg-muted-foreground/20 rounded-md animate-pulse" />) : navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -279,7 +279,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 <TacoIcon className="h-6 w-6 text-primary" />
                 <span >Tlacualli</span>
               </Link>
-              {navItems.map((item) => (
+              {isLoadingPermissions ? Array(5).fill(0).map((_, i) => <div key={i} className="h-8 w-full bg-muted/20 rounded-md animate-pulse" />) : navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
