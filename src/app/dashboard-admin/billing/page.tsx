@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Loader2, Calendar, Building, Mail, Phone, Hash, CreditCard, Download, ArrowRight, ShieldCheck } from 'lucide-react';
+import { FileText, Loader2, Calendar, Building, Mail, Phone, Hash, CreditCard, Download, ArrowRight, ShieldCheck, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
@@ -16,6 +16,7 @@ import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'fi
 import { getCurrentUserData } from '@/lib/users';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 interface Restaurant {
   id: string;
@@ -57,6 +58,7 @@ export default function BillingPage() {
   const [isPaymentsLoading, setIsPaymentsLoading] = useState(true);
   const { toast } = useToast();
   const [userPlan, setUserPlan] = useState<string | null>(null);
+  const [isPortalLoading, setIsPortalLoading] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -98,12 +100,12 @@ export default function BillingPage() {
             history.push({
                 id: doc.id,
                 paymentDate: data.paymentDate,
-                totalPaid: data.totalPaid,
+                totalPaid: data.amount,
                 status: data.status || 'Paid',
                 invoiceId: data.invoiceId || `INV-${doc.id.substring(0,5)}`
             });
         });
-        setPaymentHistory(history);
+        setPaymentHistory(history.sort((a,b) => b.paymentDate.toMillis() - a.paymentDate.toMillis()));
         setIsPaymentsLoading(false);
     }, (error) => {
         console.error("Error fetching payment history:", error);
@@ -113,6 +115,29 @@ export default function BillingPage() {
 
     return () => unsubscribe();
   }, [restaurant, t, toast, userPlan]);
+  
+  const handleManageSubscription = async () => {
+    if (!restaurant) return;
+    setIsPortalLoading(true);
+
+    try {
+        const functions = getFunctions();
+        const createCustomerPortalSession = httpsCallable(functions, 'createCustomerPortalSession');
+        const response = await createCustomerPortalSession({ restaurantId: restaurant.id });
+        const { url } = response.data as { url: string };
+        window.location.href = url;
+    } catch (error) {
+        console.error("Error creating customer portal session:", error);
+        toast({
+            variant: "destructive",
+            title: t("Error"),
+            description: t("Could not open the subscription management portal. Please try again later."),
+        });
+    } finally {
+        setIsPortalLoading(false);
+    }
+  };
+
 
   if (loading || isLoading) {
     return (
@@ -185,10 +210,16 @@ export default function BillingPage() {
                         </div>
                     </div>
                 </CardContent>
-                <CardHeader>
+                <CardHeader className="flex flex-col md:flex-row gap-4">
                      <Button className="w-full md:w-auto" onClick={() => router.push('/dashboard-admin/upgrade')}>
                         {t('Upgrade or Change Plan')} <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
+                    {restaurant.plan !== 'demo' && (
+                         <Button variant="outline" className="w-full md:w-auto" onClick={handleManageSubscription} disabled={isPortalLoading}>
+                           {isPortalLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Settings className="mr-2 h-4 w-4" />}
+                           {t('Manage my Subscription and Payments')}
+                        </Button>
+                    )}
                 </CardHeader>
             </Card>
 

@@ -6,17 +6,20 @@ import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CreditCard, ArrowLeft, Loader2, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, Loader2, CheckCircle, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getCurrentUserData } from '@/lib/users';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 const plans = [
   { id: 'esencial', name: 'Plan Esencial', price: 195, description: 'Ideal para restaurantes pequeños.' },
@@ -42,23 +45,28 @@ export default function UpgradePage() {
     } else if (user) {
       const fetchUserData = async () => {
         setIsLoading(true);
-        const userData = await getCurrentUserData();
-        if (userData && userData.restauranteId) {
-          setRestaurantId(userData.restauranteId);
-          const collectionName = userData.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-          const restaurantRef = doc(db, collectionName, userData.restauranteId);
-          const restaurantSnap = await getDoc(restaurantRef);
-          if (restaurantSnap.exists()) {
-            const restaurantData = restaurantSnap.data();
-            setCurrentPlanId(restaurantData.plan);
-            setSelectedPlanId(restaurantData.plan);
+        try {
+          const userData = await getCurrentUserData();
+          if (userData && userData.restauranteId) {
+            setRestaurantId(userData.restauranteId);
+            const collectionName = userData.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+            const restaurantRef = doc(db, collectionName, userData.restauranteId);
+            const restaurantSnap = await getDoc(restaurantRef);
+            if (restaurantSnap.exists()) {
+              const restaurantData = restaurantSnap.data();
+              setCurrentPlanId(restaurantData.plan);
+              setSelectedPlanId(restaurantData.plan);
+            }
           }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los datos del restaurante.' });
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
       };
       fetchUserData();
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, toast]);
   
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
   const subtotal = selectedPlan?.price || 0;
@@ -67,60 +75,50 @@ export default function UpgradePage() {
 
   const handleUpgrade = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPlanId || !restaurantId || !user) return;
+    if (!selectedPlanId || !restaurantId || !user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Por favor, selecciona un plan.' });
+        return;
+    }
     
     setIsProcessing(true);
     try {
-        const isDemoUpgrade = currentPlanId === 'demo';
-        const fromCollection = isDemoUpgrade ? 'restaurantes_demo' : 'restaurantes';
-        const toCollection = 'restaurantes'; // All upgrades go to production collection
-
-        // In a real scenario, you'd integrate with a payment gateway here.
-        // We'll simulate a successful payment.
-
-        // If upgrading from demo, we need to move the document.
-        // This is complex and best handled by a backend function.
-        // For this prototype, we'll just update the plan.
-        const restaurantRef = doc(db, fromCollection, restaurantId);
-        await updateDoc(restaurantRef, { plan: selectedPlanId });
-        
-        // Also update the user's plan in their profile
-        const userQuery = query(collection(db, 'usuarios'), where('uid', '==', user.uid));
-        const userSnapshot = await getDocs(userQuery);
-        if (!userSnapshot.empty) {
-            const userDocRef = userSnapshot.docs[0].ref;
-            await updateDoc(userDocRef, { plan: selectedPlanId });
-        }
-        
-        // Add a payment record
-        const paymentData = {
-            paymentDate: serverTimestamp(),
-            totalPaid: total,
-            status: 'Paid',
-            plan: selectedPlanId,
-            userId: user.uid
-        };
-        await addDoc(collection(db, `${toCollection}/${restaurantId}/billing`), paymentData);
-        
-        toast({
-            title: t('Upgrade Successful!'),
-            description: t('Your plan has been upgraded to {{planName}}.', { planName: selectedPlan?.name }),
+        const functions = getFunctions();
+        const createStripeCheckout = httpsCallable(functions, 'createStripeCheckout');
+        const response = await createStripeCheckout({ 
+            planId: selectedPlanId, 
+            restaurantId: restaurantId 
         });
-        
-        router.push('/dashboard-admin/billing');
+
+        const { sessionId } = response.data as { sessionId: string };
+
+        if (!sessionId) {
+            throw new Error('No se pudo crear la sesión de pago.');
+        }
+
+        const stripe = await stripePromise;
+        if (!stripe) {
+            throw new Error('Stripe.js no se ha cargado.');
+        }
+
+        const { error } = await stripe.redirectToCheckout({ sessionId });
+
+        if (error) {
+            console.error("Stripe redirection error:", error);
+            toast({ variant: 'destructive', title: 'Error de Redirección', description: error.message });
+        }
 
     } catch (error) {
-        console.error("Upgrade failed:", error);
+        console.error("Error al crear la sesión de Stripe:", error);
+        const errorMessage = error instanceof Error ? error.message : 'Ocurrió un problema al procesar tu pago.';
         toast({
             variant: 'destructive',
-            title: t('Error'),
-            description: t('There was a problem upgrading your plan.'),
+            title: 'Error de Pago',
+            description: errorMessage,
         });
     } finally {
         setIsProcessing(false);
     }
   };
-
 
   if (isLoading) {
     return (
@@ -131,7 +129,6 @@ export default function UpgradePage() {
       </AdminLayout>
     );
   }
-
 
   return (
     <AdminLayout>
@@ -175,28 +172,7 @@ export default function UpgradePage() {
                         </RadioGroup>
                     </CardContent>
                 </Card>
-                 <Card className="mt-6">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><CreditCard />{t('Payment Information')}</CardTitle>
-                        <CardDescription>{t('This is a simulated payment form for demonstration purposes.')}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                         <div className="space-y-2">
-                            <Label htmlFor="card-number">{t('Card Number')}</Label>
-                            <Input id="card-number" placeholder="0000 0000 0000 0000" required />
-                        </div>
-                        <div className="grid grid-cols-3 gap-4">
-                             <div className="space-y-2 col-span-2">
-                                <Label htmlFor="expiry-date">{t('Expiry Date')}</Label>
-                                <Input id="expiry-date" placeholder="MM/YY" required/>
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="cvc">{t('CVC')}</Label>
-                                <Input id="cvc" placeholder="123" required/>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                {/* El formulario de pago se ha eliminado. Stripe se encarga de esto. */}
             </div>
             <div className="lg:col-span-1">
                  <Card className="sticky top-20">
@@ -221,12 +197,12 @@ export default function UpgradePage() {
                             <span>{t('Total')}</span>
                             <span className="font-mono">${total.toFixed(2)}</span>
                         </div>
-                        <Button type="submit" size="lg" className="w-full mt-4" disabled={isProcessing}>
+                        <Button type="submit" size="lg" className="w-full mt-4" disabled={isProcessing || !selectedPlanId || currentPlanId === selectedPlanId}>
                             {isProcessing ? <Loader2 className="animate-spin" /> : (
                                 <>
                                     <CheckCircle className="mr-2 h-4 w-4" />
                                     {t('Confirm and Pay')}
-                                </>
+                                </> 
                             )}
                         </Button>
                     </CardContent>
