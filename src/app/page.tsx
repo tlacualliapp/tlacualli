@@ -95,6 +95,10 @@ export default function LandingPage() {
     }
   }, [state, toast, t]);
 
+  if (!isClient) {
+    return null;
+  }
+
   return (
     <div className="bg-background text-foreground">
       {/* Header */}

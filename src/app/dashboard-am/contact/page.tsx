@@ -40,10 +40,15 @@ export default function ContactIncidentsPage() {
     const { t } = useTranslation();
     const [incidents, setIncidents] = useState<Incident[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isClient, setIsClient] = useState(false);
     const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
     const { toast } = useToast();
     const [adminReply, setAdminReply] = useState('');
     const [isReplying, setIsReplying] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
 
     useEffect(() => {
@@ -109,6 +114,17 @@ export default function ContactIncidentsPage() {
         closed: { label: 'Atendido', color: 'bg-green-100 text-green-800' },
         escalated: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800' },
     };
+
+    if (!isClient) {
+        return (
+            <AppLayout>
+                <div className="flex justify-center items-center h-full">
+                    <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                </div>
+            </AppLayout>
+        );
+    }
+
 
     return (
         <AppLayout>
@@ -250,4 +266,3 @@ export default function ContactIncidentsPage() {
         </AppLayout>
     );
 }
-

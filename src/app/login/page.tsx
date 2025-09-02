@@ -307,6 +307,13 @@ export default function LoginPage() {
     setUserForTermsCheck(null);
   };
 
+  if (!isClient) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-cover bg-center">
+             <Loader2 className="h-24 w-24 animate-spin text-primary" />
+        </div>
+    );
+  }
 
   return (
     <>
@@ -365,7 +372,7 @@ export default function LoginPage() {
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
               <Input
                 type="email"
-                placeholder={isClient ? t('User (email)') : 'User (email)'}
+                placeholder={t('User (email)')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full focus:ring-red-500"
@@ -377,7 +384,7 @@ export default function LoginPage() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
               <Input
                 type={showPassword ? 'text' : 'password'}
-                placeholder={isClient ? t('Password') : 'Password'}
+                placeholder={t('Password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 pr-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full focus:ring-red-500"
@@ -388,7 +395,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500"
-                aria-label={isClient ? t(showPassword ? 'Hide password' : 'Show password') : 'Show password'}
+                aria-label={t(showPassword ? 'Hide password' : 'Show password')}
               >
                 {showPassword ? <EyeOff /> : <Eye />}
               </button>
@@ -397,15 +404,15 @@ export default function LoginPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
-                <Label htmlFor="remember-me" className="text-sm text-gray-600 cursor-pointer">{isClient ? t('Remember me') : 'Remember me'}</Label>
+                <Label htmlFor="remember-me" className="text-sm text-gray-600 cursor-pointer">{t('Remember me')}</Label>
               </div>
               <Button variant="link" type="button" onClick={handlePasswordReset} className="text-sm text-red-600 p-0 h-auto">
-                {isClient ? t('Forgot your password?') : 'Forgot your password?'}
+                {t('Forgot your password?')}
               </Button>
             </div>
 
             <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-full text-lg" disabled={isLoading}>
-              {isLoading ? <Loader2 className="animate-spin" /> : (isClient ? t('LOG IN') : 'LOG IN')}
+              {isLoading ? <Loader2 className="animate-spin" /> : t('LOG IN')}
             </Button>
           </form>
           <p className="text-center text-xs text-gray-500 mt-6">www.tlacualli.app</p>

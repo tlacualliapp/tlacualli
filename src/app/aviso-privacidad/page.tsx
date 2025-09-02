@@ -19,6 +19,10 @@ export default function PrivacyPolicyPage() {
     setIsClient(true);
   }, []);
   
+  if (!isClient) {
+    return null; // O un esqueleto de carga
+  }
+
   return (
     <div className="bg-background text-foreground">
       {/* Header */}

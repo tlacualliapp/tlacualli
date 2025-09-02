@@ -94,6 +94,10 @@ export default function PricingPage() {
     setIsClient(true);
   }, []);
 
+  if (!isClient) {
+    return null;
+  }
+  
   return (
     <div className="bg-background text-foreground">
       {/* Header */}

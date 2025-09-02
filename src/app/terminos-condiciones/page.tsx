@@ -19,6 +19,10 @@ export default function TermsAndConditionsPage() {
     setIsClient(true);
   }, []);
   
+  if (!isClient) {
+    return null; // Or a loading skeleton
+  }
+
   return (
     <div className="bg-background text-foreground">
       {/* Header */}
