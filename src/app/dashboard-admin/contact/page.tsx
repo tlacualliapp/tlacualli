@@ -154,8 +154,8 @@ export default function ContactPage() {
                 {conversation.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
                         <MessageSquare className="h-16 w-16 mb-4" />
-                        <h3 className="text-xl font-semibold font-headline">{t('Welcome to Support!')}</h3>
-                        <p className="max-w-sm">{t('Ask a question about how the platform works, and our AI assistant, Tlalli, will try to help you. If it cannot, it will escalate to a human agent.')}</p>
+                        <h3 className="text-xl font-semibold font-headline">{t("Hello, I'm Tlalli, your support agent.")}</h3>
+                        <p className="max-w-sm">{t("I'm here to help you improve your experience. Tell me, how can I support you?")}</p>
                     </div>
                 )}
                 {conversation.map((msg, index) => (
