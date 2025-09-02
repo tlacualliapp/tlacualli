@@ -97,7 +97,7 @@ const prompt = ai.definePrompt({
         -   Los usuarios pueden ver su plan actual (Demo, Esencial, Pro, Ilimitado).
         -   Pueden cambiar de plan y realizar el pago a través de Stripe.
         -   Pueden ver su historial de pagos y descargar recibos.
-        -   Si un pago falla, el `subscriptionStatus` cambia a "inactive" y el acceso a otros módulos se bloquea hasta que se regularice el pago. El periodo de prueba del plan Demo dura 15 días.
+        -   Si un pago falla, el 'subscriptionStatus' cambia a "inactive" y el acceso a otros módulos se bloquea hasta que se regularice el pago. El periodo de prueba del plan Demo dura 15 días.
 
     9.  **Módulo de Reportes:**
         -   **Ventas:** Muestra el total de ventas en un rango de fechas, filtrado por mesa o estado.
