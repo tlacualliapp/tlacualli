@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,7 +5,7 @@ import { AdminLayout } from '@/components/layout/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Mail, Send, User, Bot } from 'lucide-react';
+import { Loader2, Mail, Send, User, Bot, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
@@ -152,6 +151,13 @@ export default function ContactPage() {
       <Card className="h-[calc(100vh-22rem)] flex flex-col">
         <CardContent className="p-0 flex-grow flex flex-col">
             <ScrollArea className="flex-grow p-6 space-y-4" ref={scrollAreaRef as any}>
+                {conversation.length === 0 && (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                        <MessageSquare className="h-16 w-16 mb-4" />
+                        <h3 className="text-xl font-semibold font-headline">{t('Welcome to Support!')}</h3>
+                        <p className="max-w-sm">{t('Ask a question about how the platform works, and our AI assistant, Tlalli, will try to help you. If it cannot, it will escalate to a human agent.')}</p>
+                    </div>
+                )}
                 {conversation.map((msg, index) => (
                     <div key={index} className={cn("flex items-end gap-3", msg.role === 'user' ? 'justify-end' : 'justify-start')}>
                         {msg.role === 'model' && (
