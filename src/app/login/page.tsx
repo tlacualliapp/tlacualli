@@ -28,6 +28,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+  const [isClient, setIsClient] = useState(false);
 
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [demoModalContent, setDemoModalContent] = useState({ title: '', description: '', isTrialEnded: false, userProfile: '' });
@@ -35,6 +36,9 @@ export default function LoginPage() {
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [userForTermsCheck, setUserForTermsCheck] = useState<any>(null);
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedEmail');
@@ -361,7 +365,7 @@ export default function LoginPage() {
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
               <Input
                 type="email"
-                placeholder={t('User (email)')}
+                placeholder={isClient ? t('User (email)') : 'User (email)'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full focus:ring-red-500"
@@ -373,7 +377,7 @@ export default function LoginPage() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
               <Input
                 type={showPassword ? 'text' : 'password'}
-                placeholder={t('Password')}
+                placeholder={isClient ? t('Password') : 'Password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 pr-10 bg-white/50 border-gray-300 placeholder:text-gray-500 rounded-full focus:ring-red-500"
@@ -384,7 +388,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500"
-                aria-label={t(showPassword ? 'Hide password' : 'Show password')}
+                aria-label={isClient ? t(showPassword ? 'Hide password' : 'Show password') : 'Show password'}
               >
                 {showPassword ? <EyeOff /> : <Eye />}
               </button>
@@ -393,15 +397,15 @@ export default function LoginPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
-                <Label htmlFor="remember-me" className="text-sm text-gray-600 cursor-pointer">{t('Remember me')}</Label>
+                <Label htmlFor="remember-me" className="text-sm text-gray-600 cursor-pointer">{isClient ? t('Remember me') : 'Remember me'}</Label>
               </div>
               <Button variant="link" type="button" onClick={handlePasswordReset} className="text-sm text-red-600 p-0 h-auto">
-                {t('Forgot your password?')}
+                {isClient ? t('Forgot your password?') : 'Forgot your password?'}
               </Button>
             </div>
 
             <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-full text-lg" disabled={isLoading}>
-              {isLoading ? <Loader2 className="animate-spin" /> : t('LOG IN')}
+              {isLoading ? <Loader2 className="animate-spin" /> : (isClient ? t('LOG IN') : 'LOG IN')}
             </Button>
           </form>
           <p className="text-center text-xs text-gray-500 mt-6">www.tlacualli.app</p>
