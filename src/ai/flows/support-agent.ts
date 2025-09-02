@@ -100,10 +100,16 @@ const supportAgentFlow = ai.defineFlow(
 
     // Log the interaction to Firestore
     const incidentData = {
-        ...input,
+        userId: input.userId,
+        userName: input.userName,
+        userEmail: input.userEmail,
+        restaurantId: input.restaurantId,
+        restaurantName: input.restaurantName,
+        question: input.message,
+        conversationHistory: input.conversationHistory || [],
         aiResponse: response,
         escalated: requiresEscalation,
-        status: requiresEscalation ? 'escalated' : 'closed', // 'closed' if AI handles it, 'escalated' otherwise
+        status: requiresEscalation ? 'escalated' : 'closed',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     };
