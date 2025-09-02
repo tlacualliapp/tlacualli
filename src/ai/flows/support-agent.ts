@@ -12,7 +12,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { sendCustomEmail } from '@/lib/email';
 
 
@@ -44,7 +44,7 @@ export async function getSupportResponse(input: SupportAgentInput): Promise<Supp
 
 const prompt = ai.definePrompt({
     name: 'supportAgentPrompt',
-    input: { schema: SupportAgentInputSchema },
+    input: { schema: z.object({ ...SupportAgentInputSchema.shape, knowledgeBase: z.string() }) },
     output: {
         schema: z.object({
             response: z.string().describe("The direct, helpful, and friendly response to the user's query in Spanish."),
@@ -53,8 +53,56 @@ const prompt = ai.definePrompt({
     },
     prompt: `You are a friendly and expert support agent for "Tlacualli App", a restaurant management platform. Your name is Tlalli.
     Your goal is to answer user questions about how to use the platform based on the detailed knowledge base below. Always respond in Spanish.
+    If the user's question is outside of this scope (e.g., a billing issue, bug report, a specific complaint, a feature request), you cannot answer it. In that case, respond politely that you will escalate the issue to the human support team and that they will be contacted by email shortly.
 
-    KNOWLEDGE BASE:
+    === KNOWLEDGE BASE ===
+    {{{knowledgeBase}}}
+    ======================
+
+    Current conversation history (if any):
+    {{#if conversationHistory}}
+      {{#each conversationHistory}}
+        **{{role}}:** {{content}}
+      {{/each}}
+    {{/if}}
+
+    User Name: {{{userName}}}
+    Restaurant: {{{restaurantName}}}
+    User's new message:
+    {{{message}}}
+    `,
+    config: {
+        temperature: 0.3,
+    },
+});
+
+const supportAgentFlow = ai.defineFlow(
+  {
+    name: 'supportAgentFlow',
+    inputSchema: SupportAgentInputSchema,
+    outputSchema: SupportAgentOutputSchema,
+  },
+  async (input) => {
+    
+    // 1. Fetch learned knowledge from previous human-answered tickets
+    const solvedIncidentsQuery = query(
+        collection(db, 'contacto'), 
+        where('status', '==', 'closed'),
+        where('adminReply', '!=', null)
+    );
+    const solvedIncidentsSnap = await getDocs(solvedIncidentsQuery);
+    
+    let learnedKnowledge = "Previously Answered Questions by Human Support:\\n";
+    if (solvedIncidentsSnap.empty) {
+        learnedKnowledge += "No solved incidents found yet.\\n";
+    } else {
+        solvedIncidentsSnap.forEach(doc => {
+            const data = doc.data();
+            learnedKnowledge += `- User Question: "${data.question}" -> Correct Answer: "${data.adminReply}"\\n`;
+        });
+    }
+
+    const staticKnowledgeBase = `
     1.  **Workflow General:** El flujo de trabajo principal es: Inventario -> Recetas -> Menú -> Órdenes.
         -   Primero se registran los insumos en el inventario.
         -   Luego, se crean las recetas usando esos insumos.
@@ -106,35 +154,10 @@ const prompt = ai.definePrompt({
         -   **Inventario Valorado:** Calcula el valor monetario total del stock actual.
         -   **Analíticas Operativas:** Muestra horas pico, rotación de mesas y los platillos más vendidos.
         -   **Optimización IA:** Una función de IA analiza las ventas y sugiere optimizaciones para el menú.
+    `;
 
-    Based on this knowledge, answer the following user query. Be concise and helpful.
-    If the user's question is outside of this scope (e.g., a billing issue, bug report, a specific complaint, a feature request), you cannot answer it. In that case, respond politely that you will escalate the issue to the human support team and that they will be contacted by email shortly.
-
-    Current conversation history (if any):
-    {{#if conversationHistory}}
-      {{#each conversationHistory}}
-        **{{role}}:** {{content}}
-      {{/each}}
-    {{/if}}
-
-    User Name: {{{userName}}}
-    Restaurant: {{{restaurantName}}}
-    User's new message:
-    {{{message}}}
-    `,
-    config: {
-        temperature: 0.3,
-    },
-});
-
-const supportAgentFlow = ai.defineFlow(
-  {
-    name: 'supportAgentFlow',
-    inputSchema: SupportAgentInputSchema,
-    outputSchema: SupportAgentOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
+    // 2. Call the AI prompt with the combined knowledge
+    const { output } = await prompt({ ...input, knowledgeBase: `${staticKnowledgeBase}\\n${learnedKnowledge}` });
     
     if (!output) {
       throw new Error("AI did not generate a valid response.");
@@ -142,7 +165,7 @@ const supportAgentFlow = ai.defineFlow(
     
     const { response, requiresEscalation } = output;
 
-    // Log the interaction to Firestore
+    // 3. Log the interaction to Firestore
     const incidentData = {
         userId: input.userId,
         userName: input.userName,
@@ -159,7 +182,7 @@ const supportAgentFlow = ai.defineFlow(
     };
     const incidentRef = await addDoc(collection(db, 'contacto'), incidentData);
     
-    // Escalate via email if needed
+    // 4. Escalate via email if needed
     if (requiresEscalation) {
         const emailTo = process.env.EMAIL_TO || 'tlacualli.app@gmail.com';
         await sendCustomEmail({

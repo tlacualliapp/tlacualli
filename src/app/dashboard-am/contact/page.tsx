@@ -5,10 +5,10 @@ import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Mail, Eye, CheckCircle } from 'lucide-react';
+import { Loader2, Mail, Eye, CheckCircle, Trash2, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, orderBy, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, updateDoc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -17,6 +17,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Bot, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { sendSupportReply } from '@/app/actions/support';
 
 
 interface Incident {
@@ -38,6 +42,9 @@ export default function ContactIncidentsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
     const { toast } = useToast();
+    const [adminReply, setAdminReply] = useState('');
+    const [isReplying, setIsReplying] = useState(false);
+
 
     useEffect(() => {
         const q = query(collection(db, "contacto"), orderBy("createdAt", "desc"));
@@ -56,26 +63,51 @@ export default function ContactIncidentsPage() {
 
         return () => unsubscribe();
     }, [toast]);
-
-    const handleMarkAsResolved = async (incidentId: string) => {
-        const incidentRef = doc(db, 'contacto', incidentId);
+    
+    const handleDelete = async (incidentId: string) => {
         try {
-            await updateDoc(incidentRef, {
-                status: 'closed',
-                updatedAt: Timestamp.now(),
+            await deleteDoc(doc(db, "contacto", incidentId));
+            toast({
+                title: 'Incident Deleted',
+                description: 'The conversation has been permanently deleted.',
             });
-            toast({ title: 'Incident Resolved', description: 'The incident has been marked as closed.' });
-            setSelectedIncident(null);
         } catch (error) {
-            console.error("Error resolving incident: ", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not update the incident status.' });
+            console.error("Error deleting incident: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not delete the incident.' });
         }
     };
     
+    const handleSendReply = async () => {
+        if (!selectedIncident || !adminReply.trim()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please write a reply.'});
+            return;
+        }
+        setIsReplying(true);
+        try {
+            await sendSupportReply({
+                incidentId: selectedIncident.id,
+                userEmail: selectedIncident.userEmail,
+                userName: selectedIncident.userName,
+                originalQuestion: selectedIncident.question,
+                adminReply: adminReply,
+            });
+
+            toast({ title: 'Reply Sent', description: 'The reply has been sent to the user.' });
+            setSelectedIncident(null);
+            setAdminReply('');
+        } catch (error) {
+            console.error("Error sending reply:", error);
+            toast({ variant: 'destructive', title: 'Error', description: `Failed to send reply. ${(error as Error).message}` });
+        } finally {
+            setIsReplying(false);
+        }
+    };
+
+
     const statusConfig = {
-        open: { label: 'Open', color: 'bg-yellow-100 text-yellow-800' },
-        closed: { label: 'Closed', color: 'bg-green-100 text-green-800' },
-        escalated: { label: 'Escalated', color: 'bg-red-100 text-red-800' },
+        open: { label: 'Open', color: 'bg-blue-100 text-blue-800' },
+        closed: { label: 'Atendido', color: 'bg-green-100 text-green-800' },
+        escalated: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800' },
     };
 
     return (
@@ -119,11 +151,33 @@ export default function ContactIncidentsPage() {
                                                 {t(statusConfig[incident.status]?.label || incident.status)}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right space-x-2">
                                             <Button variant="outline" size="sm" onClick={() => setSelectedIncident(incident)}>
                                                 <Eye className="mr-2 h-4 w-4" />
                                                 {t('View')}
                                             </Button>
+                                             <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="destructive" size="sm">
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        {t('Delete')}
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            {t('This action cannot be undone. This will permanently delete the conversation.')}
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(incident.id)} className="bg-destructive hover:bg-destructive/90">
+                                                            {t('Yes, delete')}
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -162,32 +216,38 @@ export default function ContactIncidentsPage() {
                                     )}
                                 </div>
                             ))}
-                            <div className="flex items-end gap-3 justify-end">
-                                <div className="max-w-md p-3 rounded-lg bg-primary text-primary-foreground">
-                                    <p className="text-sm font-semibold mb-2">{t('Last message sent:')}</p>
-                                    <p className="text-sm whitespace-pre-wrap">{selectedIncident?.question}</p>
-                                </div>
-                                <Avatar><AvatarFallback><User /></AvatarFallback></Avatar>
-                            </div>
-                             <div className="flex items-end gap-3 justify-start">
-                                <Avatar><AvatarFallback><Bot /></AvatarFallback></Avatar>
-                                <div className="max-w-md p-3 rounded-lg bg-muted">
-                                    <p className="text-sm font-semibold mb-2">{t('AI Final Response:')}</p>
-                                    <p className="text-sm whitespace-pre-wrap">{selectedIncident?.aiResponse}</p>
-                                </div>
-                            </div>
                         </ScrollArea>
                     </div>
-                    {selectedIncident?.status !== 'closed' && (
-                        <DialogFooter>
-                            <Button onClick={() => handleMarkAsResolved(selectedIncident!.id)}>
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                {t('Mark as Resolved')}
-                            </Button>
-                        </DialogFooter>
+                    {selectedIncident?.status === 'escalated' && (
+                        <div className="py-4 border-t">
+                            <Label htmlFor="admin-reply" className="font-semibold">{t('Respond to User')}</Label>
+                            <Textarea 
+                                id="admin-reply"
+                                className="mt-2"
+                                rows={5}
+                                value={adminReply}
+                                onChange={(e) => setAdminReply(e.target.value)}
+                                placeholder={t('Write your response here...')}
+                            />
+                        </div>
                     )}
+                    <DialogFooter>
+                        {selectedIncident?.status === 'escalated' ? (
+                             <Button onClick={handleSendReply} disabled={isReplying}>
+                                {isReplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                <Send className="mr-2 h-4 w-4" />
+                                {t('Send Reply')}
+                            </Button>
+                        ) : selectedIncident?.status === 'closed' ? (
+                             <Button disabled>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                {t('Case Attended')}
+                            </Button>
+                        ) : null}
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </AppLayout>
     );
 }
+

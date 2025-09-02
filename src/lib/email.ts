@@ -16,6 +16,13 @@ interface CustomEmailProps {
     html: string;
 }
 
+interface SupportResponseEmailProps {
+    to: string;
+    name: string;
+    question: string;
+    reply: string;
+}
+
 const getTransporter = () => {
     // This is the standard and most reliable configuration for Gmail with nodemailer.
     return nodemailer.createTransport({
@@ -109,6 +116,76 @@ export const sendWelcomeEmail = async ({ to, name, username, password }: Welcome
         console.error(`Failed to send welcome email to ${to}:`, error);
         // We don't re-throw the error to avoid blocking the user creation process
         // but it should be logged for monitoring.
+    }
+};
+
+export const sendSupportResponseEmail = async ({ to, name, question, reply }: SupportResponseEmailProps) => {
+    const transporter = getTransporter();
+    const subject = 'Respuesta a tu consulta de soporte - Tlacualli App';
+    const html = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${subject}</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Poppins', Arial, sans-serif; background-color: #f4f4f4;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f4f4;">
+            <tr>
+                <td align="center">
+                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; margin: 20px auto; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); overflow: hidden;">
+                        <!-- Header -->
+                        <tr>
+                            <td align="center" style="background-color: #D32F2F; padding: 20px 0;">
+                                <img src="https://firebasestorage.googleapis.com/v0/b/tlacualli-a881e.appspot.com/o/restaurantes%2Fassets%2Ftlacualli_logo_white.png?alt=media&token=13688b79-56de-4c42-b949-6889a7e376d5" alt="Tlacualli Logo" style="max-width: 150px;">
+                            </td>
+                        </tr>
+                        
+                        <!-- Content -->
+                        <tr>
+                            <td style="padding: 30px 40px;">
+                                <h2 style="font-family: 'Poppins', Arial, sans-serif; color: #333; margin-top: 0;">Hola ${name},</h2>
+                                <p style="font-family: 'Poppins', Arial, sans-serif; font-size: 16px; color: #555;">Hemos revisado tu consulta y aquí tienes una respuesta de nuestro equipo de soporte:</p>
+                                
+                                <h3 style="color: #D32F2F; border-bottom: 2px solid #f0f0f0; padding-bottom: 5px; margin-top: 25px;">Tu consulta original:</h3>
+                                <p style="background-color: #fafafa; padding: 15px; border-radius: 8px; font-style: italic; color: #666;">"${question}"</p>
+
+                                <h3 style="color: #D32F2F; border-bottom: 2px solid #f0f0f0; padding-bottom: 5px; margin-top: 25px;">Nuestra respuesta:</h3>
+                                <div style="background-color: #f0f5ff; padding: 20px; border-radius: 8px; color: #333; line-height: 1.6;">
+                                    ${reply.replace(/\n/g, '<br>')}
+                                </div>
+                                
+                                <p style="font-family: 'Poppins', Arial, sans-serif; font-size: 16px; color: #555; margin-top: 30px;">Esperamos que esto resuelva tu duda. Si necesitas más ayuda, no dudes en contactarnos de nuevo.</p>
+                            </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #f8f8f8; padding: 20px 40px; text-align: center; font-size: 12px; color: #777;">
+                                <p style="margin: 0;">Saludos cordiales,</p>
+                                <p style="margin-top: 5px; margin-bottom:0;"><strong>El equipo de Tlacualli App</strong></p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    `;
+
+     try {
+        await transporter.sendMail({
+            from: `"Soporte Tlacualli" <${process.env.EMAIL_USER}>`,
+            to,
+            subject,
+            html,
+        });
+        console.log(`Support response sent to ${to}`);
+    } catch (error) {
+        console.error(`Failed to send support response email to ${to}:`, error);
+        throw error;
     }
 };
 
