@@ -30,7 +30,8 @@ import {
   Shield,
   HelpCircle,
   Building,
-  Ban
+  Ban,
+  Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -79,6 +80,7 @@ const allNavItems = [
   { key: 'map', href: '/dashboard-admin/map', label: 'Digital Map', icon: Map },
   { key: 'billing', href: '/dashboard-admin/billing', label: 'Billing', icon: InvoiceIcon },
   { key: 'settings', href: '/dashboard-admin/settings', label: 'Settings', icon: Settings },
+  { key: 'contact', href: '/dashboard-admin/contact', label: 'Contact', icon: Mail },
   { key: 'guia', href: '/guia', label: 'Guía', icon: HelpCircle },
 ];
 
@@ -135,7 +137,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             } else if (profile === '2') { // Collaborator
               setDashboardUrl('/dashboard-collaborator');
               const allowedItems = allNavItems.filter(item => {
-                 if (item.key === 'dashboard' || item.key === 'guia') return true;
+                 if (item.key === 'dashboard' || item.key === 'guia' || item.key === 'contact') return true;
                  return userData.permissions && userData.permissions[item.key]
               });
               
@@ -266,7 +268,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 pathname === item.href ? 'text-foreground font-semibold' : 'text-muted-foreground'
               }`}
             >
-              {t(item.label)}
+              {isLoadingPermissions ? item.label : t(item.label)}
             </Link>
           ))}
         </nav>
@@ -303,7 +305,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                   } transition-all hover:text-foreground`}
                 >
                   <item.icon className="h-5 w-5" />
-                  {t(item.label)}
+                  {isLoadingPermissions ? item.label : t(item.label)}
                 </Link>
               ))}
             </nav>
