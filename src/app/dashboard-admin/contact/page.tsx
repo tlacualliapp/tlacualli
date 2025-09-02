@@ -10,7 +10,7 @@ import { Loader2, Mail, Send, User, Bot } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot, orderBy, getDocs } from 'firebase/firestore';
 import { getCurrentUserData } from '@/lib/users';
 import { getSupportResponse, SupportAgentInput } from '@/ai/flows/support-agent';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
