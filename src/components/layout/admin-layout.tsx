@@ -29,7 +29,8 @@ import {
   FileText,
   Shield,
   HelpCircle,
-  Building
+  Building,
+  Ban
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -95,6 +96,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [navItems, setNavItems] = useState(allNavItems);
   const [dashboardUrl, setDashboardUrl] = useState('/login');
   const [isTrialExpired, setIsTrialExpired] = useState(false);
+  const [isSubscriptionActive, setIsSubscriptionActive] = useState(true);
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
   const [userName, setUserName] = useState('');
   const [restaurantName, setRestaurantName] = useState('');
@@ -146,7 +148,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               setDashboardUrl('/login');
             }
 
-            // --- Fetch restaurant name & Trial Status Check ---
+            // --- Fetch restaurant name & Trial/Subscription Status Check ---
             if (restaurantId) {
                 const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
                 const restaurantRef = doc(db, collectionName, restaurantId);
@@ -154,6 +156,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 if (restaurantSnap.exists()) {
                     const restaurantData = restaurantSnap.data();
                     setRestaurantName(restaurantData.restaurantName);
+                    
                     if (userPlan === 'demo') {
                         const registrationDate = restaurantData.fecharegistro?.toDate();
                         if (registrationDate) {
@@ -162,6 +165,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                                 setIsTrialExpired(true);
                             }
                         }
+                    } else { // It's a paid plan, check subscription status
+                        setIsSubscriptionActive(restaurantData.subscriptionStatus === 'active');
                     }
                 }
             }
@@ -225,14 +230,22 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   };
 
   const showTrialExpiredModal = isTrialExpired && !['/dashboard-admin/upgrade', '/dashboard-admin/billing'].includes(pathname);
+  const showAccessBlocked = !isSubscriptionActive && !['/dashboard-admin/upgrade', '/dashboard-admin/billing'].includes(pathname);
 
+  if (isLoadingPermissions) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-16 w-16 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div 
       className="relative flex min-h-screen w-full flex-col bg-cover bg-center"
       style={{ backgroundImage: "url('/assets/background.png')" }}
     >
-      {showTrialExpiredModal && (
+      {(showTrialExpiredModal || showAccessBlocked) && (
         <div className="fixed inset-0 bg-black/80 z-40" />
       )}
 
@@ -245,7 +258,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             <TacoIcon className="h-8 w-8 text-primary" />
             <span className="sr-only">Tlacualli</span>
           </Link>
-          {isLoadingPermissions ? Array(5).fill(0).map((_, i) => <div key={i} className="h-4 w-16 bg-muted-foreground/20 rounded-md animate-pulse" />) : navItems.map((item) => (
+          {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -279,7 +292,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 <TacoIcon className="h-6 w-6 text-primary" />
                 <span >Tlacualli</span>
               </Link>
-              {isLoadingPermissions ? Array(5).fill(0).map((_, i) => <div key={i} className="h-8 w-full bg-muted/20 rounded-md animate-pulse" />) : navItems.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -382,7 +395,20 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="flex-1 p-4 sm:px-6 sm:py-8 md:gap-8 md:p-8 relative z-10">
-        {children}
+        {showAccessBlocked ? (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+                <Ban className="h-16 w-16 text-destructive mb-4" />
+                <h1 className="text-2xl font-bold">{t('Access Denied')}</h1>
+                <p className="text-muted-foreground mt-2 max-w-md">
+                    {t('Your access is restricted due to an inactive subscription. Please visit the billing section to reactivate your account.')}
+                </p>
+                <Button onClick={() => router.push('/dashboard-admin/billing')} className="mt-6">
+                    {t('Go to Billing')}
+                </Button>
+            </div>
+        ) : (
+          children
+        )}
       </main>
 
       <Dialog open={showTrialExpiredModal}>

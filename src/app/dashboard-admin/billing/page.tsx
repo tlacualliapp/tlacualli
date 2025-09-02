@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Loader2, Calendar, Building, Mail, Phone, Hash, CreditCard, Download, ArrowRight, ShieldCheck, Settings } from 'lucide-react';
+import { FileText, Loader2, Calendar, Building, Mail, Phone, Hash, CreditCard, Download, ArrowRight, ShieldCheck, Settings, ExternalLink, ShieldAlert } from 'lucide-react'; // ExternalLink añadido
 import { useTranslation } from 'react-i18next';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
@@ -17,6 +17,7 @@ import { getCurrentUserData } from '@/lib/users';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface Restaurant {
   id: string;
@@ -31,6 +32,7 @@ interface Restaurant {
   plan: 'demo' | 'esencial' | 'pro' | 'ilimitado';
   status: '1' | '0' | 'deleted';
   fecharegistro: any; // Firestore Timestamp
+  subscriptionStatus?: 'active' | 'inactive';
 }
 
 interface Payment {
@@ -38,7 +40,7 @@ interface Payment {
     paymentDate: Timestamp;
     totalPaid: number;
     status: string;
-    invoiceId?: string;
+    invoiceUrl?: string; // Campo para la URL del recibo de Stripe
 }
 
 const planDetails = {
@@ -102,7 +104,7 @@ export default function BillingPage() {
                 paymentDate: data.paymentDate,
                 totalPaid: data.amount,
                 status: data.status || 'Paid',
-                invoiceId: data.invoiceId || `INV-${doc.id.substring(0,5)}`
+                invoiceUrl: data.hosted_invoice_url // Usar la URL directa del recibo
             });
         });
         setPaymentHistory(history.sort((a,b) => b.paymentDate.toMillis() - a.paymentDate.toMillis()));
@@ -164,9 +166,20 @@ export default function BillingPage() {
   const currentPlan = planDetails[restaurant.plan] || { name: t('Unknown'), price: 0 };
   const registrationDate = restaurant.fecharegistro?.toDate();
   const nextPaymentDate = registrationDate ? new Date(registrationDate.setMonth(registrationDate.getMonth() + 1)) : new Date();
+  const isSubscriptionActive = restaurant.subscriptionStatus === 'active' || restaurant.plan === 'demo';
 
   return (
     <AdminLayout>
+      {!isSubscriptionActive && (
+        <Alert variant="destructive" className="mb-6">
+          <ShieldAlert className="h-4 w-4" />
+          <AlertTitle>{t('Account Suspended')}</AlertTitle>
+          <AlertDescription>
+            {t('Your account is inactive due to a payment issue. Please update your payment information or choose a plan to continue using our services.')}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="mb-6 bg-card/65 backdrop-blur-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
@@ -182,9 +195,9 @@ export default function BillingPage() {
                 <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                         <span>{t('Subscription Details')}</span>
-                        <Badge variant={restaurant.status === '1' ? 'default' : 'destructive'} className="text-sm">
-                            <ShieldCheck className="mr-2 h-4 w-4" />
-                            {restaurant.status === '1' ? t('Active') : t('Inactive')}
+                        <Badge variant={isSubscriptionActive ? 'default' : 'destructive'} className="text-sm">
+                            {isSubscriptionActive ? <ShieldCheck className="mr-2 h-4 w-4" /> : <ShieldAlert className="mr-2 h-4 w-4" />}
+                            {isSubscriptionActive ? t('Active') : t('Inactive')}
                         </Badge>
                     </CardTitle>
                 </CardHeader>
@@ -211,15 +224,16 @@ export default function BillingPage() {
                     </div>
                 </CardContent>
                 <CardHeader className="flex flex-col md:flex-row gap-4">
-                     <Button className="w-full md:w-auto" onClick={() => router.push('/dashboard-admin/upgrade')}>
-                        {t('Upgrade or Change Plan')} <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                     
                     {restaurant.plan !== 'demo' && (
                          <Button variant="outline" className="w-full md:w-auto" onClick={handleManageSubscription} disabled={isPortalLoading}>
                            {isPortalLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Settings className="mr-2 h-4 w-4" />}
                            {t('Manage my Subscription and Payments')}
                         </Button>
                     )}
+                    <Button className="w-full md:w-auto" onClick={() => router.push('/dashboard-admin/upgrade')}>
+                        {t('Upgrade or Change Plan')} <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
                 </CardHeader>
             </Card>
 
@@ -234,7 +248,7 @@ export default function BillingPage() {
                                 <TableHead>{t('Date')}</TableHead>
                                 <TableHead>{t('Amount')}</TableHead>
                                 <TableHead>{t('Status')}</TableHead>
-                                <TableHead className="text-right">{t('Invoice')}</TableHead>
+                                <TableHead className="text-right">{t('Receipt')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -251,10 +265,18 @@ export default function BillingPage() {
                                         <TableCell>${payment.totalPaid.toFixed(2)}</TableCell>
                                         <TableCell><Badge variant="secondary" className="bg-green-100 text-green-700">{t(payment.status)}</Badge></TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="outline" size="sm">
-                                                <Download className="mr-2 h-3 w-3" />
-                                                {payment.invoiceId}
-                                            </Button>
+                                            {payment.invoiceUrl ? (
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm"
+                                                    onClick={() => window.open(payment.invoiceUrl, '_blank')}
+                                                >
+                                                    <ExternalLink className="mr-2 h-3 w-3" />
+                                                    {t('View Receipt')}
+                                                </Button>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">{t('Not available')}</span>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))

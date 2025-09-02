@@ -102,6 +102,22 @@ exports.stripeWebhook = onRequest({
         res.status(400).send(`Webhook Error: ${err.message}`);
         return;
     }
+    
+    // Función para actualizar el estado de la suscripción
+    const updateSubscriptionStatus = async (customerId, status) => {
+        const restaurantsQuery = admin.firestore().collection('restaurantes').where('stripeCustomerId', '==', customerId);
+        const snapshot = await restaurantsQuery.get();
+        if (!snapshot.empty) {
+            const restaurantId = snapshot.docs[0].id;
+            await admin.firestore().collection('restaurantes').doc(restaurantId).update({
+                subscriptionStatus: status
+            });
+            console.log(`Estado de suscripción actualizado a '${status}' para restaurante ${restaurantId}`);
+        } else {
+            console.log(`No se encontró restaurante para el customerId: ${customerId}`);
+        }
+    };
+
 
     if (event.type === "checkout.session.completed") {
         const session = event.data.object;
@@ -116,7 +132,7 @@ exports.stripeWebhook = onRequest({
             await mainRef.update({
                 plan: planId,
                 stripeSubscriptionId: session.subscription,
-                stripeCustomerId: session.customer, // <-- GUARDAR CUSTOMER ID
+                stripeCustomerId: session.customer,
                 subscriptionStatus: "active",
                 subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
             });
@@ -128,7 +144,7 @@ exports.stripeWebhook = onRequest({
                 amount: session.amount_total / 100,
                 currency: session.currency,
                 invoiceId: session.invoice, 
-                status: session.payment_status,
+                status: 'paid',
             });
 
             const usersQuery = admin.firestore().collection("usuarios").where("restauranteId", "==", restaurantId);
@@ -148,6 +164,39 @@ exports.stripeWebhook = onRequest({
             res.status(500).send("Error interno al procesar el webhook.");
             return;
         }
+    } else if (event.type === 'invoice.payment_succeeded') {
+        const invoice = event.data.object;
+        const customerId = invoice.customer;
+
+        try {
+            const restaurantsQuery = admin.firestore().collection('restaurantes').where('stripeCustomerId', '==', customerId);
+            const snapshot = await restaurantsQuery.get();
+            
+            if (!snapshot.empty) {
+                const restaurantDoc = snapshot.docs[0];
+                const restaurantId = restaurantDoc.id;
+
+                await restaurantDoc.ref.update({ subscriptionStatus: 'active' });
+
+                const billingRef = restaurantDoc.ref.collection("billing");
+                await billingRef.add({
+                    paymentDate: admin.firestore.FieldValue.serverTimestamp(),
+                    plan: restaurantDoc.data().plan,
+                    amount: invoice.amount_paid / 100,
+                    currency: invoice.currency,
+                    invoiceId: invoice.id,
+                    status: 'paid',
+                });
+                console.log(`Pago recurrente registrado para el restaurante ${restaurantId}`);
+            }
+        } catch (error) {
+            console.error("Error al registrar pago recurrente:", error);
+        }
+
+    } else if (event.type === 'invoice.payment_failed' || event.type === 'customer.subscription.deleted') {
+         const object = event.data.object;
+         const customerId = object.customer;
+         await updateSubscriptionStatus(customerId, 'inactive');
     }
 
     res.status(200).send();
