@@ -168,7 +168,17 @@ exports.createCustomerPortalSession = onCall({
     const appUrl = process.env.APP_URL || "http://localhost:3000";
 
     try {
-        const restaurantDoc = await admin.firestore().collection("restaurantes").doc(restaurantId).get();
+        const usersQuery = admin.firestore().collection("usuarios").where("uid", "==", request.auth.uid);
+        const userSnapshot = await usersQuery.get();
+
+        if(userSnapshot.empty) {
+            throw new functions.https.HttpsError("not-found", "No se encontró el usuario.");
+        }
+        const userData = userSnapshot.docs[0].data();
+        const userPlan = userData.plan;
+        
+        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const restaurantDoc = await admin.firestore().collection(collectionName).doc(restaurantId).get();
 
         if (!restaurantDoc.exists) {
             throw new functions.https.HttpsError("not-found", "No se encontró el restaurante.");
