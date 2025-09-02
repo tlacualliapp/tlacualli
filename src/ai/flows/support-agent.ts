@@ -16,7 +16,7 @@ import { sendCustomEmail } from '@/lib/email';
 
 
 // Define Zod schemas for input and output
-export const SupportAgentInputSchema = z.object({
+const SupportAgentInputSchema = z.object({
   userId: z.string().describe("The user's unique ID."),
   userName: z.string().describe("The user's full name."),
   userEmail: z.string().email().describe("The user's email address."),
