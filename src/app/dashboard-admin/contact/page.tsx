@@ -81,8 +81,11 @@ export default function ContactPage() {
     if (!message.trim() || !user || !userInfo || !restaurant) return;
 
     const userMessage: Message = { role: 'user', content: message };
-    const updatedConversation = [...conversation, userMessage];
-    setConversation(updatedConversation);
+    
+    // Pass the history *before* adding the new message
+    const currentConversationHistory = [...conversation];
+
+    setConversation(prev => [...prev, userMessage]);
     setMessage('');
     setIsSending(true);
 
@@ -93,8 +96,8 @@ export default function ContactPage() {
             userEmail: userInfo.email,
             restaurantId: restaurant.id,
             restaurantName: restaurant.restaurantName,
-            message: message,
-            conversationHistory: updatedConversation,
+            message: message, // Send only the new message
+            conversationHistory: currentConversationHistory, // Send the previous context
         };
         
         const result = await getSupportResponse(input);
