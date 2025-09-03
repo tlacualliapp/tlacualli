@@ -6,7 +6,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BarChart, LineChart, Users, UtensilsCrossed, Loader2 } from 'lucide-react';
+import { BarChart, LineChart, Users, UtensilsCrossed, Loader2, CreditCard } from 'lucide-react';
 import { DailyAccessChart } from '@/components/dashboard/daily-access-chart';
 import { RestaurantActionsChart } from '@/components/dashboard/restaurant-actions-chart';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +14,7 @@ import { RestaurantsTable } from '@/components/dashboard/restaurants-table';
 import { MasterUsersTable } from '@/components/dashboard/master-users-table';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
+import Link from 'next/link';
 
 export default function AdminMasterDashboard() {
   const [user, loading] = useAuthState(auth);
@@ -105,7 +106,7 @@ export default function AdminMasterDashboard() {
             </CardHeader>
         </Card>
         
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('Registered Restaurants')}</CardTitle>
@@ -142,6 +143,17 @@ export default function AdminMasterDashboard() {
               <div className="text-2xl font-bold font-headline">{stats.collaborators}</div>
             </CardContent>
           </Card>
+           <Link href="/dashboard-am/plans">
+             <Card className="h-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{t('Manage Plans')}</CardTitle>
+                  <CreditCard className="h-6 w-6 text-primary-foreground/80" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold font-headline">{t('Plans')}</div>
+                </CardContent>
+              </Card>
+            </Link>
         </div>
         <div className="grid gap-6 mt-6 md:grid-cols-2 lg:grid-cols-7">
           <Card className="lg:col-span-4">
