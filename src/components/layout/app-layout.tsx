@@ -19,7 +19,8 @@ import {
   FileText,
   Shield,
   Building,
-  Mail
+  Mail,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -58,6 +59,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/dashboard-am', label: 'Dashboard', icon: Home },
   { href: '/dashboard-am/contact', label: 'Incidents', icon: Mail },
+  { href: '/dashboard-am/plans', label: 'Plans', icon: CreditCard },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
