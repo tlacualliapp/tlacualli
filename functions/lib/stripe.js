@@ -4,10 +4,8 @@ const admin = require("firebase-admin");
 const { onCall } = require("firebase-functions/v2/https");
 const { onRequest } = require("firebase-functions/v2/https");
 
-// INICIALIZAR FIREBASE ADMIN
 admin.initializeApp();
 
-// Función para migrar un documento y sus subcolecciones de forma recursiva.
 async function migrateDocument(sourceDocRef, destinationDocRef) {
     const docSnapshot = await sourceDocRef.get();
     if (!docSnapshot.exists) {
@@ -92,32 +90,26 @@ exports.stripeWebhook = onRequest({
     const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     
-    const sig = req.headers["stripe-signature"];
     let event;
-
     try {
-        event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
+        event = stripe.webhooks.constructEvent(req.rawBody, req.headers["stripe-signature"], webhookSecret);
     } catch (err) {
         console.error(`Error en la firma del webhook: ${err.message}`);
         res.status(400).send(`Webhook Error: ${err.message}`);
         return;
     }
     
-    // Función para actualizar el estado de la suscripción
     const updateSubscriptionStatus = async (customerId, status) => {
         const restaurantsQuery = admin.firestore().collection('restaurantes').where('stripeCustomerId', '==', customerId);
         const snapshot = await restaurantsQuery.get();
         if (!snapshot.empty) {
             const restaurantId = snapshot.docs[0].id;
-            await admin.firestore().collection('restaurantes').doc(restaurantId).update({
-                subscriptionStatus: status
-            });
+            await admin.firestore().collection('restaurantes').doc(restaurantId).update({ subscriptionStatus: status });
             console.log(`Estado de suscripción actualizado a '${status}' para restaurante ${restaurantId}`);
         } else {
             console.log(`No se encontró restaurante para el customerId: ${customerId}`);
         }
     };
-
 
     if (event.type === "checkout.session.completed") {
         const session = event.data.object;
@@ -126,17 +118,36 @@ exports.stripeWebhook = onRequest({
         try {
             const demoRef = admin.firestore().collection("restaurantes_demo").doc(restaurantId);
             const mainRef = admin.firestore().collection("restaurantes").doc(restaurantId);
+            const demoSnapshot = await demoRef.get();
 
-            await migrateDocument(demoRef, mainRef);
+            if (demoSnapshot.exists) {
+                // --- LÓGICA DE MIGRACIÓN (demo -> pago) ---
+                console.log(`Iniciando migración para el restaurante ${restaurantId} de demo a ${planId}`);
+                await migrateDocument(demoRef, mainRef);
+                
+                await mainRef.update({
+                    plan: planId,
+                    stripeSubscriptionId: session.subscription,
+                    stripeCustomerId: session.customer,
+                    subscriptionStatus: "active",
+                    subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
+                });
+
+                await admin.firestore().recursiveDelete(demoRef);
+                console.log(`Migración completada. Restaurante ${restaurantId} eliminado de demo.`);
+
+            } else {
+                // --- LÓGICA DE ACTUALIZACIÓN (pago -> pago) ---
+                console.log(`Iniciando actualización de plan para el restaurante ${restaurantId} a ${planId}`);
+                await mainRef.update({
+                    plan: planId, 
+                    subscriptionStatus: "active", // Reactivar si estaba inactivo
+                    stripeSubscriptionId: session.subscription, // Actualizar con la nueva suscripción
+                });
+                 console.log(`Plan del restaurante ${restaurantId} actualizado a ${planId}`);
+            }
             
-            await mainRef.update({
-                plan: planId,
-                stripeSubscriptionId: session.subscription,
-                stripeCustomerId: session.customer,
-                subscriptionStatus: "active",
-                subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
-            });
-
+            // --- LÓGICA COMÚN PARA AMBOS CASOS ---
             const billingRef = mainRef.collection("billing");
             await billingRef.add({
                 paymentDate: admin.firestore.FieldValue.serverTimestamp(),
@@ -145,6 +156,7 @@ exports.stripeWebhook = onRequest({
                 currency: session.currency,
                 invoiceId: session.invoice, 
                 status: 'paid',
+                description: demoSnapshot.exists ? 'Pago inicial de suscripción' : `Cambio de plan a ${planId}`
             });
 
             const usersQuery = admin.firestore().collection("usuarios").where("restauranteId", "==", restaurantId);
@@ -154,30 +166,23 @@ exports.stripeWebhook = onRequest({
                 batch.update(doc.ref, { plan: planId });
             });
             await batch.commit();
-
-            await admin.firestore().recursiveDelete(demoRef);
-
-            console.log(`Migración y guardado de customerId completados para ${restaurantId}`);
+            console.log(`Plan actualizado a '${planId}' para todos los usuarios del restaurante ${restaurantId}`);
 
         } catch (error) {
-            console.error("Error al procesar el pago y la migración:", error);
+            console.error("Error al procesar el pago y la actualización:", error);
             res.status(500).send("Error interno al procesar el webhook.");
             return;
         }
     } else if (event.type === 'invoice.payment_succeeded') {
         const invoice = event.data.object;
         const customerId = invoice.customer;
-
         try {
             const restaurantsQuery = admin.firestore().collection('restaurantes').where('stripeCustomerId', '==', customerId);
             const snapshot = await restaurantsQuery.get();
-            
             if (!snapshot.empty) {
                 const restaurantDoc = snapshot.docs[0];
                 const restaurantId = restaurantDoc.id;
-
                 await restaurantDoc.ref.update({ subscriptionStatus: 'active' });
-
                 const billingRef = restaurantDoc.ref.collection("billing");
                 await billingRef.add({
                     paymentDate: admin.firestore.FieldValue.serverTimestamp(),
@@ -186,6 +191,7 @@ exports.stripeWebhook = onRequest({
                     currency: invoice.currency,
                     invoiceId: invoice.id,
                     status: 'paid',
+                    description: 'Pago recurrente de suscripción'
                 });
                 console.log(`Pago recurrente registrado para el restaurante ${restaurantId}`);
             }
@@ -203,7 +209,6 @@ exports.stripeWebhook = onRequest({
 });
 
 
-// NUEVA FUNCIÓN PARA CREAR EL PORTAL DE CLIENTE
 exports.createCustomerPortalSession = onCall({
     invoker: 'public',
     secrets: ["STRIPE_SECRET_KEY", "APP_URL"],

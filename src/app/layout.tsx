@@ -4,9 +4,13 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import I18nProvider from '@/components/i18n-provider';
 
+// Actualizado para incluir el favicon
 export const metadata: Metadata = {
   title: 'Tlacualli',
   description: 'Restaurant Management System',
+  icons: {
+    icon: '/assets/icon.png',
+  },
 };
 
 export default function RootLayout({

@@ -12,20 +12,26 @@ import { ArrowLeft, Loader2, CheckCircle, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, onSnapshot } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getCurrentUserData } from '@/lib/users';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { loadStripe } from '@stripe/stripe-js';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+}
 
-const plans = [
-  { id: 'esencial', name: 'Plan Esencial', price: 195, description: 'Ideal para restaurantes pequeños.' },
-  { id: 'pro', name: 'Plan Pro', price: 295, description: 'Perfecto para negocios en crecimiento.' },
-  { id: 'ilimitado', name: 'Plan Ilimitado', price: 595, description: 'Para restaurantes de gran volumen.' },
-];
+interface Restaurant {
+  plan: string;
+  isVip: boolean; // Corregido: 'isVip' en lugar de 'isVIP'
+}
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 export default function UpgradePage() {
   const { t } = useTranslation();
@@ -34,10 +40,25 @@ export default function UpgradePage() {
   const { toast } = useToast();
   
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
-  const [currentPlanId, setCurrentPlanId] = useState<string>('');
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [allPlans, setAllPlans] = useState<Plan[]>([]);
+  const [displayPlans, setDisplayPlans] = useState<Plan[]>([]);
+
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    const q = query(collection(db, 'planes'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const plansData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Plan));
+      setAllPlans(plansData);
+    }, (error) => {
+      console.error("Error fetching plans: ", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los planes.' });
+    });
+    return () => unsubscribe();
+  }, [toast]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -53,12 +74,13 @@ export default function UpgradePage() {
             const restaurantRef = doc(db, collectionName, userData.restauranteId);
             const restaurantSnap = await getDoc(restaurantRef);
             if (restaurantSnap.exists()) {
-              const restaurantData = restaurantSnap.data();
-              setCurrentPlanId(restaurantData.plan);
+              const restaurantData = restaurantSnap.data() as Restaurant;
+              setRestaurant(restaurantData);
               setSelectedPlanId(restaurantData.plan);
             }
           }
         } catch (error) {
+            console.error("Error fetching restaurant data: ", error);
             toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los datos del restaurante.' });
         } finally {
             setIsLoading(false);
@@ -67,8 +89,21 @@ export default function UpgradePage() {
       fetchUserData();
     }
   }, [user, loading, router, toast]);
+
+  useEffect(() => {
+    if (restaurant && allPlans.length > 0) {
+        let filteredPlans = [];
+        // Corregido: Usar 'isVip' para la validación
+        if (restaurant.isVip) {
+            filteredPlans = allPlans.filter(p => p.name.toLowerCase() === 'vip');
+        } else {
+            filteredPlans = allPlans.filter(p => p.name.toLowerCase() !== 'vip');
+        }
+        setDisplayPlans(filteredPlans);
+    }
+  }, [restaurant, allPlans]);
   
-  const selectedPlan = plans.find(p => p.id === selectedPlanId);
+  const selectedPlan = displayPlans.find(p => p.id === selectedPlanId);
   const subtotal = selectedPlan?.price || 0;
   const iva = subtotal * 0.16;
   const total = subtotal + iva;
@@ -120,7 +155,7 @@ export default function UpgradePage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && displayPlans.length === 0) {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-full">
@@ -156,23 +191,22 @@ export default function UpgradePage() {
                     </CardHeader>
                     <CardContent>
                         <RadioGroup value={selectedPlanId} onValueChange={setSelectedPlanId} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {plans.map((plan) => (
+                            {displayPlans.map((plan) => (
                                 <Label key={plan.id} htmlFor={`plan-${plan.id}`} className={cn(
                                     "block p-4 border rounded-lg cursor-pointer transition-all",
                                     selectedPlanId === plan.id ? "border-primary ring-2 ring-primary bg-primary/5" : "border-border hover:border-primary/50"
                                 )}>
                                     <div className="flex items-center justify-between">
-                                        <h3 className="font-bold">{t(plan.name)}</h3>
+                                        <h3 className="font-bold">{plan.name}</h3>
                                         <RadioGroupItem value={plan.id} id={`plan-${plan.id}`} />
                                     </div>
-                                    <p className="text-sm text-muted-foreground mt-1">{t(plan.description)}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">{plan.description}</p>
                                     <p className="text-2xl font-bold mt-4">${plan.price.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/{t('month')}</span></p>
                                 </Label>
                             ))}
                         </RadioGroup>
                     </CardContent>
                 </Card>
-                {/* El formulario de pago se ha eliminado. Stripe se encarga de esto. */}
             </div>
             <div className="lg:col-span-1">
                  <Card className="sticky top-20">
@@ -182,7 +216,7 @@ export default function UpgradePage() {
                     <CardContent className="space-y-4">
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">{t('Selected Plan')}</span>
-                            <span className="font-bold">{selectedPlan ? t(selectedPlan.name) : 'N/A'}</span>
+                            <span className="font-bold">{selectedPlan ? selectedPlan.name : 'N/A'}</span>
                         </div>
                          <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">{t('Subtotal')}</span>
@@ -197,7 +231,8 @@ export default function UpgradePage() {
                             <span>{t('Total')}</span>
                             <span className="font-mono">${total.toFixed(2)}</span>
                         </div>
-                        <Button type="submit" size="lg" className="w-full mt-4" disabled={isProcessing || !selectedPlanId || currentPlanId === selectedPlanId}>
+                        {/* Corregido: Asegurar que el valor de disabled sea siempre booleano */}
+                        <Button type="submit" size="lg" className="w-full mt-4" disabled={isProcessing || !selectedPlanId || !!(restaurant && restaurant.plan === selectedPlanId)}>
                             {isProcessing ? <Loader2 className="animate-spin" /> : (
                                 <>
                                     <CheckCircle className="mr-2 h-4 w-4" />

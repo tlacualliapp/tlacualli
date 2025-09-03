@@ -3,9 +3,9 @@
 
 import { useState, useEffect } from "react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts" // 1. Importar ResponsiveContainer
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -41,7 +41,7 @@ export function DailyAccessChart() {
           const date = data.fecha.toDate();
           const month = date.getMonth();
           const year = date.getFullYear();
-          const key = `${year}-${String(month).padStart(2, '0')}`; // e.g., "2024-06"
+          const key = `${year}-${String(month).padStart(2, '0')}`;
           
           if (!monthlyLogins[key]) {
             monthlyLogins[key] = 0;
@@ -59,7 +59,7 @@ export function DailyAccessChart() {
                 key
             }
         })
-        .sort((a,b) => a.key.localeCompare(b.key)); // Sort by YYYY-MM key
+        .sort((a,b) => a.key.localeCompare(b.key));
 
       setChartData(formattedData);
       setIsLoading(false);
@@ -87,16 +87,15 @@ export function DailyAccessChart() {
     )
   }
 
+  // 2. Reemplazar el div por ResponsiveContainer
   return (
-    <div className="h-[300px] w-full">
+    <ResponsiveContainer width="100%" height={300}>
       <ChartContainer config={{...chartConfig, logins: { ...chartConfig.logins, label: t('Accesses')}}}>
         <AreaChart
           accessibilityLayer
           data={chartData}
-          margin={{
-            left: 12,
-            right: 12,
-          }}
+          // 3. Eliminar los márgenes, ya que ResponsiveContainer lo maneja
+          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
         >
           <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.5} />
           <XAxis
@@ -137,6 +136,6 @@ export function DailyAccessChart() {
           />
         </AreaChart>
       </ChartContainer>
-    </div>
+    </ResponsiveContainer>
   )
 }

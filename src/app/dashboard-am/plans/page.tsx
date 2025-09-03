@@ -31,6 +31,12 @@ export default function PlansPage() {
   const [planToEdit, setPlanToEdit] = useState<Plan | null>(null);
   const { toast } = useToast();
   const { t } = useTranslation();
+  
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     setIsLoading(true);
@@ -43,11 +49,12 @@ export default function PlansPage() {
     }, (error) => {
       console.error("Error fetching plans:", error);
       setIsLoading(false);
-      toast({ variant: "destructive", title: t('Error'), description: t('Could not load plans.') });
+      // Evitar llamar a `t` en el servidor para las notificaciones
+      toast({ variant: "destructive", title: 'Error', description: 'Could not load plans.' });
     });
 
     return () => unsubscribe();
-  }, [t, toast]);
+  }, [toast]);
 
   const handleEdit = (plan: Plan) => {
     setPlanToEdit(plan);
@@ -74,9 +81,9 @@ export default function PlansPage() {
       <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{planToEdit ? t('Edit Plan') : t('Register New Plan')}</DialogTitle>
+            <DialogTitle>{isClient ? (planToEdit ? t('Edit Plan') : t('Register New Plan')) : 'Register New Plan'}</DialogTitle>
             <DialogDescription>
-              {planToEdit ? t('Modify the plan details.') : t('Create a new subscription plan for the platform.')}
+              {isClient ? (planToEdit ? t('Modify the plan details.') : t('Create a new subscription plan for the platform.')) : 'Create a new subscription plan for the platform.'}
             </DialogDescription>
           </DialogHeader>
           <PlanForm onSuccess={() => setIsFormModalOpen(false)} planToEdit={planToEdit} />
@@ -87,12 +94,12 @@ export default function PlansPage() {
         <CardHeader className="flex flex-row justify-between items-center">
           <div>
             <CardTitle className="text-3xl font-bold font-headline flex items-center gap-2">
-              <CreditCard className="h-8 w-8" /> {t('Plan Management')}
+              <CreditCard className="h-8 w-8" /> {isClient ? t('Plan Management') : 'Plan Management'}
             </CardTitle>
-            <CardDescription>{t('Manage the subscription plans for the platform.')}</CardDescription>
+            <CardDescription>{isClient ? t('Manage the subscription plans for the platform.') : 'Manage the subscription plans for the platform.'}</CardDescription>
           </div>
           <Button onClick={handleAddNew}>
-            <PlusCircle className="mr-2 h-4 w-4" /> {t('Register New Plan')}
+            <PlusCircle className="mr-2 h-4 w-4" /> {isClient ? t('Register New Plan') : 'Register New Plan'}
           </Button>
         </CardHeader>
       </Card>
@@ -103,11 +110,11 @@ export default function PlansPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('Plan Name')}</TableHead>
-                  <TableHead className="text-right">{t('Price (MXN)')}</TableHead>
-                  <TableHead className="text-right">{t('Max Tables')}</TableHead>
-                  <TableHead className="text-right">{t('Max Orders/Month')}</TableHead>
-                  <TableHead className="text-right">{t('Actions')}</TableHead>
+                  <TableHead>{isClient ? t('Plan Name') : 'Plan Name'}</TableHead>
+                  <TableHead className="text-right">{isClient ? t('Price (MXN)') : 'Price (MXN)'}</TableHead>
+                  <TableHead className="text-right">{isClient ? t('Max Tables') : 'Max Tables'}</TableHead>
+                  <TableHead className="text-right">{isClient ? t('Max Orders/Month') : 'Max Orders/Month'}</TableHead>
+                  <TableHead className="text-right">{isClient ? t('Actions') : 'Actions'}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -127,21 +134,21 @@ export default function PlansPage() {
                               <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>{t('Actions')}</DropdownMenuLabel>
-                              <DropdownMenuItem onSelect={() => handleEdit(plan)}><FilePenLine className="mr-2 h-4 w-4" />{t('Edit')}</DropdownMenuItem>
+                              <DropdownMenuLabel>{isClient ? t('Actions') : 'Actions'}</DropdownMenuLabel>
+                              <DropdownMenuItem onSelect={() => handleEdit(plan)}><FilePenLine className="mr-2 h-4 w-4" />{isClient ? t('Edit') : 'Edit'}</DropdownMenuItem>
                               <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />{t('Delete')}</DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />{isClient ? t('Delete') : 'Delete'}</DropdownMenuItem>
                               </AlertDialogTrigger>
                             </DropdownMenuContent>
                           </DropdownMenu>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>{t('Are you sure?')}</AlertDialogTitle>
-                              <AlertDialogDescription>{t('This action cannot be undone. This will permanently delete the plan.')}</AlertDialogDescription>
+                              <AlertDialogTitle>{isClient ? t('Are you sure?') : 'Are you sure?'}</AlertDialogTitle>
+                              <AlertDialogDescription>{isClient ? t('This action cannot be undone. This will permanently delete the plan.') : 'This action cannot be undone. This will permanently delete the plan.'}</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(plan.id)} className="bg-destructive hover:bg-destructive/90">{t('Yes, delete')}</AlertDialogAction>
+                              <AlertDialogCancel>{isClient ? t('Cancel') : 'Cancel'}</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(plan.id)} className="bg-destructive hover:bg-destructive/90">{isClient ? t('Yes, delete') : 'Yes, delete'}</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -149,7 +156,7 @@ export default function PlansPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={5} className="h-24 text-center">{t('No plans found.')}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="h-24 text-center">{isClient ? t('No plans found.') : 'No plans found.'}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

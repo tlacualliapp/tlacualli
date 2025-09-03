@@ -1,7 +1,7 @@
 
 "use client"
 import { useState, useEffect } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts" // 1. Importar
 import {
   ChartContainer,
   ChartTooltip,
@@ -28,7 +28,6 @@ export function RestaurantActionsChart() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            // 1. Get all restaurants to map IDs to names
             const prodRestaurantsRef = collection(db, 'restaurantes');
             const demoRestaurantsRef = collection(db, 'restaurantes_demo');
             const [prodSnap, demoSnap] = await Promise.all([getDocs(prodRestaurantsRef), getDocs(demoRestaurantsRef)]);
@@ -41,7 +40,6 @@ export function RestaurantActionsChart() {
                 restaurantNames[doc.id] = doc.data().restaurantName || t('Unknown');
             });
 
-            // 2. Get all monitor actions
             const monitorQuery = query(collection(db, 'monitor'));
             const unsubscribe = onSnapshot(monitorQuery, (snapshot) => {
                 const actionsByRestaurant: { [key: string]: number } = {};
@@ -63,7 +61,7 @@ export function RestaurantActionsChart() {
                         actions: count,
                     }))
                     .sort((a,b) => b.actions - a.actions)
-                    .slice(0, 5); // Top 5
+                    .slice(0, 5);
 
                 setChartData(formattedData);
                 setIsLoading(false);
@@ -95,19 +93,21 @@ export function RestaurantActionsChart() {
     )
   }
 
+  // 2. Reemplazar el div por ResponsiveContainer
   return (
-    <div className="h-[300px] w-full">
+    <ResponsiveContainer width="100%" height={300}>
       <ChartContainer config={{...chartConfig, actions: { ...chartConfig.actions, label: t('Actions')}}}>
-        <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 10 }}>
+        <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
           <CartesianGrid horizontal={false} strokeDasharray="3 3" strokeOpacity={0.5} />
           <YAxis
             dataKey="restaurant"
             type="category"
             tickLine={false}
-            tickMargin={10}
+            tickMargin={5}
             axisLine={false}
-            width={100}
-            stroke="hsl(var(--foreground))"
+            // 3. Dejar que el contenedor maneje el ancho, usando `width` y `domain` para el espacio
+            tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
+            interval={0}
           />
           <XAxis dataKey="actions" type="number" hide />
           <ChartTooltip
@@ -117,6 +117,6 @@ export function RestaurantActionsChart() {
           <Bar dataKey="actions" fill="var(--color-actions)" radius={8} />
         </BarChart>
       </ChartContainer>
-    </div>
+    </ResponsiveContainer>
   )
 }

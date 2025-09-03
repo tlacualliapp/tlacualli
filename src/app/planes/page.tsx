@@ -41,7 +41,7 @@ const plans = [
     salesText: 'Este plan es el socio ideal para negocios que no paran de crecer. Acelera tus procesos, atiende a más clientes y mantén el control de tus ventas con una capacidad superior. Maximiza tu rentabilidad y gestiona picos de demanda con una herramienta que se adapta a tu ritmo.',
   },
   {
-    name: 'Plan Ilimitado',
+    name: 'Plan Extenso',
     price: '$595 MXN/mes',
     description: 'Para restaurantes con gran afluencia, franquicias o múltiples ubicaciones.',
     features: [
@@ -50,7 +50,7 @@ const plans = [
       'Todas las funcionalidades de los planes anteriores.',
       'Soporte dedicado y consultoría.',
     ],
-    cta: 'Contactar para Ilimitado',
+    cta: 'Contactar para Extenso',
     salesText: 'Diseñado para los líderes de la industria. Si tu negocio tiene un alto volumen de ventas y necesitas un control total, el Plan Ilimitado es para ti. Con esta capacidad, podrás gestionar cada mesa y cada orden sin preocuparte por los límites. La solución completa para tu éxito a gran escala.',
   },
 ];
