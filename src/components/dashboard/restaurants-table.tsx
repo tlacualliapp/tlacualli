@@ -59,6 +59,7 @@ type Restaurant = {
   status: string;
   plan?: 'demo' | 'esencial' | 'pro' | 'ilimitado';
   fecharegistro?: Timestamp;
+  isVip?: boolean;
 };
 
 type AccountDetails = {
@@ -204,6 +205,28 @@ export function RestaurantsTable() {
         });
     }
   };
+  
+    const handleToggleVip = async (restaurant: Restaurant) => {
+    const newVipStatus = !restaurant.isVip;
+    try {
+        const collectionName = restaurant.plan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+        const restaurantRef = doc(db, collectionName, restaurant.id);
+        await updateDoc(restaurantRef, { isVip: newVipStatus });
+        toast({
+            title: t("VIP Status Updated"),
+            description: t("{{restaurantName}} is now {{status}}.", { restaurantName: restaurant.restaurantName, status: newVipStatus ? t('a VIP') : t('not a VIP') }),
+        });
+        setRestaurants(prev => prev.map(r => r.id === restaurant.id ? {...r, isVip: newVipStatus} : r));
+    } catch (error) {
+         console.error("Error updating VIP status:", error);
+        toast({
+            variant: "destructive",
+            title: t("Error"),
+            description: t("Could not update VIP status."),
+        });
+    }
+  }
+
 
   const handleToggleStatus = async (restaurant: Restaurant) => {
     const newStatus = restaurant.status === "1" ? "0" : "1";
@@ -512,9 +535,12 @@ export function RestaurantsTable() {
                 return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
-                        <Button variant="link" className="p-0 h-auto font-medium" onClick={() => setSelectedRestaurant(item)}>
-                          {item.restaurantName}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                           {item.isVip && <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />}
+                           <Button variant="link" className="p-0 h-auto font-medium" onClick={() => setSelectedRestaurant(item)}>
+                            {item.restaurantName}
+                           </Button>
+                        </div>
                       </TableCell>
                       <TableCell>{item.state}</TableCell>
                       <TableCell>
@@ -560,9 +586,13 @@ export function RestaurantsTable() {
                                         <><Power className="mr-2 h-4 w-4 text-green-500" />{t('Activate')}</>
                                       )}
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleToggleVip(item)}>
+                                        <Star className="mr-2 h-4 w-4 text-yellow-500" />
+                                        {item.isVip ? t('Remove VIP') : t('Mark as VIP')}
+                                    </DropdownMenuItem>
                                     {item.plan === 'demo' && (
                                         <DropdownMenuItem onSelect={() => setRestaurantToMigrate(item)}>
-                                            <Star className="mr-2 h-4 w-4 text-yellow-500" />
+                                            <ShieldCheck className="mr-2 h-4 w-4 text-blue-500" />
                                             {t('Migrate Plan')}
                                         </DropdownMenuItem>
                                     )}
@@ -610,13 +640,17 @@ export function RestaurantsTable() {
           {selectedRestaurant && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl font-headline">{selectedRestaurant.restaurantName}</DialogTitle>
+                 <DialogTitle className="text-2xl font-headline flex items-center gap-2">
+                    {selectedRestaurant.isVip && <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />}
+                    {selectedRestaurant.restaurantName}
+                </DialogTitle>
                 <DialogDescription>
                     <div className="flex items-center gap-2 pt-1">
                         <Badge variant="outline" className="border-primary text-primary">{selectedRestaurant.style}</Badge>
                         <Badge variant={selectedRestaurant.status === '1' ? 'default' : 'destructive'} className={cn(selectedRestaurant.status === '1' && 'bg-green-600 hover:bg-green-700')}>
                             {selectedRestaurant.status === '1' ? t('Active') : t('Inactive')}
                         </Badge>
+                         {selectedRestaurant.isVip && <Badge variant="outline" className="border-yellow-400 text-yellow-600 bg-yellow-50">{t('VIP Client')}</Badge>}
                     </div>
                 </DialogDescription>
               </DialogHeader>
