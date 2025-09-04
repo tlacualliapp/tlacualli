@@ -180,6 +180,7 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tableNameFilter, setTableNameFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
   const [profitabilitySearchTerm, setProfitabilitySearchTerm] = useState('');
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
   const [consumptionSearchTerm, setConsumptionSearchTerm] = useState('');
@@ -752,8 +753,9 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
   const filteredSalesReport = salesReportData.filter(order => {
     const orderName = (order.tableName || order.takeoutId || '').toLowerCase();
     const statusMatch = statusFilter === 'all' ? true : order.status === statusFilter;
+    const paymentMethodMatch = paymentMethodFilter === 'all' ? true : (order.paymentMethod || '').toLowerCase() === paymentMethodFilter;
     const nameMatch = orderName.includes(tableNameFilter.toLowerCase());
-    return statusMatch && nameMatch;
+    return statusMatch && nameMatch && paymentMethodMatch;
   });
 
   const totalSubtotalInRange = filteredSalesReport.reduce((acc, order) => acc + order.subtotal, 0);
@@ -970,6 +972,19 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                                         <SelectItem value="served">{t('Served')}</SelectItem>
                                         <SelectItem value="cancelled">{t('Cancelled')}</SelectItem>
                                         <SelectItem value="open">{t('Open')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('Filter by payment method...')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">{t('All Payment Methods')}</SelectItem>
+                                        <SelectItem value="cash">{t('Cash')}</SelectItem>
+                                        <SelectItem value="credit_card">{t('Credit Card')}</SelectItem>
+                                        <SelectItem value="debit_card">{t('Debit Card')}</SelectItem>
+                                        <SelectItem value="transfer">{t('Bank Transfer')}</SelectItem>
+                                        <SelectItem value="other">{t('Other')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

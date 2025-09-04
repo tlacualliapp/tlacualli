@@ -647,6 +647,10 @@
     "Use as a template":"Puedes ocupar una de tus recetas como base",
     "Select a recipe to duplicate...":"Selecciona una receta para duplicar...",
     "Start by adding an ingredient.":"Comienza añadiendo un ingrediente",
-    "e.g., Classic Burger (Copy)":"p.e., Hamburguesa Clásica"
+    "e.g., Classic Burger (Copy)":"p.e., Hamburguesa Clásica",
+    "Sales by Payment Method":"Ventas por método de pago",
+    "Tips":"Propinas",
+    "Export to Excel":"Exportar a Excel",
+    "cancelled":"cancelado"
 }
     
