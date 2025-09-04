@@ -1,15 +1,15 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, PlusCircle, MoreHorizontal, FilePenLine, Trash2, Loader2, PackagePlus, PackageMinus, History } from 'lucide-react';
+import { Search, PlusCircle, MoreHorizontal, FilePenLine, Trash2, Loader2, PackagePlus, PackageMinus } from 'lucide-react';
 import { ItemForm } from './item-form';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
@@ -62,6 +62,16 @@ export function InventoryItemsTable({ restaurantId, userPlan }: ItemsTableProps)
 
     return () => unsubscribe();
   }, [restaurantId, userPlan]);
+
+  const categories = useMemo(() => {
+    const categorySet = new Set<string>();
+    items.forEach(item => {
+      if (item.category) {
+        categorySet.add(item.category);
+      }
+    });
+    return Array.from(categorySet).sort();
+  }, [items]);
 
   const handleEdit = (item: Item) => {
     setItemToEdit(item);
@@ -118,7 +128,14 @@ export function InventoryItemsTable({ restaurantId, userPlan }: ItemsTableProps)
             <DialogTitle>{itemToEdit ? t('Edit Item') : t('Add New Item')}</DialogTitle>
             <DialogDescription>{itemToEdit ? t('Modify the item details.') : t('Add a new item to your inventory.')}</DialogDescription>
           </DialogHeader>
-          <ItemForm t={t} restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsFormModalOpen(false)} itemToEdit={itemToEdit} />
+          <ItemForm 
+            t={t} 
+            restaurantId={restaurantId} 
+            userPlan={userPlan} 
+            categories={categories}
+            onSuccess={() => setIsFormModalOpen(false)} 
+            itemToEdit={itemToEdit} 
+          />
         </DialogContent>
       </Dialog>
 

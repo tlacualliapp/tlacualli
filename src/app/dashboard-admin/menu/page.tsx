@@ -14,16 +14,26 @@ import { MenuItemForm } from '@/components/menu/menu-item-form';
 import { MenuTable } from '@/components/menu/menu-table';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { getCurrentUserData } from '@/lib/users';
 import { RecipeSuggester } from '@/components/recipes/recipe-suggester';
+
+interface Recipe {
+  id: string;
+  name: string;
+  cost: number;
+  ingredients: any[];
+}
+
+type UserPlan = "demo" | "esencial" | "pro" | "ilimitado";
 
 export default function MenuPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
-  const [userPlan, setUserPlan] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const { t } = useTranslation();
   const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
   const [isMenuItemModalOpen, setIsMenuItemModalOpen] = useState(false);
@@ -40,12 +50,25 @@ export default function MenuPage() {
         const userData = await getCurrentUserData();
         if (userData) {
           setRestaurantId(userData.restauranteId);
-          setUserPlan(userData.plan);
+          setUserPlan(userData.plan as UserPlan);
         }
       }
     };
     fetchUserData();
   }, [user]);
+
+  useEffect(() => {
+    if (!restaurantId || !userPlan) return;
+    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+    const q = query(collection(db, `${collectionName}/${restaurantId}/recipes`));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const recipesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
+      setRecipes(recipesData);
+    });
+
+    return () => unsubscribe();
+  }, [restaurantId, userPlan]);
 
   if (loading || !user) {
     return (
@@ -71,7 +94,6 @@ export default function MenuPage() {
       </Card>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {/* Create Recipe Card */}
         <Dialog open={isRecipeModalOpen} onOpenChange={setIsRecipeModalOpen}>
             <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
@@ -89,11 +111,10 @@ export default function MenuPage() {
                     <DialogTitle>{t('Create New Recipe')}</DialogTitle>
                     <DialogDescription>{t('Define the ingredients and cost for a new dish.')}</DialogDescription>
                 </DialogHeader>
-                <RecipeForm restaurantId={restaurantId} userPlan={userPlan} onSuccess={() => setIsRecipeModalOpen(false)} />
+                <RecipeForm restaurantId={restaurantId} userPlan={userPlan} existingRecipes={recipes} onSuccess={() => setIsRecipeModalOpen(false)} />
             </DialogContent>
         </Dialog>
 
-        {/* AI Recipe Suggester Card */}
         <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Wand2 className="text-accent"/>{t('AI Inspiration')}</CardTitle>
@@ -104,7 +125,6 @@ export default function MenuPage() {
             </CardContent>
         </Card>
         
-        {/* Create Menu Item Card */}
         <Dialog open={isMenuItemModalOpen} onOpenChange={setIsMenuItemModalOpen}>
             <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader>
@@ -128,7 +148,6 @@ export default function MenuPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Existing Recipes Card */}
         <div className="lg:col-span-1">
           <Card>
               <CardHeader>
@@ -136,12 +155,11 @@ export default function MenuPage() {
                    <CardDescription>{t('View and manage your current recipes.')}</CardDescription>
               </CardHeader>
               <CardContent>
-                  <RecipesTable restaurantId={restaurantId} userPlan={userPlan} />
+                  <RecipesTable restaurantId={restaurantId} userPlan={userPlan} recipes={recipes} />
               </CardContent>
           </Card>
         </div>
 
-        {/* Menu Items Card */}
         <div className="lg:col-span-2">
           <Card>
               <CardHeader>

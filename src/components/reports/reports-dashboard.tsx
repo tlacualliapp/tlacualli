@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart as BarChartIcon, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award, Hourglass, Wand2 } from 'lucide-react';
+import { BarChart as BarChartIcon, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award, Hourglass, Wand2, CreditCard, Gift, Banknote } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
@@ -44,11 +44,15 @@ interface Order {
   tableName?: string;
   takeoutId?: string;
   type?: 'dine-in' | 'takeout';
+  paymentMethod?: string;
+  tip?: number;
 }
 
 interface Payment {
     orderId: string;
     paymentDate: Timestamp;
+    paymentMethod: string;
+    tip: number;
 }
 
 interface Recipe {
@@ -114,7 +118,6 @@ type SortKeyProfitability = keyof ProfitabilityData;
 type SortKeyInventory = keyof InventoryItem;
 type SortKeyConsumption = keyof ConsumptionData;
 type SortKeyTableTurnaround = keyof TableTurnaroundTimeData;
-type SortKeyDishPreparation = keyof DishPreparationTimeData;
 
 interface ReportsDashboardProps {
   restaurantId: string;
@@ -147,6 +150,8 @@ const statusColors: { [key: string]: string } = {
 export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardProps) {
   const { t } = useTranslation();
   const [dailySales, setDailySales] = useState(0);
+  const [dailyTips, setDailyTips] = useState(0);
+  const [salesByMethod, setSalesByMethod] = useState({ cash: 0, credit_card: 0, debit_card: 0, transfer: 0, other: 0 });
   const [activeOrders, setActiveOrders] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
   const [salesByCategory, setSalesByCategory] = useState<{ name: string, value: number }[]>([]);
@@ -189,7 +194,6 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
   useEffect(() => {
     if (!restaurantId || !collectionName) return;
 
-    // Fetch IVA rate
     const fetchIvaRate = async () => {
         try {
             const restaurantRef = doc(db, collectionName, restaurantId);
@@ -211,12 +215,15 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
       collection(db, `${collectionName}/${restaurantId}/orders`),
       where('createdAt', '>=', todayTimestamp)
     );
+    const paymentsQuery = query(
+        collection(db, `${collectionName}/${restaurantId}/billing`),
+        where('paymentDate', '>=', todayTimestamp)
+    );
 
-    const unsubscribe = onSnapshot(ordersQuery, async (snapshot) => {
-      let totalSales = 0;
+
+    const unsubscribeOrders = onSnapshot(ordersQuery, async (snapshot) => {
       let activeCount = 0;
       const categorySales: { [key: string]: number } = {};
-      
       const categoriesCache = new Map<string, string>();
       setTotalOrders(snapshot.docs.length);
 
@@ -236,12 +243,8 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
         return t('Uncategorized');
       };
 
-
       for (const docSnap of snapshot.docs) {
         const order = docSnap.data() as Order;
-        if (order.status === 'paid' || order.status === 'served') { // Count only completed sales
-             totalSales += order.subtotal || 0;
-        }
         if (order.status !== 'paid' && order.status !== 'cancelled') {
           activeCount++;
         }
@@ -251,7 +254,6 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                 const categoryId = item.categoryId || 'uncategorized';
                 const categoryName = await getCategoryName(categoryId);
                 const itemTotal = item.price * item.quantity;
-
                 if (categorySales[categoryName]) {
                     categorySales[categoryName] += itemTotal;
                 } else {
@@ -260,13 +262,31 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
             }
         }
       }
-
-      setDailySales(totalSales);
       setActiveOrders(activeCount);
       setSalesByCategory(Object.entries(categorySales).map(([name, value]) => ({ name, value })));
     });
 
-    return () => unsubscribe();
+    const unsubscribePayments = onSnapshot(paymentsQuery, (snapshot) => {
+        let totalSales = 0;
+        let totalTips = 0;
+        const salesByMethodData = { cash: 0, credit_card: 0, debit_card: 0, transfer: 0, other: 0 };
+        snapshot.forEach(doc => {
+            const payment = doc.data() as Payment & { orderSubtotal: number, paymentMethod: keyof typeof salesByMethodData };
+            totalSales += payment.orderSubtotal || 0;
+            totalTips += payment.tip || 0;
+            if(payment.paymentMethod && salesByMethodData.hasOwnProperty(payment.paymentMethod)) {
+                salesByMethodData[payment.paymentMethod] += payment.orderSubtotal || 0;
+            }
+        });
+        setDailySales(totalSales);
+        setDailyTips(totalTips);
+        setSalesByMethod(salesByMethodData);
+    });
+
+    return () => {
+        unsubscribeOrders();
+        unsubscribePayments();
+    }
   }, [restaurantId, collectionName, t]);
 
   // Sales report effect
@@ -285,10 +305,32 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
       orderBy('createdAt', 'desc')
     );
+    
+    const paymentsQuery = query(
+        collection(db, `${collectionName}/${restaurantId}/billing`),
+        where('paymentDate', '>=', Timestamp.fromDate(startDate)),
+        where('paymentDate', '<=', Timestamp.fromDate(endDate))
+    );
 
-    const unsubscribe = onSnapshot(salesQuery, (snapshot) => {
-      const salesData = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as Order));
+    const unsubscribe = onSnapshot(salesQuery, async (ordersSnapshot) => {
+        const paymentsSnapshot = await getDocs(paymentsQuery);
+        const paymentsMap = new Map<string, { paymentMethod: string; tip: number }>();
+        paymentsSnapshot.forEach(doc => {
+            const data = doc.data();
+            paymentsMap.set(data.orderId, { paymentMethod: data.paymentMethod, tip: data.tip });
+        });
+
+      const salesData = ordersSnapshot.docs
+        .map(doc => {
+            const orderData = doc.data() as Order;
+            const paymentInfo = paymentsMap.get(doc.id);
+            return {
+                id: doc.id,
+                ...orderData,
+                paymentMethod: paymentInfo?.paymentMethod || 'N/A',
+                tip: paymentInfo?.tip || 0,
+            }
+        });
       setSalesReportData(salesData);
       setIsSalesLoading(false);
     }, (error) => {
@@ -501,7 +543,7 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
         const orders = ordersSnap.docs.map(d => ({id: d.id, ...d.data()}) as Order);
         
         const paymentsQuery = getDocs(query(
-            collection(db, `${collectionName}/${restaurantId}/payments`),
+            collection(db, `${collectionName}/${restaurantId}/billing`),
             where('paymentDate', '>=', Timestamp.fromDate(startDate)),
             where('paymentDate', '<=', Timestamp.fromDate(endDate))
         ));
@@ -707,8 +749,8 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
   });
 
   const totalSubtotalInRange = filteredSalesReport.reduce((acc, order) => acc + order.subtotal, 0);
-  const totalIvaInRange = totalSubtotalInRange * (ivaRate / 100);
-  const totalSalesInRange = totalSubtotalInRange + totalIvaInRange;
+  const totalTipsInRange = filteredSalesReport.reduce((acc, order) => acc + (order.tip || 0), 0);
+  const totalSalesInRange = totalSubtotalInRange * (1 + ivaRate / 100);
 
   const totalProfitability = useMemo(() => {
     return sortedAndFilteredProfitability.reduce(
@@ -778,50 +820,59 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t("Today's Tips")}</CardTitle>
+                <Gift className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${dailyTips.toFixed(2)}</div>
+                 <p className="text-xs text-muted-foreground pt-1 mt-1 invisible">_</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t('Orders Volume')}</CardTitle>
                 <ClipboardList className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{activeOrders} <span className="text-sm font-normal text-muted-foreground">/ {totalOrders} {t('Total')}</span></div>
+                <p className="text-xs text-muted-foreground pt-1 mt-1 invisible">_</p>
               </CardContent>
             </Card>
              
-            <Card className="md:col-span-2">
+            <Card>
                <CardHeader>
                  <CardTitle className="text-sm font-medium">{t("Today's Sales by Category")}</CardTitle>
               </CardHeader>
-               <CardContent>
+               <CardContent className="h-[150px]">
                 {salesByCategory.length > 0 ? (
-                  <ChartContainer
-                    config={chartConfig}
-                    className="mx-auto aspect-square h-[150px]"
-                  >
+                  <ChartContainer config={chartConfig} className="mx-auto aspect-square h-full">
                     <PieChart>
-                      <ChartTooltip
-                        content={<ChartTooltipContent nameKey="name" hideLabel />}
-                      />
-                      <Pie
-                        data={salesByCategory}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={60}
-                        label={renderCustomizedLabel}
-                        labelLine={false}
-                      >
+                      <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
+                      <Pie data={salesByCategory} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} labelLine={false} label={renderCustomizedLabel}>
                         {salesByCategory.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                       <Legend iconSize={10} />
+                       <Legend iconSize={10} layout="vertical" align="right" verticalAlign="middle" />
                     </PieChart>
                   </ChartContainer>
                 ) : (
-                  <div className="flex items-center justify-center h-[150px] text-muted-foreground">{t('No sales data for today yet.')}</div>
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">{t('No sales data for today yet.')}</div>
                 )}
                </CardContent>
             </Card>
+
+             <Card className="md:col-span-2 lg:col-span-4">
+                <CardHeader><CardTitle className="text-sm font-medium">{t('Sales by Payment Method')}</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+                    <div><Banknote className="mx-auto h-6 w-6 text-green-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Cash')}</p><p className="font-bold">${salesByMethod.cash.toFixed(2)}</p></div>
+                    <div><CreditCard className="mx-auto h-6 w-6 text-blue-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Credit Card')}</p><p className="font-bold">${salesByMethod.credit_card.toFixed(2)}</p></div>
+                    <div><CreditCard className="mx-auto h-6 w-6 text-sky-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Debit Card')}</p><p className="font-bold">${salesByMethod.debit_card.toFixed(2)}</p></div>
+                    <div><Banknote className="mx-auto h-6 w-6 text-purple-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Transfer')}</p><p className="font-bold">${salesByMethod.transfer.toFixed(2)}</p></div>
+                    <div><Banknote className="mx-auto h-6 w-6 text-gray-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Other')}</p><p className="font-bold">${salesByMethod.other.toFixed(2)}</p></div>
+                </CardContent>
+            </Card>
+
         </CardContent>
       </Card>
       
@@ -906,8 +957,9 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                              <CardDescription>
                                 <div className="flex flex-wrap gap-x-6 gap-y-1">
                                     <span>{t('Subtotal')}: <span className="font-bold text-primary ml-1">${totalSubtotalInRange.toFixed(2)}</span></span>
-                                    <span>${t('IVA')} (${ivaRate}%): <span className="font-bold text-primary ml-1">${totalIvaInRange.toFixed(2)}</span></span>
-                                    <span>{t('Total')}: <span className="font-bold text-primary ml-1">${totalSalesInRange.toFixed(2)}</span></span>
+                                    <span>{t('Tips')}: <span className="font-bold text-primary ml-1">${totalTipsInRange.toFixed(2)}</span></span>
+                                    <span>{t('IVA')} ({ivaRate}%): <span className="font-bold text-primary ml-1">${totalIvaInRange.toFixed(2)}</span></span>
+                                    <span>{t('Total')}: <span className="font-bold text-primary ml-1">${(totalSubtotalInRange + totalTipsInRange + totalIvaInRange).toFixed(2)}</span></span>
                                 </div>
                             </CardDescription>
                         </CardHeader>
@@ -919,8 +971,8 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                                         <TableHead>{t('Date')}</TableHead>
                                         <TableHead>{t('Table/Takeout')}</TableHead>
                                         <TableHead>{t('Status')}</TableHead>
-                                        <TableHead className="text-right">{t('Subtotal')}</TableHead>
-                                        <TableHead className="text-right">${t('IVA')} (${ivaRate}%)</TableHead>
+                                        <TableHead>{t('Payment Method')}</TableHead>
+                                        <TableHead className="text-right">{t('Tip')}</TableHead>
                                         <TableHead className="text-right">{t('Total')}</TableHead>
                                     </TableRow>
                                     </TableHeader>
@@ -933,8 +985,8 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                                             <TableCell>{order.createdAt.toDate().toLocaleString()}</TableCell>
                                             <TableCell>{order.tableName || order.takeoutId || 'N/A'}</TableCell>
                                             <TableCell><Badge className={statusColors[order.status]}>{t(order.status)}</Badge></TableCell>
-                                            <TableCell className="text-right font-mono">${order.subtotal.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right font-mono">${(order.subtotal * (ivaRate / 100)).toFixed(2)}</TableCell>
+                                            <TableCell><Badge variant="outline">{t(order.paymentMethod)}</Badge></TableCell>
+                                            <TableCell className="text-right font-mono">${(order.tip || 0).toFixed(2)}</TableCell>
                                             <TableCell className="text-right font-mono font-bold">${(order.subtotal * (1 + ivaRate / 100)).toFixed(2)}</TableCell>
                                         </TableRow>
                                         ))

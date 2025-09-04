@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, FilePenLine, Trash2, Loader2, Info } from 'lucide-react';
+import { MoreHorizontal, FilePenLine, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { RecipeForm } from './recipe-form';
@@ -33,10 +33,10 @@ interface Recipe {
 interface RecipesTableProps {
   restaurantId: string;
   userPlan: string;
+  recipes: Recipe[];
 }
 
-export function RecipesTable({ restaurantId, userPlan }: RecipesTableProps) {
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+export function RecipesTable({ restaurantId, userPlan, recipes }: RecipesTableProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
@@ -45,22 +45,8 @@ export function RecipesTable({ restaurantId, userPlan }: RecipesTableProps) {
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (!restaurantId || !userPlan) return;
-    setIsLoading(true);
-    const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-    const q = query(collection(db, `${collectionName}/${restaurantId}/recipes`));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const recipesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
-      setRecipes(recipesData);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Error fetching recipes:", error);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [restaurantId, userPlan]);
+    setIsLoading(recipes.length === 0);
+  }, [recipes]);
 
   const handleEdit = (recipe: Recipe) => {
     setRecipeToEdit(recipe);
@@ -69,7 +55,6 @@ export function RecipesTable({ restaurantId, userPlan }: RecipesTableProps) {
   
   const handleDelete = async (recipeId: string) => {
     const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-    // 1. Check if recipe is used in any menu item
     const menuItemsRef = collection(db, `${collectionName}/${restaurantId}/menuItems`);
     const q = query(menuItemsRef, where("recipeId", "==", recipeId));
     const querySnapshot = await getDocs(q);
@@ -83,7 +68,6 @@ export function RecipesTable({ restaurantId, userPlan }: RecipesTableProps) {
         return;
     }
 
-    // 2. If not used, proceed with deletion
     try {
       await deleteDoc(doc(db, `${collectionName}/${restaurantId}/recipes`, recipeId));
       toast({ title: t("Recipe Deleted"), description: t("The recipe has been removed.") });
@@ -106,6 +90,7 @@ export function RecipesTable({ restaurantId, userPlan }: RecipesTableProps) {
                     userPlan={userPlan}
                     onSuccess={() => setIsFormModalOpen(false)} 
                     recipeToEdit={recipeToEdit}
+                    existingRecipes={recipes}
                 />
             </DialogContent>
         </Dialog>

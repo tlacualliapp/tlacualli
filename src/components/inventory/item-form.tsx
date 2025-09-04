@@ -26,17 +26,19 @@ interface ItemFormProps {
   t: (key: string) => string;
   restaurantId: string;
   userPlan: string;
+  categories: string[];
   onSuccess?: () => void;
   itemToEdit?: Item | null;
 }
 
 const unitsOfMeasure = ["kg", "g", "L", "ml", "pz", "box", "can"];
-const categories = ["Meats", "Vegetables", "Fruits", "Dairy", "Pantry", "Beverages", "Cleaning", "Other"];
 
-export function ItemForm({ t, restaurantId, userPlan, onSuccess, itemToEdit }: ItemFormProps) {
+export function ItemForm({ t, restaurantId, userPlan, categories, onSuccess, itemToEdit }: ItemFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<{ id: string, name: string }[]>([]);
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
   const isEditMode = !!itemToEdit;
 
   const [formData, setFormData] = useState({
@@ -50,6 +52,15 @@ export function ItemForm({ t, restaurantId, userPlan, onSuccess, itemToEdit }: I
   });
 
   useEffect(() => {
+    const defaultState = {
+        name: '',
+        unitOfMeasure: '',
+        currentStock: 0,
+        minimumStock: 0,
+        averageCost: 0,
+        supplierId: '',
+        category: '',
+    };
     if (itemToEdit) {
       setFormData({
         name: itemToEdit.name || '',
@@ -60,16 +71,12 @@ export function ItemForm({ t, restaurantId, userPlan, onSuccess, itemToEdit }: I
         supplierId: itemToEdit.supplierId || '',
         category: itemToEdit.category || '',
       });
+      setShowNewCategoryInput(false);
+      setNewCategory('');
     } else {
-        setFormData({
-            name: '',
-            unitOfMeasure: '',
-            currentStock: 0,
-            minimumStock: 0,
-            averageCost: 0,
-            supplierId: '',
-            category: '',
-        });
+        setFormData(defaultState);
+        setShowNewCategoryInput(false);
+        setNewCategory('');
     }
   }, [itemToEdit]);
 
@@ -78,11 +85,13 @@ export function ItemForm({ t, restaurantId, userPlan, onSuccess, itemToEdit }: I
     const fetchSuppliers = async () => {
       if (!restaurantId || !userPlan) return;
       const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+      
       const suppliersQuery = collection(db, `${collectionName}/${restaurantId}/suppliers`);
-      const querySnapshot = await getDocs(suppliersQuery);
-      const suppliersList = querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
+      const suppliersSnapshot = await getDocs(suppliersQuery);
+      const suppliersList = suppliersSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
       setSuppliers(suppliersList);
     };
+
     fetchSuppliers();
   }, [restaurantId, userPlan]);
 
@@ -93,15 +102,35 @@ export function ItemForm({ t, restaurantId, userPlan, onSuccess, itemToEdit }: I
   
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'category') {
+      if (value === 'Otro') {
+        setShowNewCategoryInput(true);
+      } else {
+        setShowNewCategoryInput(false);
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (formData.category === 'Otro' && !newCategory.trim()) {
+      toast({
+        variant: "destructive",
+        title: t("Validation Error"),
+        description: t("Please enter a name for the new category."),
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
+      let finalCategory = formData.category === 'Otro' ? newCategory.trim() : formData.category;
+
       const itemData = {
         ...formData,
+        category: finalCategory,
         updatedAt: serverTimestamp(),
       };
       
@@ -116,6 +145,7 @@ export function ItemForm({ t, restaurantId, userPlan, onSuccess, itemToEdit }: I
         await addDoc(collectionRef, { ...itemData, createdAt: serverTimestamp() });
         toast({ title: t("Item Added"), description: t("The new item has been added to inventory.") });
       }
+      
       onSuccess?.();
     } catch (error) {
       console.error("Error saving item:", error);
@@ -139,9 +169,23 @@ export function ItemForm({ t, restaurantId, userPlan, onSuccess, itemToEdit }: I
             <SelectTrigger><SelectValue placeholder={t('Select a category')} /></SelectTrigger>
             <SelectContent>
               {categories.map(cat => <SelectItem key={cat} value={cat}>{t(cat)}</SelectItem>)}
+              <SelectItem value="Otro">{t('Other...')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
+        {showNewCategoryInput && (
+          <div className="space-y-2 md:col-start-2">
+            <Label htmlFor="newCategory">{t('New Category Name')}</Label>
+            <Input 
+              id="newCategory" 
+              name="newCategory" 
+              value={newCategory} 
+              onChange={(e) => setNewCategory(e.target.value)} 
+              placeholder={t('e.g., Disposables')}
+              required 
+            />
+          </div>
+        )}
         <div className="space-y-2">
           <Label htmlFor="unitOfMeasure">{t('Unit of Measure')}</Label>
           <Select name="unitOfMeasure" value={formData.unitOfMeasure} onValueChange={(value) => handleSelectChange('unitOfMeasure', value)}>
