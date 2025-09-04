@@ -750,7 +750,7 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
 
   const totalSubtotalInRange = filteredSalesReport.reduce((acc, order) => acc + order.subtotal, 0);
   const totalTipsInRange = filteredSalesReport.reduce((acc, order) => acc + (order.tip || 0), 0);
-  const totalSalesInRange = totalSubtotalInRange * (1 + ivaRate / 100);
+  const totalIvaInRange = totalSubtotalInRange * (ivaRate / 100);
 
   const totalProfitability = useMemo(() => {
     return sortedAndFilteredProfitability.reduce(
