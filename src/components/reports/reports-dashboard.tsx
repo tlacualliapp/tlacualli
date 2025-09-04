@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart as BarChartIcon, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award, Hourglass, Wand2, CreditCard, Gift, Banknote } from 'lucide-react';
+import { BarChart as BarChartIcon, DollarSign, Package, ClipboardList, TrendingUp, TrendingDown, Calendar as CalendarIcon, Loader2, ArrowUpDown, ListChecks, Clock, Utensils, Award, Hourglass, Wand2, CreditCard, Gift, Banknote, Download } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +23,7 @@ import { Progress } from '../ui/progress';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
 import { ReportForm } from '@/app/reports/report-form';
+import * as XLSX from 'xlsx';
 
 
 interface OrderItem {
@@ -189,6 +190,13 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
   const [tableTurnaroundSortConfig, setTableTurnaroundSortConfig] = useState<{ key: SortKeyTableTurnaround; direction: 'ascending' | 'descending' } | null>({ key: 'averageTimeMinutes', direction: 'descending' });
 
   const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+
+  const exportToExcel = (data: any[], fileName: string) => {
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+    XLSX.writeFile(workbook, `${fileName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
 
   // Real-time stats effect
   useEffect(() => {
@@ -861,18 +869,6 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                 )}
                </CardContent>
             </Card>
-
-             <Card className="md:col-span-2 lg:col-span-4">
-                <CardHeader><CardTitle className="text-sm font-medium">{t('Sales by Payment Method')}</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-                    <div><Banknote className="mx-auto h-6 w-6 text-green-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Cash')}</p><p className="font-bold">${salesByMethod.cash.toFixed(2)}</p></div>
-                    <div><CreditCard className="mx-auto h-6 w-6 text-blue-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Credit Card')}</p><p className="font-bold">${salesByMethod.credit_card.toFixed(2)}</p></div>
-                    <div><CreditCard className="mx-auto h-6 w-6 text-sky-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Debit Card')}</p><p className="font-bold">${salesByMethod.debit_card.toFixed(2)}</p></div>
-                    <div><Banknote className="mx-auto h-6 w-6 text-purple-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Transfer')}</p><p className="font-bold">${salesByMethod.transfer.toFixed(2)}</p></div>
-                    <div><Banknote className="mx-auto h-6 w-6 text-gray-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Other')}</p><p className="font-bold">${salesByMethod.other.toFixed(2)}</p></div>
-                </CardContent>
-            </Card>
-
         </CardContent>
       </Card>
       
@@ -932,28 +928,22 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                     <TabsTrigger value="consumption"><TrendingDown className="mr-2"/>{t('Consumption Report')}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="sales" className="pt-4 space-y-4">
-                     <div className="flex gap-4">
-                        <Input 
-                            placeholder={t('Filter by Table/Takeout...')}
-                            value={tableNameFilter}
-                            onChange={(e) => setTableNameFilter(e.target.value)}
-                        />
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger>
-                                <SelectValue placeholder={t('Filter by status...')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">{t('All Statuses')}</SelectItem>
-                                <SelectItem value="paid">{t('Paid')}</SelectItem>
-                                <SelectItem value="served">{t('Served')}</SelectItem>
-                                <SelectItem value="cancelled">{t('Cancelled')}</SelectItem>
-                                <SelectItem value="open">{t('Open')}</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
                     <Card>
                         <CardHeader>
-                            <CardTitle>{t('Sales Summary')}</CardTitle>
+                            <div className="flex justify-between items-center">
+                                <CardTitle>{t('Sales Summary')}</CardTitle>
+                                <Button variant="outline" size="sm" onClick={() => exportToExcel(filteredSalesReport.map(o => ({
+                                        Date: o.createdAt.toDate().toLocaleString(),
+                                        'Table/Takeout': o.tableName || o.takeoutId || 'N/A',
+                                        Status: o.status,
+                                        'Payment Method': o.paymentMethod || 'N/A',
+                                        Tip: o.tip || 0,
+                                        Total: (o.subtotal * (1 + ivaRate / 100)).toFixed(2)
+                                    })), 'Sales_Report')}>
+                                    <Download className="mr-2 h-4 w-4" />
+                                    {t('Export to Excel')}
+                                </Button>
+                            </div>
                              <CardDescription>
                                 <div className="flex flex-wrap gap-x-6 gap-y-1">
                                     <span>{t('Subtotal')}: <span className="font-bold text-primary ml-1">${totalSubtotalInRange.toFixed(2)}</span></span>
@@ -963,7 +953,36 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                                 </div>
                             </CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-4">
+                             <div className="flex gap-4">
+                                <Input 
+                                    placeholder={t('Filter by Table/Takeout...')}
+                                    value={tableNameFilter}
+                                    onChange={(e) => setTableNameFilter(e.target.value)}
+                                />
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('Filter by status...')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">{t('All Statuses')}</SelectItem>
+                                        <SelectItem value="paid">{t('Paid')}</SelectItem>
+                                        <SelectItem value="served">{t('Served')}</SelectItem>
+                                        <SelectItem value="cancelled">{t('Cancelled')}</SelectItem>
+                                        <SelectItem value="open">{t('Open')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Card className="md:col-span-2 lg:col-span-4">
+                                <CardHeader><CardTitle className="text-sm font-medium">{t('Sales by Payment Method')}</CardTitle></CardHeader>
+                                <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+                                    <div><Banknote className="mx-auto h-6 w-6 text-green-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Cash')}</p><p className="font-bold">${salesByMethod.cash.toFixed(2)}</p></div>
+                                    <div><CreditCard className="mx-auto h-6 w-6 text-blue-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Credit Card')}</p><p className="font-bold">${salesByMethod.credit_card.toFixed(2)}</p></div>
+                                    <div><CreditCard className="mx-auto h-6 w-6 text-sky-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Debit Card')}</p><p className="font-bold">${salesByMethod.debit_card.toFixed(2)}</p></div>
+                                    <div><Banknote className="mx-auto h-6 w-6 text-purple-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Transfer')}</p><p className="font-bold">${salesByMethod.transfer.toFixed(2)}</p></div>
+                                    <div><Banknote className="mx-auto h-6 w-6 text-gray-500 mb-1"/><p className="text-xs text-muted-foreground">{t('Other')}</p><p className="font-bold">${salesByMethod.other.toFixed(2)}</p></div>
+                                </CardContent>
+                            </Card>
                             <div className="rounded-md border h-96 overflow-y-auto">
                                 <Table>
                                     <TableHeader>
@@ -1000,15 +1019,16 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                     </Card>
                 </TabsContent>
                 <TabsContent value="profitability" className="pt-4 space-y-4">
-                     <Input 
-                        placeholder={t('Filter by dish name...')} 
-                        value={profitabilitySearchTerm} 
-                        onChange={(e) => setProfitabilitySearchTerm(e.target.value)}
-                        className="max-w-sm"
-                    />
+                    
                      <Card>
                         <CardHeader>
-                            <CardTitle>{t('Profitability Summary')}</CardTitle>
+                            <div className="flex justify-between items-center">
+                                <CardTitle>{t('Profitability Summary')}</CardTitle>
+                                <Button variant="outline" size="sm" onClick={() => exportToExcel(sortedAndFilteredProfitability, 'Profitability_Report')}>
+                                    <Download className="mr-2 h-4 w-4" />
+                                    {t('Export to Excel')}
+                                </Button>
+                            </div>
                             <CardDescription>
                                 <div className="flex flex-wrap gap-x-6 gap-y-1">
                                     <span>{t('Total Revenue')}: <span className="font-bold text-green-600 ml-1">${totalProfitability.totalRevenue.toFixed(2)}</span></span>
@@ -1018,6 +1038,12 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
+                            <Input 
+                                placeholder={t('Filter by dish name...')} 
+                                value={profitabilitySearchTerm} 
+                                onChange={(e) => setProfitabilitySearchTerm(e.target.value)}
+                                className="max-w-sm mb-4"
+                            />
                             <div className="rounded-md border h-[500px] overflow-y-auto">
                                 <Table>
                                     <TableHeader>
@@ -1081,6 +1107,10 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                             onChange={(e) => setInventorySearchTerm(e.target.value)}
                             className="max-w-sm"
                         />
+                         <Button variant="outline" size="sm" onClick={() => exportToExcel(sortedAndFilteredInventory, 'Inventory_Value_Report')}>
+                            <Download className="mr-2 h-4 w-4" />
+                            {t('Export to Excel')}
+                        </Button>
                         <Card className="p-4">
                             <CardTitle className="text-sm font-medium text-muted-foreground">{t('Total Inventory Value')}</CardTitle>
                             <p className="text-2xl font-bold text-primary">${totalInventoryValue.toFixed(2)}</p>
@@ -1131,6 +1161,10 @@ export function ReportsDashboard({ restaurantId, userPlan }: ReportsDashboardPro
                             onChange={(e) => setConsumptionSearchTerm(e.target.value)}
                             className="max-w-sm"
                         />
+                         <Button variant="outline" size="sm" onClick={() => exportToExcel(sortedAndFilteredConsumption, 'Consumption_Report')}>
+                            <Download className="mr-2 h-4 w-4" />
+                            {t('Export to Excel')}
+                        </Button>
                         <Card className="p-4">
                             <CardTitle className="text-sm font-medium text-muted-foreground">{t('Total Consumption Cost')}</CardTitle>
                             <p className="text-2xl font-bold text-primary">${totalConsumptionCost.toFixed(2)}</p>
