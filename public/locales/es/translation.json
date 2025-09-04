@@ -651,6 +651,16 @@
     "Sales by Payment Method":"Ventas por método de pago",
     "Tips":"Propinas",
     "Export to Excel":"Exportar a Excel",
-    "cancelled":"cancelado"
+    "cancelled":"cancelado",
+    "All Payment Methods":"Todos los métodos de pago",
+    "Here are some recipe ideas based on your inventory. You can save your favorites directly.":"Aquí tienes algunas ideas de recetas basadas en tu inventario. Puedes guardar tus favoritas directamente.",
+    "Generate Ideas":"Generar Ideas",
+    "Automated Menu Analysis":"Análisis de Menú Automatizado",
+    "Click the button to automatically analyze sales data from the selected period and get AI-powered recommendations.":"Haga clic en el botón para analizar automáticamente los datos de ventas del período seleccionado y obtener recomendaciones impulsadas por IA.",
+    "Generate Insights":"Genera Análisis",
+    "Your insights will appear here":"Tu análisis aparecerá aquí",
+    "Generate a report to begin.":"Genera un reporte para iniciar.",
+    "Today's Tips":"Propinas del día",
+    "Recommendations":"Recomendaciones"
 }
     
