@@ -10,9 +10,5 @@ runConfig:
 env:
   - variable: GEMINI_API_KEY
     secret: GEMINI_API_KEY
-  - variable: EMAIL_USER
-    secret: EMAIL_USER
-  - variable: EMAIL_PASS
-    secret: EMAIL_PASS
   - variable: STRIPE_SECRET_KEY
     secret: STRIPE_SECRET_KEY
