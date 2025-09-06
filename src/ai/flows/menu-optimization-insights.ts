@@ -1,18 +1,9 @@
-
 'use server';
-
-/**
- * @fileOverview Provides menu optimization insights based on sales data.
- *
- * - getMenuOptimizationInsights - A function that generates menu optimization reports.
- * - MenuOptimizationInsightsInput - The input type for the getMenuOptimizationInsights function.
- * - MenuOptimizationInsightsOutput - The return type for the getMenuOptimizationInsights function.
- */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, Timestamp, DocumentData, doc, getDoc } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { Timestamp, DocumentData } from 'firebase-admin/firestore';
 
 
 interface MenuItem {
@@ -93,41 +84,35 @@ const menuOptimizationInsightsFlow = ai.defineFlow(
   async (input) => {
     const { restaurantId, dateRange } = input;
     
-    // Determine if the restaurant is a demo or production one.
-    const prodRestaurantRef = doc(db, 'restaurantes', restaurantId);
-    const demoRestaurantRef = doc(db, 'restaurantes_demo', restaurantId);
-    const prodSnap = await getDoc(prodRestaurantRef);
+    const prodRestaurantRef = adminDb.collection('restaurantes').doc(restaurantId);
+    const demoRestaurantRef = adminDb.collection('restaurantes_demo').doc(restaurantId);
+    const prodSnap = await prodRestaurantRef.get();
     
-    const collectionName = prodSnap.exists() ? 'restaurantes' : 'restaurantes_demo';
+    const collectionName = prodSnap.exists ? 'restaurantes' : 'restaurantes_demo';
     
-    // 1. Fetch all menu items and recipes for cost calculation
-    const menuItemsQuery = getDocs(collection(db, `${collectionName}/${restaurantId}/menuItems`));
-    const recipesQuery = getDocs(collection(db, `${collectionName}/${restaurantId}/recipes`));
+    const menuItemsQuery = adminDb.collection(`${collectionName}/${restaurantId}/menuItems`).get();
+    const recipesQuery = adminDb.collection(`${collectionName}/${restaurantId}/recipes`).get();
     const [menuItemsSnap, recipesSnap] = await Promise.all([menuItemsQuery, recipesQuery]);
     
     const menuItemsMap = new Map<string, MenuItem>(menuItemsSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as MenuItem]));
     const recipesMap = new Map<string, Recipe>(recipesSnap.docs.map(d => [d.id, {id: d.id, ...d.data()} as Recipe]));
 
-    // 2. Fetch all orders in the date range
     const startDate = new Date(dateRange.from);
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(dateRange.to);
     endDate.setHours(23, 59, 59, 999);
 
-    const ordersQuery = query(
-        collection(db, `${collectionName}/${restaurantId}/orders`),
-        where('createdAt', '>=', Timestamp.fromDate(startDate)),
-        where('createdAt', '<=', Timestamp.fromDate(endDate))
-    );
-    const ordersSnap = await getDocs(ordersQuery);
+    const ordersQuery = adminDb.collection(`${collectionName}/${restaurantId}/orders`)
+        .where('createdAt', '>=', Timestamp.fromDate(startDate))
+        .where('createdAt', '<=', Timestamp.fromDate(endDate));
+    const ordersSnap = await ordersQuery.get();
 
-    // 3. Process orders to create the sales data JSON
     const salesDataMap = new Map<string, { itemName: string; quantitySold: number; revenue: number; cost: number }>();
 
     ordersSnap.docs.forEach(orderDoc => {
         const order = orderDoc.data() as Order;
         if (order.status !== 'paid' && order.status !== 'served') {
-            return; // Only include completed orders
+            return;
         }
         order.items.forEach(item => {
             const menuItem = menuItemsMap.get(item.id);
@@ -151,7 +136,6 @@ const menuOptimizationInsightsFlow = ai.defineFlow(
 
     const salesDataJson = JSON.stringify(Array.from(salesDataMap.values()));
     
-    // 4. Call the prompt with the generated data
     const {output} = await prompt({ salesData: salesDataJson });
     return output!;
   }

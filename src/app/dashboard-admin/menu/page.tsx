@@ -120,7 +120,7 @@ export default function MenuPage() {
                 <CardTitle className="flex items-center gap-2"><Wand2 className="text-accent"/>{t('AI Inspiration')}</CardTitle>
                 <CardDescription>{t('Generate recipe ideas based on your inventory.')}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="max-h-80 overflow-y-auto">
                 <RecipeSuggester restaurantId={restaurantId} userPlan={userPlan} />
             </CardContent>
         </Card>

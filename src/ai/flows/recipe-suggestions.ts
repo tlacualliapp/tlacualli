@@ -1,20 +1,9 @@
-
 'use server';
-
-/**
- * @fileOverview Provides recipe suggestions based on available inventory.
- *
- * - getRecipeSuggestions - A function that generates recipe ideas.
- * - RecipeSuggestionInput - The input type for the getRecipeSuggestions function.
- * - RecipeSuggestionOutput - The return type for the getRecipeSuggestions function.
- */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebaseAdmin';
 
-// Define Zod schemas for input and output
 const RecipeSuggestionInputSchema = z.object({
   restaurantId: z.string(),
   userPlan: z.enum(['demo', 'esencial', 'pro', 'ilimitado']),
@@ -38,14 +27,12 @@ const RecipeSuggestionOutputSchema = z.object({
 });
 export type RecipeSuggestionOutput = z.infer<typeof RecipeSuggestionOutputSchema>;
 
-// Define the main exported function
 export async function getRecipeSuggestions(
   input: RecipeSuggestionInput
 ): Promise<RecipeSuggestionOutput> {
   return recipeSuggestionsFlow(input);
 }
 
-// Define the Genkit prompt
 const prompt = ai.definePrompt({
   name: 'recipeSuggestionsPrompt',
   input: { schema: z.object({ inventoryList: z.string() }) },
@@ -64,7 +51,6 @@ Provide your response in a structured JSON format.
 `,
 });
 
-// Define the Genkit flow
 const recipeSuggestionsFlow = ai.defineFlow(
   {
     name: 'recipeSuggestionsFlow',
@@ -75,21 +61,18 @@ const recipeSuggestionsFlow = ai.defineFlow(
     const { restaurantId, userPlan } = input;
     
     const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-    const inventoryCollectionRef = collection(db, `${collectionName}/${restaurantId}/inventoryItems`);
-    const inventorySnapshot = await getDocs(inventoryCollectionRef);
+    const inventoryCollectionRef = adminDb.collection(`${collectionName}/${restaurantId}/inventoryItems`);
+    const inventorySnapshot = await inventoryCollectionRef.get();
 
     if (inventorySnapshot.empty) {
       throw new Error("No inventory items found to generate suggestions.");
     }
     
-    // Format inventory for the prompt
     const inventoryList = inventorySnapshot.docs.map(doc => {
         const item = doc.data();
-        // Format: "Tomate, 123xyz, kg"
         return `${item.name}, ${doc.id}, ${item.unitOfMeasure}`;
-    }).join('\\n');
+    }).join('\n');
 
-    // Call the prompt with the inventory data
     const { output } = await prompt({ inventoryList });
     return output || { suggestions: [] };
   }

@@ -12,12 +12,24 @@ import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { TacoIcon } from '@/components/icons/logo';
 import { auth, db } from '@/lib/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, DocumentData } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { differenceInDays } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import Link from 'next/link';
+import { logLogin } from '@/app/actions/monitor';
 
+// MODIFICADO: Interfaz para tipar los datos del usuario
+interface UserData {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  restauranteId?: string;
+  perfil: 'AM' | '1' | '2' | '3' | 1 | 2 | 3;
+  plan?: 'demo' | 'esencial' | 'pro' | 'extenso';
+  aceptaTerminos: boolean;
+  status: string;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -31,10 +43,11 @@ export default function LoginPage() {
   const [isClient, setIsClient] = useState(false);
 
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
-  const [demoModalContent, setDemoModalContent] = useState({ title: '', description: '', isTrialEnded: false, userProfile: '' });
+  const [demoModalContent, setDemoModalContent] = useState({ title: '', description: '', isTrialEnded: false, userProfile: '' as any });
   
+  // MODIFICADO: Tipamos el estado para el modal de términos
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
-  const [userForTermsCheck, setUserForTermsCheck] = useState<any>(null);
+  const [userForTermsCheck, setUserForTermsCheck] = useState<UserData | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -46,11 +59,11 @@ export default function LoginPage() {
       setEmail(rememberedEmail);
       setRememberMe(true);
     }
-    // Ensure user is logged out when visiting the login page
     signOut(auth);
   }, []);
 
-  const proceedToDashboard = async (userData: any) => {
+  // MODIFICADO: Tipamos el parámetro de la función
+  const proceedToDashboard = async (userData: UserData) => {
     const restaurantId = userData.restauranteId;
     let restaurantName = 'N/A';
      if (restaurantId) {
@@ -62,14 +75,11 @@ export default function LoginPage() {
         }
     }
 
-    // Log to Monitor
-    await addDoc(collection(db, "monitor"), {
-        accion: "Inicio de sesion",
-        usuarioNombre: `${userData.nombre} ${userData.apellidos}`,
-        usuarioPerfil: userData.perfil,
-        restauranteId: restaurantId || null,
-        restauranteNombre: restaurantName,
-        fecha: serverTimestamp(),
+    await logLogin({
+        userName: `${userData.nombre} ${userData.apellidos}`,
+        userProfile: userData.perfil,
+        restaurantId: restaurantId || null,
+        restaurantName: restaurantName,
     });
     
     toast({
@@ -77,14 +87,14 @@ export default function LoginPage() {
       description: t("Welcome back, {{name}}!", { name: userData.nombre }),
     });
 
-    // Redirect based on profile
-    if (userData.perfil === 'AM') {
+    const profile = String(userData.perfil);
+    if (profile === 'AM') {
       router.push('/dashboard-am');
-    } else if (userData.perfil === 1 || userData.perfil === '1') {
+    } else if (profile === '1') {
       router.push('/dashboard-admin');
-    } else if (userData.perfil === 2 || userData.perfil === '2') {
+    } else if (profile === '2') {
       router.push('/dashboard-collaborator');
-    } else if (userData.perfil === 3 || userData.perfil === '3') {
+    } else if (profile === '3') {
       router.push('/dashboard-client');
     } else {
         throw new Error(t("Unrecognized user profile or invalid status."));
@@ -103,28 +113,28 @@ export default function LoginPage() {
     }
 
     try {
-      // 1. Authenticate with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Query Firestore to check user profile and status
-      const q = query(
-        collection(db, "usuarios"), 
-        where("email", "==", user.email),
-        where("status", "==", "1") // status as string
-      );
-      const querySnapshot = await getDocs(q);
+      // MODIFICACIÓN CLAVE: Buscar al usuario por el campo 'uid' en lugar de por el ID del documento
+      const usersQuery = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+      const querySnapshot = await getDocs(usersQuery);
 
       if (querySnapshot.empty) {
-        throw new Error(t("The user is not active or does not have permissions."));
+        throw new Error(t("No user data found in database."));
       }
 
-      const userDoc = querySnapshot.docs[0];
-      const userData = { id: userDoc.id, ...userDoc.data() };
+      const userDocSnap = querySnapshot.docs[0];
+
+      if (!userDocSnap.exists() || userDocSnap.data().status !== "1") {
+        throw new Error(t("The user is not active or does not have permissions."));
+      }
+      
+      // MODIFICADO: Hacemos un "cast" al tipo UserData para que TS entienda la estructura
+      const userData = { id: userDocSnap.id, ...userDocSnap.data() } as UserData;
       const restaurantId = userData.restauranteId;
       const userPlan = userData.plan;
       
-      // 3. If user belongs to a restaurant, check restaurant status
       if (restaurantId) {
         const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
         const restaurantRef = doc(db, collectionName, restaurantId);
@@ -158,17 +168,14 @@ export default function LoginPage() {
                     }
                     setIsLoading(false);
                     setIsDemoModalOpen(true);
-                    return; // Stop execution here, let the modal handle redirection
+                    return;
                 }
             }
-
-
         } else {
             throw new Error(t("The associated restaurant could not be found."));
         }
       }
       
-      // 4. Check if terms have been accepted
       if (userData.aceptaTerminos !== true) {
           setUserForTermsCheck(userData);
           setIsTermsModalOpen(true);
@@ -176,7 +183,6 @@ export default function LoginPage() {
           return;
       }
 
-      // 5. Proceed to dashboard if terms are accepted
       await proceedToDashboard(userData);
 
     } catch (error) {
@@ -187,8 +193,7 @@ export default function LoginPage() {
       if (errorCode === 'auth/invalid-credential') {
           errorMessage = t("The email or password are incorrect.");
       } else if (error instanceof Error) {
-          // Handle custom errors thrown in the try block
-          if (error.message.includes("not active") || error.message.includes("unrecognized") || error.message.includes("could not be found")) {
+          if (error.message.includes("not active") || error.message.includes("unrecognized") || error.message.includes("could not be found") || error.message.includes("No user data")) {
             errorMessage = error.message;
           }
       }
@@ -239,19 +244,21 @@ export default function LoginPage() {
     setIsDemoModalOpen(false);
 
     if (demoModalContent.isTrialEnded) {
-        if (demoModalContent.userProfile === '1') {
+        const profile = String(demoModalContent.userProfile);
+        if (profile === '1') {
             router.push('/dashboard-admin/upgrade');
         } else {
-            // For non-admins, maybe a generic page explaining the situation
             router.push('/planes');
         }
     } else {
         const user = auth.currentUser;
         if (user) {
-            getDocs(query(collection(db, "usuarios"), where("uid", "==", user.uid))).then(snap => {
-                if (!snap.empty) {
-                    const userData = snap.docs[0].data();
-                    const profile = String(userData.perfil); // Ensure profile is a string
+            // Usamos una consulta directa al UID del usuario ya autenticado
+            const userDocRef = doc(db, "usuarios", user.uid);
+            getDoc(userDocRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const userData = docSnap.data() as DocumentData;
+                    const profile = String(userData.perfil);
                     
                     switch (profile) {
                         case '1':
@@ -264,17 +271,17 @@ export default function LoginPage() {
                             router.push('/dashboard-am');
                             break;
                         default:
-                            router.push('/login'); // Fallback to login
+                            router.push('/login');
                             break;
                     }
                 } else {
-                     router.push('/login'); // Fallback if user data not found
+                     router.push('/login');
                 }
             }).catch(() => {
-                router.push('/login'); // Fallback on error
+                router.push('/login');
             });
         } else {
-            router.push('/login'); // Fallback if no user is authenticated
+            router.push('/login');
         }
     }
   };

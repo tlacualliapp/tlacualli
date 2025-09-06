@@ -1,22 +1,12 @@
-
 'use server';
-
-/**
- * @fileOverview A support agent for Tlacualli App.
- *
- * - getSupportResponse - A function that handles user support queries.
- * - SupportAgentInput - The input type for the getSupportResponse function.
- * - SupportAgentOutput - The return type for the getSupportResponse function.
- */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { sendCustomEmail } from '@/lib/email';
 
 
-// Define Zod schemas for input and output
 const SupportAgentInputSchema = z.object({
   userId: z.string().describe("The user's unique ID."),
   userName: z.string().describe("The user's full name."),
@@ -51,26 +41,7 @@ const prompt = ai.definePrompt({
             requiresEscalation: z.boolean().describe("Set to true ONLY if the user's query cannot be answered with the provided knowledge, if it's a complaint, a feature request, or clearly needs human intervention. Otherwise, set to false.")
         })
     },
-    prompt: `You are a friendly and expert support agent for "Tlacualli App", a restaurant management platform. Your name is Tlalli.
-    Your goal is to answer user questions about how to use the platform based on the detailed knowledge base below. Always respond in Spanish.
-    If the user's question is outside of this scope (e.g., a billing issue, bug report, a specific complaint, a feature request), you cannot answer it. In that case, respond politely that you will escalate the issue to the human support team and that they will be contacted by email shortly.
-
-    === KNOWLEDGE BASE ===
-    {{{knowledgeBase}}}
-    ======================
-
-    Current conversation history (if any):
-    {{#if conversationHistory}}
-      {{#each conversationHistory}}
-        **{{role}}:** {{content}}
-      {{/each}}
-    {{/if}}
-
-    User Name: {{{userName}}}
-    Restaurant: {{{restaurantName}}}
-    User's new message:
-    {{{message}}}
-    `,
+    prompt: `You are a friendly and expert support agent for "Tlacualli App", a restaurant management platform. Your name is Tlalli.\n    Your goal is to answer user questions about how to use the platform based on the detailed knowledge base below. Always respond in Spanish.\n    If the user's question is outside of this scope (e.g., a billing issue, bug report, a specific complaint, a feature request), you cannot answer it. In that case, respond politely that you will escalate the issue to the human support team and that they will be contacted by email shortly.\n\n    === KNOWLEDGE BASE ===\n    {{{knowledgeBase}}}\n    ======================\n\n    Current conversation history (if any):\n    {{#if conversationHistory}}\n      {{#each conversationHistory}}\n        **{{role}}:** {{content}}\n      {{/each}}\n    {{/if}}\n\n    User Name: {{{userName}}}\n    Restaurant: {{{restaurantName}}}\n    User's new message:\n    {{{message}}}\n    `,
     config: {
         temperature: 0.3,
     },
@@ -84,13 +55,10 @@ const supportAgentFlow = ai.defineFlow(
   },
   async (input) => {
     
-    // 1. Fetch learned knowledge from previous human-answered tickets
-    const solvedIncidentsQuery = query(
-        collection(db, 'contacto'), 
-        where('status', '==', 'closed'),
-        where('adminReply', '!=', null)
-    );
-    const solvedIncidentsSnap = await getDocs(solvedIncidentsQuery);
+    const solvedIncidentsQuery = adminDb.collection('contacto') 
+        .where('status', '==', 'closed')
+        .where('adminReply', '!=', null);
+    const solvedIncidentsSnap = await solvedIncidentsQuery.get();
     
     let learnedKnowledge = "Previously Answered Questions by Human Support:\\n";
     if (solvedIncidentsSnap.empty) {
@@ -103,60 +71,8 @@ const supportAgentFlow = ai.defineFlow(
     }
 
     const staticKnowledgeBase = `
-    1.  **Workflow General:** El flujo de trabajo principal es: Inventario -> Recetas -> Menú -> Órdenes.
-        -   Primero se registran los insumos en el inventario.
-        -   Luego, se crean las recetas usando esos insumos.
-        -   Después, se crea el menú, donde cada platillo se asocia a una receta (o a un producto directo del inventario).
-        -   Finalmente, al tomar una orden, el sistema descuenta automáticamente los ingredientes del inventario.
+    1.  **Workflow General:** El flujo de trabajo principal es: Inventario -> Recetas -> Menú -> Órdenes.\n        -   Primero se registran los insumos en el inventario.\n        -   Luego, se crean las recetas usando esos insumos.\n        -   Después, se crea el menú, donde cada platillo se asocia a una receta (o a un producto directo del inventario).\n        -   Finalmente, al tomar una orden, el sistema descuenta automáticamente los ingredientes del inventario.\n\n    2.  **Módulo de Inventario:**\n        -   **Items:** Aquí se registran todos los insumos y productos. Cada ítem debe tener un nombre, una categoría (carnes, vegetales, bebidas, etc.), una unidad de medida (kg, g, pz, L), y un stock mínimo. El costo promedio es crucial para los reportes de rentabilidad.\n        -   **Proveedores:** Se gestionan los proveedores de los insumos.\n        -   **Movimientos:** Se registran las entradas (compras), salidas (mermas) y ajustes manuales del inventario. Las salidas por venta son automáticas.\n\n    3.  **Módulo de Menú y Recetas:**\n        -   **Recetas:** Se definen los platillos con sus ingredientes exactos del inventario y las cantidades. El sistema calcula el costo total de la receta automáticamente.\n        -   **Platillos del Menú:** Se crea el menú público. Cada platillo del menú debe estar asociado a una receta para que el sistema descuente los ingredientes. Los productos que no necesitan receta (ej. una lata de refresco) se pueden asociar directamente a un ítem del inventario. Se define el precio de venta aquí.\n        -   **Inspiración IA:** Hay una función que usa IA para sugerir nuevas recetas basadas en el inventario disponible.\n\n    4.  **Módulo de Personal (Empleados):**\n        -   Se registran los empleados con su nombre, correo y un teléfono (que sirve como contraseña inicial).\n        -   Se asignan perfiles: "Administrador" (acceso total) o "Empleado" (acceso restringido).\n        -   **Permisos:** A los empleados se les pueden asignar permisos específicos para cada módulo (Órdenes, Cocina, Inventario, etc.), lo que permite un control granular.\n\n    5.  **Módulo de Mapa Digital:**\n        -   Se diseñan las áreas del restaurante (Salón, Terraza, etc.).\n        -   Dentro de cada área, se añaden las mesas (cuadradas o redondas) y se arrastran a su posición en el mapa.\n        -   **Asignaciones:** Se pueden asignar áreas o mesas específicas a ciertos meseros para organizar el servicio.\n\n    6.  **Módulo de Órdenes:**\n        -   Es la pantalla principal para meseros. Se visualiza el mapa de mesas.\n        -   Al hacer clic en una mesa, se puede iniciar una nueva orden, añadir platillos del menú o ver una orden existente.\n        -   **Cuentas Separadas:** Se pueden crear subcuentas para dividir el consumo entre varios comensales en una misma mesa.\n        -   **Órdenes para Llevar:** Existe un botón para registrar órdenes que no están asociadas a una mesa.\n        -   Al "Enviar a Cocina", los platillos aparecen en el Módulo de Cocina.\n\n    7.  **Módulo de Cocina:**\n        -   Muestra las órdenes activas en tarjetas.\n        -   El personal de cocina puede marcar cada platillo como "listo".\n        -   Cuando todos los platillos de una orden están listos, la orden se marca como "Lista para recoger" y el mesero es notificado visualmente en la pantalla de órdenes.\n\n    8.  **Módulo de Facturación (Billing) y Planes:**\n        -   Los usuarios pueden ver su plan actual (Demo, Esencial, Pro, Ilimitado).\n        -   Pueden cambiar de plan y realizar el pago a través de Stripe.\n        -   Pueden ver su historial de pagos y descargar recibos.\n        -   Si un pago falla, el 'subscriptionStatus' cambia a "inactive" y el acceso a otros módulos se bloquea hasta que se regularice el pago. El periodo de prueba del plan Demo dura 15 días.\n\n    9.  **Módulo de Reportes:**\n        -   **Ventas:** Muestra el total de ventas en un rango de fechas, filtrado por mesa o estado.\n        -   **Rentabilidad:** Analiza el costo de cada platillo (según su receta) contra su precio de venta, mostrando el margen de ganancia.\n        -   **Consumo:** Muestra qué ingredientes se han consumido más.\n        -   **Inventario Valorado:** Calcula el valor monetario total del stock actual.\n        -   **Analíticas Operativas:** Muestra horas pico, rotación de mesas y los platillos más vendidos.\n        -   **Optimización IA:** Una función de IA analiza las ventas y sugiere optimizaciones para el menú.\n    `;
 
-    2.  **Módulo de Inventario:**
-        -   **Items:** Aquí se registran todos los insumos y productos. Cada ítem debe tener un nombre, una categoría (carnes, vegetales, bebidas, etc.), una unidad de medida (kg, g, pz, L), y un stock mínimo. El costo promedio es crucial para los reportes de rentabilidad.
-        -   **Proveedores:** Se gestionan los proveedores de los insumos.
-        -   **Movimientos:** Se registran las entradas (compras), salidas (mermas) y ajustes manuales del inventario. Las salidas por venta son automáticas.
-
-    3.  **Módulo de Menú y Recetas:**
-        -   **Recetas:** Se definen los platillos con sus ingredientes exactos del inventario y las cantidades. El sistema calcula el costo total de la receta automáticamente.
-        -   **Platillos del Menú:** Se crea el menú público. Cada platillo del menú debe estar asociado a una receta para que el sistema descuente los ingredientes. Los productos que no necesitan receta (ej. una lata de refresco) se pueden asociar directamente a un ítem del inventario. Se define el precio de venta aquí.
-        -   **Inspiración IA:** Hay una función que usa IA para sugerir nuevas recetas basadas en el inventario disponible.
-
-    4.  **Módulo de Personal (Empleados):**
-        -   Se registran los empleados con su nombre, correo y un teléfono (que sirve como contraseña inicial).
-        -   Se asignan perfiles: "Administrador" (acceso total) o "Empleado" (acceso restringido).
-        -   **Permisos:** A los empleados se les pueden asignar permisos específicos para cada módulo (Órdenes, Cocina, Inventario, etc.), lo que permite un control granular.
-
-    5.  **Módulo de Mapa Digital:**
-        -   Se diseñan las áreas del restaurante (Salón, Terraza, etc.).
-        -   Dentro de cada área, se añaden las mesas (cuadradas o redondas) y se arrastran a su posición en el mapa.
-        -   **Asignaciones:** Se pueden asignar áreas o mesas específicas a ciertos meseros para organizar el servicio.
-
-    6.  **Módulo de Órdenes:**
-        -   Es la pantalla principal para meseros. Se visualiza el mapa de mesas.
-        -   Al hacer clic en una mesa, se puede iniciar una nueva orden, añadir platillos del menú o ver una orden existente.
-        -   **Cuentas Separadas:** Se pueden crear subcuentas para dividir el consumo entre varios comensales en una misma mesa.
-        -   **Órdenes para Llevar:** Existe un botón para registrar órdenes que no están asociadas a una mesa.
-        -   Al "Enviar a Cocina", los platillos aparecen en el Módulo de Cocina.
-
-    7.  **Módulo de Cocina:**
-        -   Muestra las órdenes activas en tarjetas.
-        -   El personal de cocina puede marcar cada platillo como "listo".
-        -   Cuando todos los platillos de una orden están listos, la orden se marca como "Lista para recoger" y el mesero es notificado visualmente en la pantalla de órdenes.
-
-    8.  **Módulo de Facturación (Billing) y Planes:**
-        -   Los usuarios pueden ver su plan actual (Demo, Esencial, Pro, Ilimitado).
-        -   Pueden cambiar de plan y realizar el pago a través de Stripe.
-        -   Pueden ver su historial de pagos y descargar recibos.
-        -   Si un pago falla, el 'subscriptionStatus' cambia a "inactive" y el acceso a otros módulos se bloquea hasta que se regularice el pago. El periodo de prueba del plan Demo dura 15 días.
-
-    9.  **Módulo de Reportes:**
-        -   **Ventas:** Muestra el total de ventas en un rango de fechas, filtrado por mesa o estado.
-        -   **Rentabilidad:** Analiza el costo de cada platillo (según su receta) contra su precio de venta, mostrando el margen de ganancia.
-        -   **Consumo:** Muestra qué ingredientes se han consumido más.
-        -   **Inventario Valorado:** Calcula el valor monetario total del stock actual.
-        -   **Analíticas Operativas:** Muestra horas pico, rotación de mesas y los platillos más vendidos.
-        -   **Optimización IA:** Una función de IA analiza las ventas y sugiere optimizaciones para el menú.
-    `;
-
-    // 2. Call the AI prompt with the combined knowledge
     const { output } = await prompt({ ...input, knowledgeBase: `${staticKnowledgeBase}\\n${learnedKnowledge}` });
     
     if (!output) {
@@ -165,7 +81,6 @@ const supportAgentFlow = ai.defineFlow(
     
     const { response, requiresEscalation } = output;
 
-    // 3. Log the interaction to Firestore
     const incidentData = {
         userId: input.userId,
         userName: input.userName,
@@ -177,12 +92,11 @@ const supportAgentFlow = ai.defineFlow(
         aiResponse: response,
         escalated: requiresEscalation,
         status: requiresEscalation ? 'escalated' : 'closed',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
     };
-    const incidentRef = await addDoc(collection(db, 'contacto'), incidentData);
+    const incidentRef = await adminDb.collection('contacto').add(incidentData);
     
-    // 4. Escalate via email if needed
     if (requiresEscalation) {
         const emailTo = process.env.EMAIL_TO || 'tlacualli.app@gmail.com';
         await sendCustomEmail({

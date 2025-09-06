@@ -1,9 +1,8 @@
-
 'use server';
 
 import { z } from 'zod';
-import { db } from '@/lib/firebase';
-import { doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { Timestamp } from 'firebase-admin/firestore';
 import { sendSupportResponseEmail } from '@/lib/email';
 
 const supportReplySchema = z.object({
@@ -24,7 +23,6 @@ export async function sendSupportReply(input: z.infer<typeof supportReplySchema>
   const { incidentId, userEmail, userName, originalQuestion, adminReply } = validatedFields.data;
 
   try {
-    // 1. Send the email to the user
     await sendSupportResponseEmail({
       to: userEmail,
       name: userName,
@@ -32,17 +30,17 @@ export async function sendSupportReply(input: z.infer<typeof supportReplySchema>
       reply: adminReply,
     });
 
-    // 2. Update the incident in Firestore
-    const incidentRef = doc(db, 'contacto', incidentId);
-    await updateDoc(incidentRef, {
+    const incidentRef = adminDb.collection('support_incidents').doc(incidentId);
+    await incidentRef.update({
       status: 'closed',
       adminReply: adminReply,
-      updatedAt: Timestamp.now(),
+      resolvedAt: Timestamp.now(),
     });
 
-    return { success: true, message: 'Reply sent and incident updated successfully.' };
+    return { success: true };
+
   } catch (error) {
-    console.error('Error sending support reply:', error);
-    throw new Error(`Failed to process the reply: ${(error as Error).message}`);
+    console.error('Error processing support reply:', error);
+    throw new Error('Failed to process support reply.');
   }
 }
