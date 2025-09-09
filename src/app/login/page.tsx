@@ -19,14 +19,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import Link from 'next/link';
 import { logLogin } from '@/app/actions/monitor';
 
-// MODIFICADO: Interfaz para tipar los datos del usuario
 interface UserData {
   id: string;
   nombre: string;
   apellidos: string;
   restauranteId?: string;
   perfil: 'AM' | '1' | '2' | '3' | 1 | 2 | 3;
-  plan?: 'demo' | 'esencial' | 'pro' | 'extenso';
+  plan?: 'demo' | 'esencial' | 'pro' | 'ilimitado';
   aceptaTerminos: boolean;
   status: string;
 }
@@ -45,7 +44,6 @@ export default function LoginPage() {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [demoModalContent, setDemoModalContent] = useState({ title: '', description: '', isTrialEnded: false, userProfile: '' as any });
   
-  // MODIFICADO: Tipamos el estado para el modal de términos
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [userForTermsCheck, setUserForTermsCheck] = useState<UserData | null>(null);
 
@@ -62,7 +60,6 @@ export default function LoginPage() {
     signOut(auth);
   }, []);
 
-  // MODIFICADO: Tipamos el parámetro de la función
   const proceedToDashboard = async (userData: UserData) => {
     const restaurantId = userData.restauranteId;
     let restaurantName = 'N/A';
@@ -116,7 +113,6 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // MODIFICACIÓN CLAVE: Buscar al usuario por el campo 'uid' en lugar de por el ID del documento
       const usersQuery = query(collection(db, "usuarios"), where("uid", "==", user.uid));
       const querySnapshot = await getDocs(usersQuery);
 
@@ -130,7 +126,6 @@ export default function LoginPage() {
         throw new Error(t("The user is not active or does not have permissions."));
       }
       
-      // MODIFICADO: Hacemos un "cast" al tipo UserData para que TS entienda la estructura
       const userData = { id: userDocSnap.id, ...userDocSnap.data() } as UserData;
       const restaurantId = userData.restauranteId;
       const userPlan = userData.plan;
@@ -253,34 +248,22 @@ export default function LoginPage() {
     } else {
         const user = auth.currentUser;
         if (user) {
-            // Usamos una consulta directa al UID del usuario ya autenticado
-            const userDocRef = doc(db, "usuarios", user.uid);
-            getDoc(userDocRef).then(docSnap => {
-                if (docSnap.exists()) {
-                    const userData = docSnap.data() as DocumentData;
-                    const profile = String(userData.perfil);
-                    
-                    switch (profile) {
-                        case '1':
-                            router.push('/dashboard-admin');
-                            break;
-                        case '2':
-                            router.push('/dashboard-collaborator');
-                            break;
-                        case 'AM':
-                            router.push('/dashboard-am');
-                            break;
-                        default:
-                            router.push('/login');
-                            break;
-                    }
+            const usersQuery = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+            getDocs(usersQuery).then(querySnapshot => {
+                if (!querySnapshot.empty) {
+                    const userDocSnap = querySnapshot.docs[0];
+                    const userData = { id: userDocSnap.id, ...userDocSnap.data() } as UserData;
+                    proceedToDashboard(userData); // Reutilizamos la lógica de redirección
                 } else {
+                     console.error("No se encontró el documento del usuario después del modal de demo.");
                      router.push('/login');
                 }
-            }).catch(() => {
+            }).catch((error) => {
+                console.error("Error al buscar usuario después del modal de demo:", error);
                 router.push('/login');
             });
         } else {
+            console.error("No se encontró usuario de auth después del modal de demo.");
             router.push('/login');
         }
     }

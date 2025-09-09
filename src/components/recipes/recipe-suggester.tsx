@@ -92,7 +92,6 @@ export function RecipeSuggester({ restaurantId, userPlan }: RecipeSuggesterProps
             description: t('The recipe "{{recipeName}}" has been added to your collection.', { recipeName: recipe.recipeName }),
         });
         
-        // Remove the saved suggestion from the list
         setSuggestions(prev => prev.filter(s => s.recipeName !== recipe.recipeName));
 
     } catch (error) {
@@ -117,7 +116,7 @@ export function RecipeSuggester({ restaurantId, userPlan }: RecipeSuggesterProps
             <DialogTitle className="flex items-center gap-2"><Wand2 /> {t('AI Recipe Suggestions')}</DialogTitle>
             <DialogDescription>{t('Here are some recipe ideas based on your inventory. You can save your favorites directly.')}</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 120px)' }}>
             {suggestions.length > 0 ? (
                 suggestions.map((suggestion, index) => (
                     <Card key={index} className="flex flex-col">
