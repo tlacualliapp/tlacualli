@@ -149,7 +149,6 @@ function MenuDisplay() {
           <div className="flex-grow overflow-y-auto px-4 pb-4">
             {categories.map(cat => (
               <TabsContent key={cat.id} value={cat.id} className="mt-0">
-                 <h2 className="text-2xl font-bold mb-4 font-headline">{cat.name}</h2>
                  <div className="space-y-4">
                     {menuItems.filter(item => item.categoryId === cat.id).map(item => (
                         <Card key={item.id} className="bg-transparent border-0 shadow-none">
