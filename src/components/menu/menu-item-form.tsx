@@ -18,6 +18,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { getPriceSuggestion, PriceSuggestionInput } from '@/ai/flows/price-suggestion';
+import { getDishDescription, DishDescriptionInput } from '@/ai/flows/dish-description-generation';
+
 
 interface MenuItem {
   id?: string;
@@ -36,6 +38,7 @@ interface MenuItem {
 interface Recipe {
   id: string;
   name: string;
+  ingredients: { itemName: string }[];
 }
 
 interface InventoryItem {
@@ -78,6 +81,7 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuggestingPrice, setIsSuggestingPrice] = useState(false);
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -110,7 +114,7 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
     const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
 
     const unsubRecipes = onSnapshot(collection(db, `${collectionName}/${restaurantId}/recipes`), (snapshot) => {
-      setRecipes(snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string })));
+      setRecipes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe)));
     });
 
     const unsubInventory = onSnapshot(collection(db, `${collectionName}/${restaurantId}/inventoryItems`), (snapshot) => {
@@ -259,6 +263,35 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
         }
     };
 
+    const handleGenerateDescription = async () => {
+        setIsGeneratingDesc(true);
+        try {
+            const selectedRecipe = recipes.find(r => r.id === formData.recipeId);
+            if (!selectedRecipe || !selectedRecipe.ingredients) {
+                 toast({ variant: 'destructive', title: t('Error'), description: t('Selected recipe has no ingredients.') });
+                 setIsGeneratingDesc(false);
+                 return;
+            }
+
+            const ingredientNames = selectedRecipe.ingredients.map(ing => ing.itemName);
+            
+            const input: DishDescriptionInput = {
+                dishName: formData.name,
+                ingredients: ingredientNames,
+            };
+
+            const result = await getDishDescription(input);
+            setFormData(prev => ({ ...prev, description: result.description }));
+            toast({ title: t('Description Generated'), description: t('The AI has generated a description for your dish.') });
+
+        } catch (error) {
+            console.error("Error generating description:", error);
+            toast({ variant: 'destructive', title: t('Error'), description: t('Could not generate a description.') });
+        } finally {
+            setIsGeneratingDesc(false);
+        }
+    };
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -367,8 +400,21 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description">{t('Description')}</Label>
-          <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} placeholder={t('e.g., Juicy beef patty with avocado and chipotle sauce.')} />
+            <div className="flex justify-between items-center">
+                <Label htmlFor="description">{t('Description')}</Label>
+                <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleGenerateDescription}
+                    disabled={isGeneratingDesc || !formData.recipeId || formData.recipeId === 'none' || !formData.name}
+                    title={t('Generate description with AI')}
+                >
+                    {isGeneratingDesc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                    <span className="ml-2 text-xs">{t('Generate with AI')}</span>
+                </Button>
+            </div>
+            <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} placeholder={t('e.g., Juicy beef patty with avocado and chipotle sauce.')} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

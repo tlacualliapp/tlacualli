@@ -662,6 +662,9 @@
     "Generate a report to begin.":"Genera un reporte para iniciar.",
     "Today's Tips":"Propinas del día",
     "Recommendations":"Recomendaciones",
-    "Login Succesful":"Ingreso exitoso"
+    "Login Succesful":"Ingreso exitoso",
+    "Suggest price with AI":"Sugerir precio con IA",
+    "Price Suggested":"Precio Sugerido",
+    "The AI has suggested a sale price based on the item's cost.":"Precio sugerido por IA basado en costo de insumos y análisis de competencia"
 }
     
