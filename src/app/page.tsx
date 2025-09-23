@@ -199,7 +199,7 @@ export default function LandingPage() {
                                 {t('“Tlacualli transformó nuestra operación. El mapa de mesas y la gestión de inventario nos han ahorrado horas de trabajo y miles de pesos al mes. Es la herramienta que no sabíamos que necesitábamos.”')}
                             </blockquote>
                             <footer className="mt-4">
-                                <p className="font-headline font-semibold">Ana Torres</p>
+                                <p className="font-headline font-semibold">Ana Torres S.</p>
                                 <p className="text-muted-foreground">{t('Gerente, Sabor Ancestral')}</p>
                             </footer>
                         </CardContent>
