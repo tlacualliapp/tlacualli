@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Utensils, ImageOff } from 'lucide-react';
 import Image from 'next/image';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 interface MenuItem {
   id: string;
@@ -136,11 +137,14 @@ function MenuDisplay() {
       {categories.length > 0 ? (
         <Tabs defaultValue={categories[0].id} className="flex-grow flex flex-col font-body">
           <div className="p-4">
-            <TabsList className="grid w-full grid-cols-4">
-              {categories.map(cat => (
-                <TabsTrigger key={cat.id} value={cat.id}>{cat.name}</TabsTrigger>
-              ))}
-            </TabsList>
+             <ScrollArea className="w-full whitespace-nowrap">
+              <TabsList className="inline-flex">
+                {categories.map(cat => (
+                  <TabsTrigger key={cat.id} value={cat.id}>{cat.name}</TabsTrigger>
+                ))}
+              </TabsList>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </div>
           <div className="flex-grow overflow-y-auto px-4 pb-4">
             {categories.map(cat => (
@@ -188,5 +192,3 @@ export default function MenuReadOnlyPage() {
         </div>
     )
 }
-
-    

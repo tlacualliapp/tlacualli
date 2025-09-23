@@ -665,6 +665,10 @@
     "Login Succesful":"Ingreso exitoso",
     "Suggest price with AI":"Sugerir precio con IA",
     "Price Suggested":"Precio Sugerido",
-    "The AI has suggested a sale price based on the item's cost.":"Precio sugerido por IA basado en costo de insumos y análisis de competencia"
+    "The AI has suggested a sale price based on the item's cost.":"Precio sugerido por IA basado en costo de insumos y análisis de competencia",
+    "Generate with AI":"Generar con IA",
+    "Description Generated":"Descripción Generada",
+    "The AI has generated a description for your dish.":"Se ha generado una descripción con IA para tu platillo",
+    "The menu item has been updated":"El artículo ha sido actualizado"
 }
     
