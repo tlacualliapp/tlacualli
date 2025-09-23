@@ -37,7 +37,7 @@ exports.createStripeCheckout = onCall({
     const prices = {
         esencial: 22620, 
         pro: 34220,      
-        ilimitado: 69020 
+        extenso: 69020 
     };
 
     const unitAmount = prices[planId];
