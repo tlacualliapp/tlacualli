@@ -119,7 +119,7 @@ function MenuDisplay() {
 
   return (
     <div className="bg-card/80 backdrop-blur-lg rounded-3xl shadow-lg h-full overflow-hidden flex flex-col text-card-foreground">
-        <div className="p-4 border-b border-white/10 text-center">
+        <div className="p-4 border-b border-white/10 text-center flex-shrink-0">
             {(logoUrl || iconUrl) && (
               <div className="mb-4 flex justify-center">
                 <Image 
@@ -135,8 +135,8 @@ function MenuDisplay() {
             <h1 className="text-2xl font-bold font-headline">{restaurantName}</h1>
         </div>
       {categories.length > 0 ? (
-        <Tabs defaultValue={categories[0].id} className="flex-grow flex flex-col font-body">
-          <div className="p-4">
+        <Tabs defaultValue={categories[0].id} className="flex-grow flex flex-col font-body min-h-0">
+          <div className="p-4 flex-shrink-0">
              <ScrollArea className="w-full whitespace-nowrap">
               <TabsList className="inline-flex">
                 {categories.map(cat => (
@@ -146,7 +146,7 @@ function MenuDisplay() {
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </div>
-          <div className="flex-grow overflow-y-auto px-4 pb-4">
+          <div className="flex-grow overflow-y-auto px-4 pb-4 min-h-0">
             {categories.map(cat => (
               <TabsContent key={cat.id} value={cat.id} className="mt-0">
                  <div className="space-y-4">
