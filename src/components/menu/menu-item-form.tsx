@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, PlusCircle, ChevronsUpDown, Check } from 'lucide-react';
+import { Loader2, Save, PlusCircle, ChevronsUpDown, Check, Wand2 } from 'lucide-react';
 import { db, storage } from '@/lib/firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, getDocs, onSnapshot, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { getPriceSuggestion, PriceSuggestionInput } from '@/ai/flows/price-suggestion';
 
 interface MenuItem {
   id?: string;
@@ -76,6 +77,7 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
   const { toast } = useToast();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuggestingPrice, setIsSuggestingPrice] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -216,6 +218,47 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
       toast({ variant: 'destructive', title: t('Error'), description: t('Could not add the responsible.') });
     }
   };
+  
+    const handleSuggestPrice = async () => {
+        setIsSuggestingPrice(true);
+        let cost = 0;
+        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
+
+        try {
+            if (formData.recipeId && formData.recipeId !== 'none') {
+                const recipeRef = doc(db, `${collectionName}/${restaurantId}/recipes`, formData.recipeId);
+                const recipeSnap = await getDoc(recipeRef);
+                if (recipeSnap.exists()) {
+                    cost = recipeSnap.data().cost || 0;
+                }
+            } else if (formData.inventoryItemId) {
+                const itemRef = doc(db, `${collectionName}/${restaurantId}/inventoryItems`, formData.inventoryItemId);
+                const itemSnap = await getDoc(itemRef);
+                if (itemSnap.exists()) {
+                    cost = itemSnap.data().averageCost || 0;
+                }
+            }
+
+            if (cost === 0) {
+                toast({ variant: 'destructive', title: t('Cannot Suggest Price'), description: t('The item cost is zero. Please set a cost for the recipe or inventory item first.') });
+                setIsSuggestingPrice(false);
+                return;
+            }
+
+            const input: PriceSuggestionInput = { dishName: formData.name, cost };
+            const result = await getPriceSuggestion(input);
+            
+            setFormData(prev => ({ ...prev, price: result.suggestedPrice }));
+            toast({ title: t('Price Suggested'), description: t('The AI has suggested a sale price based on the item\'s cost.') });
+
+        } catch (error) {
+            console.error("Error suggesting price:", error);
+            toast({ variant: 'destructive', title: t('Error'), description: t('Could not get a price suggestion from the AI.') });
+        } finally {
+            setIsSuggestingPrice(false);
+        }
+    };
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -346,7 +389,12 @@ export function MenuItemForm({ restaurantId, userPlan, onSuccess, menuItemToEdit
             </div>
             <div className="space-y-2">
                 <Label htmlFor="price">{t('Sale Price ($)')}</Label>
-                <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} required />
+                <div className="flex items-center gap-2">
+                    <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} required />
+                    <Button type="button" variant="outline" size="icon" onClick={handleSuggestPrice} disabled={isSuggestingPrice || (!formData.recipeId && !formData.inventoryItemId)} title={t('Suggest price with AI')}>
+                        {isSuggestingPrice ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                    </Button>
+                </div>
             </div>
         </div>
 
