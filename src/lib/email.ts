@@ -28,8 +28,8 @@ const getTransporter = () => {
     return nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
+        user: process.env.EMAIL_USER, // Corrected from GMAIL_USER
+        pass: process.env.EMAIL_PASS, // Corrected from GMAIL_APP_PASSWORD
       },
       connectionTimeout: 10000,
       socketTimeout: 10000,
@@ -106,7 +106,7 @@ export const sendWelcomeEmail = async ({ to, name, username, password }: Welcome
 
     try {
         await transporter.sendMail({
-            from: `"Tlacualli App" <${process.env.GMAIL_USER}>`,
+            from: `"Tlacualli App" <${process.env.EMAIL_USER}>`,
             to,
             subject,
             html,
@@ -177,7 +177,7 @@ export const sendSupportResponseEmail = async ({ to, name, question, reply }: Su
 
      try {
         await transporter.sendMail({
-            from: `"Soporte Tlacualli" <${process.env.GMAIL_USER}>`,
+            from: `"Soporte Tlacualli" <${process.env.EMAIL_USER}>`,
             to,
             subject,
             html,
@@ -193,7 +193,7 @@ export const sendCustomEmail = async ({ to, subject, html }: CustomEmailProps) =
     const transporter = getTransporter();
     try {
         await transporter.sendMail({
-            from: `"Tlacualli App" <${process.env.GMAIL_USER}>`,
+            from: `"Tlacualli App" <${process.env.EMAIL_USER}>`,
             to,
             subject,
             html,
