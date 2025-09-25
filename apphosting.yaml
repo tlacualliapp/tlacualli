@@ -12,3 +12,8 @@ env:
     secret: GEMINI_API_KEY
   - variable: STRIPE_SECRET_KEY
     secret: STRIPE_SECRET_KEY
+  - variable: EMAIL_USER
+    secret: EMAIL_USER
+  - variable: EMAIL_PASS
+    secret: EMAIL_PASS
+
