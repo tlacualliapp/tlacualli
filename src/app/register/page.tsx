@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { RestaurantForm } from '@/components/dashboard/restaurant-form';
@@ -8,16 +8,12 @@ import { useTranslation } from 'react-i18next';
 import { auth } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { TacoIcon } from '@/components/icons/logo';
-import '@/app/i18n';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { CheckCircle } from 'lucide-react';
+import '@app/i18n';
 
 export default function RegisterPage() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const [user, loading] = useAuthState(auth);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
   useEffect(() => {
     // If the user is already logged in, redirect them to their dashboard
@@ -31,32 +27,10 @@ export default function RegisterPage() {
   }, [user, loading, router, i18n]);
 
   const handleSuccess = () => {
-    setIsSuccessModalOpen(true);
+    router.push('/register-success');
   };
   
-  const handleModalClose = () => {
-    setIsSuccessModalOpen(false);
-    router.push('/login');
-  };
-
   return (
-    <>
-      <Dialog open={isSuccessModalOpen} onOpenChange={setIsSuccessModalOpen}>
-        <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <div className="flex justify-center">
-                  <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-              </div>
-              <DialogTitle className="text-center">{t('Registration Successful!')}</DialogTitle>
-              <DialogDescription className="text-center">
-                {t('Your restaurant has been successfully registered. An email with your access details has been sent. Please check your inbox (and spam folder).')}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button onClick={handleModalClose} className="w-full">{t('Go to Login')}</Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <div 
           className="relative flex flex-col items-center justify-center min-h-screen bg-cover bg-center p-4 sm:p-6 md:p-8"
           style={{ backgroundImage: "url('/assets/background.png')" }}
@@ -78,6 +52,5 @@ export default function RegisterPage() {
           </Card>
         </div>
       </div>
-    </>
   );
 }
