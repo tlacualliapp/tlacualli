@@ -24,7 +24,7 @@ export async function sendContactEmail(prevState: any, formData: FormData) {
   }
 
   const { name, email, message } = validatedFields.data;
-  const emailTo = process.env.EMAIL_TO || 'tlacualli.app@gmail.com';
+  const emailTo = process.env.GMAIL_USER || 'tlacualli.app@gmail.com';
 
   try {
     await sendCustomEmail({
