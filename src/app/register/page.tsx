@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { auth } from '@/lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { TacoIcon } from '@/components/icons/logo';
-import '@app/i18n';
+import '@/app/i18n';
 
 export default function RegisterPage() {
   const router = useRouter();
