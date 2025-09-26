@@ -34,19 +34,22 @@ exports.createStripeCheckout = onCall({
     const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
     const { planId, restaurantId } = request.data;
 
-    const prices = {
-        esencial: 22620, 
-        pro: 34220,      
-        extenso: 69020,
-        vip: 2320
-    };
-
-    const unitAmount = prices[planId];
-    if (!unitAmount) {
-        throw new functions.https.HttpsError("invalid-argument", `El plan seleccionado '${planId}' no es válido.`);
+    const planDoc = await admin.firestore().collection('planes').doc(planId).get();
+    if (!planDoc.exists) {
+        throw new functions.https.HttpsError("not-found", `El plan con ID '${planId}' no fue encontrado.`);
     }
 
-    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    const planData = planDoc.data();
+    const priceFromDb = planData.price;
+    const planName = planData.name;
+
+    if (typeof priceFromDb !== 'number' || priceFromDb <= 0) {
+        throw new functions.https.HttpsError("invalid-argument", `El plan no tiene un precio válido.`);
+    }
+    
+    const unitAmount = Math.round(priceFromDb * 100);
+
+    const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, '');
     const successUrl = `${appUrl}/dashboard-admin/billing?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${appUrl}/dashboard-admin/upgrade`;
 
@@ -59,7 +62,7 @@ exports.createStripeCheckout = onCall({
                     price_data: {
                         currency: "mxn",
                         product_data: {
-                            name: `Plan ${planId.charAt(0).toUpperCase() + planId.slice(1)}`,
+                            name: `Plan ${planName}`,
                         },
                         unit_amount: unitAmount,
                         recurring: { interval: "month" },
@@ -106,10 +109,7 @@ exports.stripeWebhook = onRequest({
         if (!snapshot.empty) {
             const restaurantId = snapshot.docs[0].id;
             await admin.firestore().collection('restaurantes').doc(restaurantId).update({ subscriptionStatus: status });
-            console.log(`Estado de suscripción actualizado a '${status}' para restaurante ${restaurantId}`);
-        } else {
-            console.log(`No se encontró restaurante para el customerId: ${customerId}`);
-        }
+        } 
     };
 
     if (event.type === "checkout.session.completed") {
@@ -117,57 +117,50 @@ exports.stripeWebhook = onRequest({
         const { restaurantId, planId } = session.metadata;
         
         try {
+            const planDoc = await admin.firestore().collection('planes').doc(planId).get();
+            if (!planDoc.exists) throw new Error(`Plan con ID ${planId} no encontrado.`);
+            const planName = planDoc.data().name.toLowerCase();
+
             const demoRef = admin.firestore().collection("restaurantes_demo").doc(restaurantId);
             const mainRef = admin.firestore().collection("restaurantes").doc(restaurantId);
             const demoSnapshot = await demoRef.get();
 
             if (demoSnapshot.exists) {
-                // --- LÓGICA DE MIGRACIÓN (demo -> pago) ---
-                console.log(`Iniciando migración para el restaurante ${restaurantId} de demo a ${planId}`);
                 await migrateDocument(demoRef, mainRef);
-                
                 await mainRef.update({
-                    plan: planId,
+                    plan: planName,
                     stripeSubscriptionId: session.subscription,
                     stripeCustomerId: session.customer,
                     subscriptionStatus: "active",
                     subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
                 });
-
                 await admin.firestore().recursiveDelete(demoRef);
-                console.log(`Migración completada. Restaurante ${restaurantId} eliminado de demo.`);
-
             } else {
-                // --- LÓGICA DE ACTUALIZACIÓN (pago -> pago) ---
-                console.log(`Iniciando actualización de plan para el restaurante ${restaurantId} a ${planId}`);
                 await mainRef.update({
-                    plan: planId, 
-                    subscriptionStatus: "active", // Reactivar si estaba inactivo
-                    stripeSubscriptionId: session.subscription, // Actualizar con la nueva suscripción
+                    plan: planName, 
+                    subscriptionStatus: "active",
+                    stripeSubscriptionId: session.subscription,
                 });
-                 console.log(`Plan del restaurante ${restaurantId} actualizado a ${planId}`);
             }
             
-            // --- LÓGICA COMÚN PARA AMBOS CASOS ---
             const billingRef = mainRef.collection("billing");
             await billingRef.add({
                 paymentDate: admin.firestore.FieldValue.serverTimestamp(),
-                plan: planId,
+                plan: planName,
                 amount: session.amount_total / 100,
                 currency: session.currency,
                 invoiceId: session.invoice, 
                 status: 'paid',
-                description: demoSnapshot.exists ? 'Pago inicial de suscripción' : `Cambio de plan a ${planId}`
+                description: demoSnapshot.exists ? 'Pago inicial de suscripción' : `Cambio de plan a ${planName}`
             });
 
             const usersQuery = admin.firestore().collection("usuarios").where("restauranteId", "==", restaurantId);
             const usersSnapshot = await usersQuery.get();
             const batch = admin.firestore().batch();
             usersSnapshot.forEach(doc => {
-                batch.update(doc.ref, { plan: planId });
+                batch.update(doc.ref, { plan: planName });
             });
             await batch.commit();
-            console.log(`Plan actualizado a '${planId}' para todos los usuarios del restaurante ${restaurantId}`);
 
         } catch (error) {
             console.error("Error al procesar el pago y la actualización:", error);
@@ -182,7 +175,6 @@ exports.stripeWebhook = onRequest({
             const snapshot = await restaurantsQuery.get();
             if (!snapshot.empty) {
                 const restaurantDoc = snapshot.docs[0];
-                const restaurantId = restaurantDoc.id;
                 await restaurantDoc.ref.update({ subscriptionStatus: 'active' });
                 const billingRef = restaurantDoc.ref.collection("billing");
                 await billingRef.add({
@@ -194,7 +186,6 @@ exports.stripeWebhook = onRequest({
                     status: 'paid',
                     description: 'Pago recurrente de suscripción'
                 });
-                console.log(`Pago recurrente registrado para el restaurante ${restaurantId}`);
             }
         } catch (error) {
             console.error("Error al registrar pago recurrente:", error);
@@ -220,29 +211,42 @@ exports.createCustomerPortalSession = onCall({
 
     const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
     const { restaurantId } = request.data;
-    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, '');
 
     try {
-        const usersQuery = admin.firestore().collection("usuarios").where("uid", "==", request.auth.uid);
-        const userSnapshot = await usersQuery.get();
-
-        if(userSnapshot.empty) {
-            throw new functions.https.HttpsError("not-found", "No se encontró el usuario.");
-        }
-        const userData = userSnapshot.docs[0].data();
-        const userPlan = userData.plan;
-        
-        const collectionName = userPlan === 'demo' ? 'restaurantes_demo' : 'restaurantes';
-        const restaurantDoc = await admin.firestore().collection(collectionName).doc(restaurantId).get();
+        const restaurantRef = admin.firestore().collection('restaurantes').doc(restaurantId);
+        const restaurantDoc = await restaurantRef.get();
 
         if (!restaurantDoc.exists) {
-            throw new functions.https.HttpsError("not-found", "No se encontró el restaurante.");
+            console.error(`Restaurante con ID ${restaurantId} no encontrado.`);
+            throw new functions.https.HttpsError("not-found", "No se encontró el restaurante asociado a la suscripción.");
         }
 
-        const stripeCustomerId = restaurantDoc.data().stripeCustomerId;
+        let stripeCustomerId = restaurantDoc.data().stripeCustomerId;
+        const restaurantEmail = restaurantDoc.data().email;
+
+        // Lógica de autoreparación: si no hay ID, buscarlo en Stripe por email
+        if (!stripeCustomerId && restaurantEmail) {
+            console.log(`stripeCustomerId no encontrado para ${restaurantId}. Buscando en Stripe por email...`);
+            try {
+                const customers = await stripe.customers.list({ email: restaurantEmail, limit: 1 });
+                if (customers.data.length > 0) {
+                    stripeCustomerId = customers.data[0].id;
+                    console.log(`Cliente de Stripe encontrado: ${stripeCustomerId}. Actualizando la base de datos.`);
+                    await restaurantRef.update({ stripeCustomerId: stripeCustomerId });
+                } else {
+                    console.error(`Ningún cliente de Stripe encontrado con el email: ${restaurantEmail}`);
+                    throw new functions.https.HttpsError("not-found", "No se encontró información de cliente en el sistema de pagos.");
+                }
+            } catch (stripeError) {
+                console.error("Error al buscar cliente en Stripe:", stripeError);
+                throw new functions.https.HttpsError("internal", "Ocurrió un error al verificar la información de pago.");
+            }
+        }
 
         if (!stripeCustomerId) {
-            throw new functions.https.HttpsError("failed-precondition", "El cliente no tiene una suscripción de Stripe.");
+            console.error(`stripeCustomerId sigue sin encontrarse para ${restaurantId} después de la búsqueda.`);
+            throw new functions.https.HttpsError("failed-precondition", "Este cliente no tiene una suscripción de Stripe activa para administrar.");
         }
 
         const session = await stripe.billingPortal.sessions.create({
@@ -253,7 +257,12 @@ exports.createCustomerPortalSession = onCall({
         return { url: session.url };
 
     } catch (error) {
-        console.error("Error al crear la sesión del portal de cliente:", error);
-        throw new functions.https.HttpsError("internal", "No se pudo crear la sesión del portal de cliente.");
+        if (error instanceof functions.https.HttpsError) {
+            console.error(`Error al crear la sesión del portal de cliente para ${restaurantId}: ${error.message}`);
+            throw error; 
+        } else {
+            console.error(`Error genérico al crear la sesión del portal de cliente para ${restaurantId}:`, error);
+            throw new functions.https.HttpsError("internal", "No se pudo crear la sesión del portal de cliente. Intenta de nuevo más tarde.");
+        }
     }
 });

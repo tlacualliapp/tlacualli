@@ -8,11 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Loader2, Calendar, Building, Mail, Phone, Hash, CreditCard, Download, ArrowRight, ShieldCheck, Settings, ExternalLink, ShieldAlert } from 'lucide-react'; // ExternalLink añadido
+import { FileText, Loader2, Calendar, Building, Mail, Phone, Hash, CreditCard, Download, ArrowRight, ShieldCheck, Settings, ExternalLink, ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, onSnapshot, Timestamp, getDocs } from 'firebase/firestore';
 import { getCurrentUserData } from '@/lib/users';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -29,9 +29,9 @@ interface Restaurant {
   phone: string;
   email: string;
   rfc: string;
-  plan: 'demo' | 'esencial' | 'pro' | 'ilimitado';
+  plan: 'demo' | 'esencial' | 'pro' | 'extenso' | 'vip';
   status: '1' | '0' | 'deleted';
-  fecharegistro: any; // Firestore Timestamp
+  fecharegistro: any;
   subscriptionStatus?: 'active' | 'inactive';
 }
 
@@ -40,14 +40,14 @@ interface Payment {
     paymentDate: Timestamp;
     totalPaid: number;
     status: string;
-    invoiceUrl?: string; // Campo para la URL del recibo de Stripe
+    invoiceUrl?: string;
 }
 
-const planDetails = {
-    demo: { name: 'Demo Gratuita', price: 0 },
-    esencial: { name: 'Plan Esencial', price: 195 },
-    pro: { name: 'Plan Pro', price: 295 },
-    ilimitado: { name: 'Plan Ilimitado', price: 595 }
+interface PlanDetails {
+    [key: string]: {
+        name: string;
+        price: number;
+    }
 }
 
 export default function BillingPage() {
@@ -56,8 +56,10 @@ export default function BillingPage() {
   const router = useRouter();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
+  const [planDetails, setPlanDetails] = useState<PlanDetails>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentsLoading, setIsPaymentsLoading] = useState(true);
+  const [isPlansLoading, setIsPlansLoading] = useState(true);
   const { toast } = useToast();
   const [userPlan, setUserPlan] = useState<string | null>(null);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
@@ -67,6 +69,40 @@ export default function BillingPage() {
       router.push('/login');
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    const fetchPlanDetails = async () => {
+        setIsPlansLoading(true);
+        try {
+            const plansCollectionRef = collection(db, 'planes');
+            const querySnapshot = await getDocs(plansCollectionRef);
+            const plans: PlanDetails = {
+                demo: { name: 'Demo Gratuita', price: 0 }
+            };
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.name && typeof data.price === 'number') {
+                    plans[data.name.toLowerCase()] = {
+                        name: data.name,
+                        price: data.price,
+                    };
+                }
+            });
+            setPlanDetails(plans);
+        } catch (error) {
+            console.error("Error fetching plan details:", error);
+            toast({
+                variant: 'destructive',
+                title: t('Error'),
+                description: t('Could not load plan details.'),
+            });
+        } finally {
+            setIsPlansLoading(false);
+        }
+    };
+
+    fetchPlanDetails();
+  }, [t, toast]);
 
   useEffect(() => {
     const fetchRestaurantData = async () => {
@@ -104,7 +140,7 @@ export default function BillingPage() {
                 paymentDate: data.paymentDate,
                 totalPaid: data.amount,
                 status: data.status || 'Paid',
-                invoiceUrl: data.hosted_invoice_url // Usar la URL directa del recibo
+                invoiceUrl: data.hosted_invoice_url
             });
         });
         setPaymentHistory(history.sort((a,b) => b.paymentDate.toMillis() - a.paymentDate.toMillis()));
@@ -141,7 +177,7 @@ export default function BillingPage() {
   };
 
 
-  if (loading || isLoading) {
+  if (loading || isLoading || isPlansLoading) {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-full">
@@ -163,7 +199,7 @@ export default function BillingPage() {
     );
   }
   
-  const currentPlan = planDetails[restaurant.plan] || { name: t('Unknown'), price: 0 };
+  const currentPlan = planDetails[restaurant.plan] || { name: t('Unknown Plan'), price: 0 };
   const registrationDate = restaurant.fecharegistro?.toDate();
   const nextPaymentDate = registrationDate ? new Date(registrationDate.setMonth(registrationDate.getMonth() + 1)) : new Date();
   const isSubscriptionActive = restaurant.subscriptionStatus === 'active' || restaurant.plan === 'demo';
