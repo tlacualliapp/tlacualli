@@ -1,4 +1,16 @@
 {
+  "hosting": {
+    "source": ".",
+    "frameworksBackend": {
+      "region": "us-central1",
+      "secretEnv": [
+        {
+          "key": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+          "secret": "STRIPE_PUBLISHABLE_KEY"
+        }
+      ]
+    }
+  },
   "functions": {
     "source": "functions"
   }
