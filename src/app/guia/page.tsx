@@ -6,7 +6,7 @@ const steps = [
     {
         icon: Warehouse,
         title: 'Paso 1: Controla tu Inventario',
-        description: 'Registra todos tus insumos, desde alimentos hasta artículos de limpieza, con su unidad de medida y costo. Un inventario exacto es el cimiento para una gestión sin sorpresas y decisiones acertadas.',
+        description: 'Registra todos tus insumos, desde alimentos hasta bebidas y todos tus ingredientes, con su unidad de medida y costo. Un inventario exacto es el cimiento para una gestión sin sorpresas y decisiones acertadas.',
         color: 'text-green-500',
     },
     {

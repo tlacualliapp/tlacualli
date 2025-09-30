@@ -123,10 +123,13 @@ export default function ContactPage() {
 
   useEffect(() => {
     if (scrollAreaRef.current) {
-        scrollAreaRef.current.scrollTo({
-            top: scrollAreaRef.current.scrollHeight,
-            behavior: 'smooth'
-        });
+        const scrollArea = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if(scrollArea) {
+            scrollArea.scrollTo({
+                top: scrollArea.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
     }
   }, [conversation]);
 
@@ -152,8 +155,7 @@ export default function ContactPage() {
         </CardHeader>
       </Card>
       
-      <Card className="h-[calc(100vh-22rem)] flex flex-col">
-        <CardContent className="p-0 flex-grow flex flex-col">
+      <div className="h-[calc(100vh-22rem)] flex flex-col bg-card rounded-lg border">
             <ScrollArea className="flex-grow p-6 space-y-4" ref={scrollAreaRef as any}>
                 {conversation.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
@@ -188,7 +190,7 @@ export default function ContactPage() {
                     </div>
                 )}
             </ScrollArea>
-             <form onSubmit={handleSendMessage} className="p-4 border-t flex items-center gap-4">
+             <form onSubmit={handleSendMessage} className="p-4 border-t flex items-center gap-4 flex-shrink-0">
                 <Input 
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -199,8 +201,7 @@ export default function ContactPage() {
                     <Send className="h-4 w-4" />
                 </Button>
             </form>
-        </CardContent>
-      </Card>
+        </div>
 
     </AdminLayout>
   );
